@@ -110,14 +110,14 @@ export class OpencodeClient {
   /** Fire-and-forget: server returns 204 and continues running the agent. */
   promptAsync(sessionId: string, body: {
     messageID?: string;
-    model?: string;
+    model?: { providerID: string; modelID: string };
     agent?: string;
     parts: Array<{ type: 'text'; text: string } | { type: 'file'; filename: string; mime?: string }>;
   }) {
     return this.req<void>('POST', `/session/${sessionId}/prompt_async`, { body });
   }
 
-  runCommand(sessionId: string, body: { command: string; arguments?: string; agent?: string; model?: string }) {
+  runCommand(sessionId: string, body: { command: string; arguments?: string; agent?: string; model?: { providerID: string; modelID: string } }) {
     return this.req<MessageWithParts>('POST', `/session/${sessionId}/command`, { body });
   }
 

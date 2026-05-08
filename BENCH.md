@@ -1,6 +1,8 @@
 # Pilot Benchmark & Audit Suite
 
-A self-contained benchmark suite for the Pilot app backend (OpenCode HTTP/SSE server). No extra dependencies — pure Node.js ESM. Produces a single self-contained HTML audit report.
+A self-contained benchmark suite for the Pilot app backend (OpenCode HTTP/SSE server) and the
+Memory Plugin. No extra dependencies — pure Node.js ESM. Produces a single self-contained HTML
+audit report.
 
 ---
 
@@ -39,16 +41,18 @@ Open that file in any browser — it is fully self-contained (no CDN, no externa
 | `npm run bench:correctness` | Correctness suite only |
 | `npm run bench:load` | Load test only |
 | `npm run bench:sse` | SSE + app flow only |
+| `npm run bench:memory` | Memory plugin suite only |
 | `npm run bench:report` | Re-generate HTML from last JSON results |
 | `npm run test:api` | Original smoke test (`pilot-test.mjs`) |
 
 Individual suites accept flags:
 
 ```bash
-node pilot-bench.mjs   --url http://host:4096 --json /tmp/out.json
-node pilot-load.mjs    --url http://host:4096 --vus 50 --out /tmp/out.json
-node pilot-sse-bench.mjs --url http://host:4096 --out /tmp/out.json
-node audit-report.mjs  --in /tmp/out.json --out ./report.html
+node pilot-bench.mjs        --url http://host:4096 --json /tmp/out.json
+node pilot-load.mjs         --url http://host:4096 --vus 50 --out /tmp/out.json
+node pilot-sse-bench.mjs    --url http://host:4096 --out /tmp/out.json
+node pilot-memory-bench.mjs --url http://host:4096 --out /tmp/out.json
+node audit-report.mjs       --in /tmp/out.json --out ./report.html
 ```
 
 ---
@@ -160,12 +164,87 @@ All 10 steps must pass. If step 9 fails, the SSE connection dropped during norma
 
 ---
 
+### Phase 4 — Memory Plugin (`pilot-memory-bench.mjs`)
+
+Tests the memory plugin across five suites. Suites 2–5 are fully offline (no network required).
+Suite 1 requires a live OpenCode server.
+
+**Suite 1 — Shadow Session Pathway (7 tests)**
+
+Exercises the exact sequence `ExtractionSession` uses to run an extraction:
+
+| Step | What is tested |
+|---|---|
+| Create shadow session | `POST /session` returns a valid id |
+| Send extraction prompt | `POST /session/:id/prompt_async` returns 204 |
+| Check status map | `GET /session/status` includes the shadow session |
+| Poll until idle | Status reaches `idle` within 30 s |
+| Read response messages | `GET /session/:id/message` returns an array |
+| Delete shadow session | `DELETE /session/:id` succeeds |
+| Verify deletion | `GET /session/:id` returns 4xx after delete |
+
+**Suite 2 — Extraction JSON Parser (7 tests, offline)**
+
+Validates the inline reimplementation of `parseExtractionResponse` from
+`plugin/memory/extraction/MemoryExtractor.ts`:
+
+- Valid array → correctly typed candidates
+- Missing `category` → defaults to `"fact"`
+- Invalid category string → coerced to `"fact"`
+- Content shorter than 10 chars → filtered out
+- Confidence below 0.65 → filtered out
+- JSON array wrapped in AI prose → still parsed
+- Non-JSON response → returns `[]` without throwing
+
+**Suite 3 — Cosine Similarity & TopK (6 tests, offline)**
+
+Unit-tests the vector math from `plugin/memory/embeddings/similarity.ts`:
+
+- Identical vectors → similarity = 1.0
+- Orthogonal vectors → similarity = 0
+- Opposite vectors → similarity = −1.0
+- TopK returns at most K results
+- TopK filters below `minScore` threshold
+- TopK output is sorted descending by score
+
+**Suite 4 — Config & Schema Defaults (7 tests, offline)**
+
+Parses the DDL from `plugin/memory/db/schema.ts` and asserts that all defaults match the
+documented values:
+
+| Column | Expected default |
+|---|---|
+| `dedup_threshold` | 0.92 |
+| `top_k` | 5 |
+| `max_memories` | 2 000 |
+| `embedding_provider` | `ollama` |
+| `embedding_model` | `nomic-embed-text` |
+| `enabled` / `extract_enabled` / `inject_enabled` | 1 (true) |
+| Valid categories | preference, fact, code_pattern, decision |
+
+**Suite 5 — Injection Context Format (8 tests, offline)**
+
+Validates the output of the inline `buildContext()` function (mirrors `MemoryInjector`):
+
+- `[Memory Context — from previous sessions]` header is present
+- `[End Memory Context]` footer is present
+- Each memory line starts with `"- "`
+- Highest-scoring memory is listed first
+- Empty memories array → `""` returned
+- Empty embeddings array → `""` returned
+- All memories below minScore → `""` returned
+- TopK limit is respected in output line count
+- Context block ends with `"\n\n"` (prompt separator)
+
+---
+
 ## HTML report sections
 
 | Section | What it shows |
 |---|---|
-| Summary scorecard | Pass / fail / skip counts across all three phases |
+| Summary scorecard | Pass / fail / skip counts for correctness + memory; load requests and error rate |
 | Correctness results table | Every test with status, duration, and detail message |
+| Memory plugin results table | All memory suite tests with status, duration, and detail |
 | Known failures | Any `fail` test with the full error message |
 | Load — endpoint table | Per-endpoint latency percentiles and error rate |
 | Load — latency chart | SVG bar chart: p50 / p95 / p99 for each endpoint |
@@ -178,7 +257,7 @@ All 10 steps must pass. If step 9 fails, the SSE connection dropped during norma
 
 | File | Description |
 |---|---|
-| `/tmp/pilot-results.json` | Raw merged results from all three suites; overwritten each full run |
+| `/tmp/pilot-results.json` | Raw merged results from all four suites; overwritten each full run |
 | `pilot-audit-YYYY-MM-DD-HH-MM.html` | Self-contained HTML report; one file per run, kept in the project root |
 
 ---
@@ -189,3 +268,4 @@ All 10 steps must pass. If step 9 fails, the SSE connection dropped during norma
 |---|---|
 | `GET /find?pattern=package searches text` | Server-side bug: ripgrep fails when the pattern matches binary or cache files in the working directory. The test skips gracefully when it detects the `"invalid ripgrep output"` error so it does not count as a regression in your suite. |
 | SSE event throughput (events/s) | Events are only emitted when the server is actively processing a session. An idle server will show `1 event` (the initial connection event) — this is correct. |
+| `poll until shadow session is idle` | The extraction AI may take longer than 30 s on a slow or overloaded server. The test skips gracefully rather than failing when the timeout is exceeded. |

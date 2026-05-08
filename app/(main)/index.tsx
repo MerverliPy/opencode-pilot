@@ -16,6 +16,9 @@ import type { ServerEvent } from '@/services/types';
 import { loadLastSessionId, saveLastSessionId } from '@/services/auth';
 import { log } from '@/services/logger';
 import { colors } from '@/theme';
+import { useMemoryStore } from '@/plugin/memory/store/memoryStore';
+import { useMemoryExtraction } from '@/plugin/memory/hooks/useMemoryExtraction';
+import { useMemoryInjection } from '@/plugin/memory/hooks/useMemoryInjection';
 
 export default function TuiHome() {
   const nav = useNavigation();
@@ -49,6 +52,26 @@ export default function TuiHome() {
   const resolvePermission = useSessionStore((s) => s.resolvePermission);
 
   const openModal = useUIStore((s) => s.openModal);
+
+  // ---- Memory plugin ----
+  const loadMemoryForServer = useMemoryStore((s) => s.loadForServer);
+  // Load memory state whenever the active server changes.
+  useEffect(() => {
+    if (server?.id) void loadMemoryForServer(server.id);
+  }, [server?.id]);
+
+  useMemoryExtraction({
+    client,
+    serverId: server?.id ?? null,
+    serverUrl: server?.url,
+    status,
+    turns,
+  });
+
+  const { buildPrefix } = useMemoryInjection({
+    serverId: server?.id ?? null,
+    serverUrl: server?.url,
+  });
   // ---- Initial bootstrap: pick / create a session ----
   useEffect(() => {
     if (!client || !server) return;
@@ -164,10 +187,12 @@ export default function TuiHome() {
     if (!client || !session) return;
     setStatus('busy');
     try {
+      // Prepend relevant memories as a context block (silent — empty string if none).
+      const prefix = await buildPrefix(text);
       await client.promptAsync(session.id, {
         agent,
-        model: modelID && providerID ? `${providerID}/${modelID}` : undefined,
-        parts: [{ type: 'text', text }],
+        model: modelID && providerID ? { providerID, modelID } : undefined,
+        parts: [{ type: 'text', text: prefix ? `${prefix}${text}` : text }],
       });
     } catch (e) {
       log.error('prompt', 'promptAsync failed', (e as Error).message);

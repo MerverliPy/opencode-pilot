@@ -181,6 +181,24 @@ export default function SettingsScreen() {
           </Pressable>
         </Section>
 
+        <Section title="memory">
+          <Pressable
+            onPress={() => router.push('/memory' as Parameters<typeof router.push>[0])}
+            style={({ pressed }) => ({
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+              flexDirection: 'row',
+              alignItems: 'center',
+            })}
+          >
+            <Text style={{ flex: 1, color: colors.foreground, fontFamily: fonts.mono, fontSize: fontSizes.sm }}>
+              agent memory
+            </Text>
+            <Text style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.sm }}>›</Text>
+          </Pressable>
+        </Section>
+
         <Section title="appearance">
           <Row label="font size">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

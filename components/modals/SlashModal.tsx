@@ -52,7 +52,7 @@ export function SlashModal({ onClose }: Props) {
         command: cmd.name,
         arguments: withArgs || undefined,
         agent,
-        model: modelID && providerID ? `${providerID}/${modelID}` : undefined,
+        model: modelID && providerID ? { providerID, modelID } : undefined,
       });
       onClose();
     } catch (e) {

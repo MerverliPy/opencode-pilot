@@ -44,6 +44,7 @@ const meta        = data.meta        ?? {};
 const correctness = data.correctness ?? { passed: 0, failed: 0, skipped: 0, tests: [] };
 const load        = data.load        ?? null;
 const sse         = data.sse         ?? null;
+const memory      = data.memory      ?? null;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -371,12 +372,14 @@ const errorRate  = load?.errorRate ?? 0;
 const allTests   = [
   ...(correctness.tests ?? []),
   ...(sse?.tests ?? []),
+  ...(memory?.tests ?? []),
 ];
 
 const ts         = meta.timestamp ? new Date(meta.timestamp).toLocaleString() : 'unknown';
 const runDurMs   = (correctness.tests ?? []).reduce((a, t) => a + (t.durationMs ?? 0), 0)
                  + (load?.durationMs ?? 0)
-                 + (sse?.durationMs ?? 0);
+                 + (sse?.durationMs ?? 0)
+                 + (memory?.durationMs ?? 0);
 
 // ─── Full HTML ────────────────────────────────────────────────────────────────
 
@@ -591,6 +594,26 @@ const html = `<!DOCTYPE html>
   </div>
 </div>
 
+<div class="summary-row" style="padding-top:0">
+  <div style="width:100%;padding:4px 0 2px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Memory Plugin</div>
+  <div class="card ${memory ? 'pass' : ''}">
+    <div class="card-val ${memory ? 'green' : 'muted'}">${memory?.passed ?? '—'}</div>
+    <div class="card-lbl">Memory Passed</div>
+  </div>
+  <div class="card ${(memory?.failed ?? 0) > 0 ? 'fail' : ''}">
+    <div class="card-val ${(memory?.failed ?? 0) > 0 ? 'red' : 'muted'}">${memory?.failed ?? '—'}</div>
+    <div class="card-lbl">Memory Failed</div>
+  </div>
+  <div class="card">
+    <div class="card-val muted">${memory?.skipped ?? '—'}</div>
+    <div class="card-lbl">Memory Skipped</div>
+  </div>
+  <div class="card">
+    <div class="card-val blue">${memory ? memory.total : '—'}</div>
+    <div class="card-lbl">Memory Total</div>
+  </div>
+</div>
+
 <hr class="divider"/>
 
 <!-- ── Correctness Results ───────────────────────────────────────────────── -->
@@ -631,6 +654,22 @@ const html = `<!DOCTYPE html>
 <section>
   <h2 class="section-title">SSE &amp; Frontend Network Layer</h2>
   ${sseSection(sse)}
+</section>
+
+<hr class="divider"/>
+
+<!-- ── Memory Plugin ─────────────────────────────────────────────────────── -->
+<section>
+  <h2 class="section-title">Memory Plugin</h2>
+  ${memory ? `
+  <div class="stat-grid" style="margin-bottom:16px">
+    <div class="stat-card"><div class="stat-val ${memory.failed > 0 ? 'text-red' : 'text-green'}">${memory.passed}/${memory.total}</div><div class="stat-lbl">Passed / Total</div></div>
+    <div class="stat-card"><div class="stat-val ${memory.failed > 0 ? 'text-red' : 'text-green'}">${memory.failed > 0 ? memory.failed + ' failures' : 'All clear'}</div><div class="stat-lbl">Failures</div></div>
+    <div class="stat-card"><div class="stat-val muted">${memory.skipped}</div><div class="stat-lbl">Skipped</div></div>
+    <div class="stat-card"><div class="stat-val">${fmtMs(memory.durationMs)}</div><div class="stat-lbl">Duration</div></div>
+  </div>
+  ${correctnessTable(memory.tests)}
+  ` : '<p style="color:var(--muted)">No memory plugin data — run pilot-memory-bench.mjs first.</p>'}
 </section>
 
 <hr class="divider"/>

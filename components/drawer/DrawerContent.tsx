@@ -4,23 +4,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, fonts, fontSizes } from '@/theme';
 import { useServerStore } from '@/store/server';
+import { useMemoryStore } from '@/plugin/memory/store/memoryStore';
 
 type Item = {
   label: string;
   icon: string;
-  route: '/' | '/files' | '/diff' | '/settings';
+  route: '/' | '/files' | '/diff' | '/settings' | '/memory';
 };
 
 const ITEMS: Item[] = [
   { label: 'opencode',     icon: '◆', route: '/' },
   { label: 'file browser', icon: '▤', route: '/files' },
   { label: 'diff viewer',  icon: '±', route: '/diff' },
+  { label: 'memory',       icon: '◉', route: '/memory' },
   { label: 'settings',     icon: '⚙', route: '/settings' },
 ];
 
 export function DrawerContent(props: DrawerContentComponentProps) {
   const router = useRouter();
   const active = useServerStore((s) => s.active());
+  const memoryCount = useMemoryStore((s) => s.memoryCount);
+  const isExtracting = useMemoryStore((s) => s.isExtracting);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -55,7 +59,8 @@ export function DrawerContent(props: DrawerContentComponentProps) {
               key={it.route}
               onPress={() => {
                 props.navigation.closeDrawer();
-                router.push(it.route);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                router.push(it.route as any);
               }}
               style={({ pressed }) => ({
                 flexDirection: 'row',
@@ -90,6 +95,29 @@ export function DrawerContent(props: DrawerContentComponentProps) {
               >
                 {it.label}
               </Text>
+              {it.route === '/memory' && memoryCount > 0 && (
+                <View
+                  style={{
+                    marginLeft: 8,
+                    backgroundColor: isExtracting ? colors.accentDim : colors.surfaceAlt,
+                    borderRadius: 8,
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    minWidth: 20,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: isExtracting ? colors.accent : colors.muted,
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                    }}
+                  >
+                    {isExtracting ? '…' : String(memoryCount)}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           );
         })}

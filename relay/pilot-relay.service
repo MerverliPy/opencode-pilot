@@ -1,0 +1,21 @@
+[Unit]
+Description=Pilot push relay (OpenCode SSE -> Expo push)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/pilot-relay
+ExecStart=/usr/bin/node /opt/pilot-relay/relay.js
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/pilot-relay.env
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,127 @@
+/**
+ * Minimal type slice of the OpenCode OpenAPI surface we use.
+ * Kept hand-written to avoid bundling the Node-targeted SDK.
+ */
+
+export type Session = {
+  id: string;
+  parentID?: string;
+  title: string;
+  version: string;
+  time: { created: number; updated: number };
+  share?: { url: string };
+};
+
+export type SessionStatus = 'idle' | 'busy' | 'error' | 'aborted';
+
+export type Provider = {
+  id: string;
+  name: string;
+  models: Record<string, { id: string; name: string }>;
+};
+
+export type Agent = {
+  name: string;
+  description?: string;
+  mode?: 'build' | 'plan' | string;
+};
+
+export type Command = {
+  name: string;
+  description?: string;
+};
+
+export type FileNode = {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+};
+
+export type FileContent = {
+  type: 'raw' | 'patch';
+  content: string;
+};
+
+export type FileDiff = {
+  path: string;
+  added: number;
+  removed: number;
+  diff: string;
+};
+
+export type PartBase = {
+  id: string;
+  messageID: string;
+  sessionID: string;
+};
+
+export type TextPart = PartBase & {
+  type: 'text';
+  text: string;
+};
+
+export type ReasoningPart = PartBase & {
+  type: 'reasoning';
+  text: string;
+};
+
+export type ToolPart = PartBase & {
+  type: 'tool';
+  tool: string;
+  state: {
+    status: 'pending' | 'running' | 'completed' | 'error';
+    input?: unknown;
+    output?: string;
+    title?: string;
+    metadata?: Record<string, unknown>;
+  };
+};
+
+export type FilePart = PartBase & {
+  type: 'file';
+  filename?: string;
+  mime?: string;
+  url?: string;
+};
+
+export type StepStartPart = PartBase & { type: 'step-start' };
+export type StepFinishPart = PartBase & { type: 'step-finish' };
+
+export type Part = TextPart | ReasoningPart | ToolPart | FilePart | StepStartPart | StepFinishPart;
+
+export type Message = {
+  id: string;
+  sessionID: string;
+  role: 'user' | 'assistant' | 'system';
+  time: { created: number; completed?: number };
+  modelID?: string;
+  providerID?: string;
+  cost?: number;
+  tokens?: { input: number; output: number; reasoning?: number };
+};
+
+export type MessageWithParts = { info: Message; parts: Part[] };
+
+export type PermissionRequest = {
+  id: string;
+  sessionID: string;
+  type: string;
+  title: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+};
+
+/** Raw event shapes we care about from /event SSE stream. */
+export type ServerEvent =
+  | { type: 'server.connected' }
+  | { type: 'session.updated'; properties: { info: Session } }
+  | { type: 'session.deleted'; properties: { info: Session } }
+  | { type: 'session.idle'; properties: { sessionID: string } }
+  | { type: 'session.error'; properties: { sessionID: string; error?: unknown } }
+  | { type: 'message.updated'; properties: { info: Message } }
+  | { type: 'message.removed'; properties: { sessionID: string; messageID: string } }
+  | { type: 'message.part.updated'; properties: { part: Part } }
+  | { type: 'message.part.removed'; properties: { sessionID: string; messageID: string; partID: string } }
+  | { type: 'permission.requested'; properties: PermissionRequest }
+  | { type: 'permission.replied'; properties: { id: string; sessionID: string } }
+  | { type: string; properties?: unknown };

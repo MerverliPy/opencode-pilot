@@ -1,7 +1,7 @@
 ---
 description: Go build, vet, and compilation error resolution specialist. Fixes build errors, go vet issues, and linter warnings with minimal changes. Use when Go builds fail.
 mode: subagent
-model: anthropic/claude-sonnet-4-5
+model: opencode/claude-haiku-4-5
 temperature: 0.1
 tools:
   read: true
@@ -62,12 +62,14 @@ go list -m all
 **Error:** `undefined: SomeFunc`
 
 **Causes:**
+
 - Missing import
 - Typo in function/variable name
 - Unexported identifier (lowercase first letter)
 - Function defined in different file with build constraints
 
 **Fix:**
+
 ```go
 // Add missing import
 import "package/that/defines/SomeFunc"
@@ -84,11 +86,13 @@ import "package/that/defines/SomeFunc"
 **Error:** `cannot use x (type A) as type B`
 
 **Causes:**
+
 - Wrong type conversion
 - Interface not satisfied
 - Pointer vs value mismatch
 
 **Fix:**
+
 ```go
 // Type conversion
 var x int = 42
@@ -108,12 +112,14 @@ var ptr *int = &val
 **Error:** `X does not implement Y (missing method Z)`
 
 **Diagnosis:**
+
 ```bash
 # Find what methods are missing
 go doc package.Interface
 ```
 
 **Fix:**
+
 ```go
 // Implement missing method with correct signature
 func (x *X) Z() error {
@@ -131,11 +137,13 @@ func (x *X) Z() error {
 **Error:** `import cycle not allowed`
 
 **Diagnosis:**
+
 ```bash
 go list -f '{{.ImportPath}} -> {{.Imports}}' ./...
 ```
 
 **Fix:**
+
 - Move shared types to a separate package
 - Use interfaces to break the cycle
 - Restructure package dependencies
@@ -155,6 +163,7 @@ package/b -> package/types
 **Error:** `cannot find package "x"`
 
 **Fix:**
+
 ```bash
 # Add dependency
 go get package/path@version
@@ -172,6 +181,7 @@ go mod tidy
 **Error:** `missing return at end of function`
 
 **Fix:**
+
 ```go
 func Process() (int, error) {
     if condition {
@@ -186,6 +196,7 @@ func Process() (int, error) {
 **Error:** `x declared but not used` or `imported and not used`
 
 **Fix:**
+
 ```go
 // Remove unused variable
 x := getValue()  // Remove if x not used
@@ -202,6 +213,7 @@ import _ "package/for/init/only"
 **Error:** `multiple-value X() in single-value context`
 
 **Fix:**
+
 ```go
 // Wrong
 result := funcReturningTwo()
@@ -221,6 +233,7 @@ result, _ := funcReturningTwo()
 **Error:** `cannot assign to struct field x.y in map`
 
 **Fix:**
+
 ```go
 // Cannot modify struct in map directly
 m := map[string]MyStruct{}
@@ -243,6 +256,7 @@ m["key"] = tmp
 **Error:** `invalid type assertion: x.(T) (non-interface type)`
 
 **Fix:**
+
 ```go
 // Can only assert from interface
 var i interface{} = "hello"
@@ -345,6 +359,7 @@ x = x  // Remove pointless assignment
 ## Stop Conditions
 
 Stop and report if:
+
 - Same error persists after 3 fix attempts
 - Fix introduces more errors than it resolves
 - Error requires architectural changes beyond scope
@@ -364,6 +379,7 @@ Remaining errors: 3
 ```
 
 Final summary:
+
 ```text
 Build Status: SUCCESS/FAILED
 Errors Fixed: N

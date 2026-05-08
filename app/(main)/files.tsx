@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { colors, fonts, fontSizes } from '@/theme';
 import { useServerStore } from '@/store/server';
+import { OpencodeClient } from '@/services/api';
 import { useUIStore } from '@/store/ui';
 import type { FileNode } from '@/services/types';
 
@@ -14,7 +15,11 @@ type TextHit = { path: string; line_number: number; lines: string };
 export default function FilesScreen() {
   const nav = useNavigation();
   const openModal = useUIStore((s) => s.openModal);
-  const client = useServerStore((s) => s.client());
+  const server = useServerStore((s) => s.active());
+  const client = useMemo(
+    () => (server ? new OpencodeClient(server) : null),
+    [server?.id, server?.url, server?.username, server?.password],
+  );
 
   const [mode, setMode] = useState<Mode>('browse');
   const [path, setPath] = useState('.');
@@ -70,7 +75,7 @@ export default function FilesScreen() {
   const openDrawer = () => nav.dispatch(DrawerActions.openDrawer());
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <Header title="file browser" onMenu={openDrawer} />
 
       <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>

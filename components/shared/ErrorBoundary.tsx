@@ -1,6 +1,7 @@
 import { Component, ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { colors, fonts, fontSizes } from '@/theme';
+import { log } from '@/services/logger';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -14,8 +15,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    // eslint-disable-next-line no-console
-    console.error('[pilot] uncaught error:', error, info.componentStack);
+    log.error('ErrorBoundary', error.message, `${error.stack ?? ''}\n\nComponent stack:${info.componentStack}`);
   }
 
   reset = () => this.setState({ error: null });

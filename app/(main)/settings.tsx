@@ -8,6 +8,8 @@ import { colors, fonts, fontSizes } from '@/theme';
 import { useServerStore } from '@/store/server';
 import { useUIStore } from '@/store/ui';
 import { useSessionStore } from '@/store/session';
+import { useLogStore } from '@/store/log';
+import type { LogEntry } from '@/store/log';
 import { loadPushToken } from '@/services/auth';
 import { registerForPushNotifications } from '@/services/notifications';
 import type { ServerConfig } from '@/services/auth';
@@ -24,6 +26,8 @@ export default function SettingsScreen() {
   const setFontSize = useUIStore((s) => s.setFontSize);
 
   const resetSession = useSessionStore((s) => s.reset);
+  const logEntries = useLogStore((s) => s.entries);
+  const clearLog = useLogStore((s) => s.clearLog);
 
   const [pushToken, setPushToken] = useState<string | null>(null);
 
@@ -43,6 +47,25 @@ export default function SettingsScreen() {
     }
     await Clipboard.setStringAsync(token);
     Alert.alert('Copied', 'Push token copied to clipboard.');
+  };
+
+  const copyLog = async () => {
+    if (logEntries.length === 0) {
+      Alert.alert('Log empty', 'No entries to copy.');
+      return;
+    }
+    const text = logEntries
+      .slice()
+      .reverse()
+      .map((e) => {
+        const d = new Date(e.ts);
+        const hms = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        const base = `[${hms}] ${e.level.toUpperCase().padEnd(5)} ${e.tag}: ${e.message}`;
+        return e.data ? `${base}\n  ${e.data.replace(/\n/g, '\n  ')}` : base;
+      })
+      .join('\n');
+    await Clipboard.setStringAsync(text);
+    Alert.alert('Copied', `${logEntries.length} log entries copied to clipboard.`);
   };
 
   const openDrawer = () => nav.dispatch(DrawerActions.openDrawer());
@@ -71,7 +94,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <Header title="settings" onMenu={openDrawer} />
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <Section title="servers">
@@ -234,6 +257,50 @@ export default function SettingsScreen() {
             </Text>
           </Row>
         </Section>
+
+        {/* ── Error / Debug Log ───────────────────────────────────────── */}
+        <View style={{ marginTop: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 }}>
+            <Text
+              style={{
+                flex: 1,
+                color: colors.muted,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.xs,
+                letterSpacing: 1,
+              }}
+            >
+              {`DEBUG LOG (${logEntries.length})`}
+            </Text>
+            <Pressable onPress={copyLog} hitSlop={8} style={{ marginRight: 12 }}>
+              <Text style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: fontSizes.xs }}>
+                copy all
+              </Text>
+            </Pressable>
+            <Pressable onPress={clearLog} hitSlop={8}>
+              <Text style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.xs }}>
+                clear
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={{ borderTopWidth: 1, borderColor: colors.border }}>
+            {logEntries.length === 0 ? (
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.xs,
+                  padding: 16,
+                }}
+              >
+                no log entries
+              </Text>
+            ) : (
+              logEntries.map((entry) => <LogRow key={entry.id} entry={entry} />)
+            )}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -340,5 +407,76 @@ function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+const LEVEL_COLOR: Record<string, string> = {
+  debug: '#6c7a89',
+  info: '#5b9bd5',
+  warn: '#e5a639',
+  error: '#e05252',
+};
+
+function LogRow({ entry }: { entry: LogEntry }) {
+  const d = new Date(entry.ts);
+  const hms = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  const levelColor = LEVEL_COLOR[entry.level] ?? colors.muted;
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderSubtle,
+      }}
+    >
+      {/* Header row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <Text style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: 10 }}>
+          {hms}
+        </Text>
+        <Text
+          style={{
+            color: levelColor,
+            fontFamily: fonts.mono,
+            fontSize: 10,
+            fontWeight: '700',
+          }}
+        >
+          {entry.level.toUpperCase()}
+        </Text>
+        <Text style={{ color: colors.mutedAlt ?? colors.muted, fontFamily: fonts.mono, fontSize: 10 }}>
+          {entry.tag}
+        </Text>
+      </View>
+      {/* Message */}
+      <Text
+        selectable
+        style={{
+          color: entry.level === 'error' ? levelColor : colors.foreground,
+          fontFamily: fonts.mono,
+          fontSize: fontSizes.xs,
+          marginTop: 2,
+        }}
+      >
+        {entry.message}
+      </Text>
+      {/* Extra data */}
+      {!!entry.data && (
+        <Text
+          selectable
+          style={{
+            color: colors.muted,
+            fontFamily: fonts.mono,
+            fontSize: 10,
+            marginTop: 4,
+          }}
+          numberOfLines={6}
+        >
+          {entry.data}
+        </Text>
+      )}
+    </View>
   );
 }

@@ -74,13 +74,14 @@ function authHeaders() {
   return { Authorization: `Basic ${b64}` };
 }
 
-async function send(title, body, data) {
+async function send(title, body, data, categoryId) {
   const messages = validTokens.map((to) => ({
     to,
     sound: 'default',
     title,
     body,
     data,
+    ...(categoryId ? { categoryId } : {}),
   }));
 
   const chunks = expo.chunkPushNotifications(messages);
@@ -118,7 +119,7 @@ function handleEvent(evt) {
     send(`${NAME}: error`, title, { sessionID });
   } else if (t === 'permission.requested') {
     const what = p.title || 'permission requested';
-    send(`${NAME}: permission`, `${title} — ${what}`, { sessionID, permissionID: p.id });
+    send(`${NAME}: permission`, `${title} — ${what}`, { sessionID, permissionID: p.id }, 'PILOT_PERMISSION');
   }
 }
 

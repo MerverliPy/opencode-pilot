@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import EventSource from 'react-native-sse';
 import { basicAuthHeader, ServerConfig } from './auth';
 import type { ServerEvent } from './types';
+import { log } from './logger';
 
 type Handler = (event: ServerEvent) => void;
 
@@ -29,6 +30,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
       });
 
       es.addEventListener('open', () => {
+        log.info('sse', `connected → ${server.name ?? server.url}`);
         backoff = 500;
       });
 
@@ -38,7 +40,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
           const parsed = JSON.parse(msg.data) as ServerEvent;
           handlerRef.current(parsed);
         } catch {
-          // ignore malformed events
+          log.warn('sse', 'malformed event (JSON parse failed)', msg.data);
         }
       });
 
@@ -47,6 +49,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
         es = null;
         if (stopped) return;
         backoff = Math.min(backoff * 2, 15_000);
+        log.warn('sse', `disconnected — reconnecting in ${backoff}ms`);
         setTimeout(connect, backoff);
       });
     };

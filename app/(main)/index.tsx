@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { TopBar } from '@/components/tui/TopBar';
 import { MessageStream } from '@/components/tui/MessageStream';
@@ -11,14 +11,24 @@ import { useServerStore } from '@/store/server';
 import { useSessionStore } from '@/store/session';
 import { useUIStore } from '@/store/ui';
 import { useEventStream } from '@/services/sse';
+import { OpencodeClient } from '@/services/api';
 import type { ServerEvent } from '@/services/types';
 import { loadLastSessionId, saveLastSessionId } from '@/services/auth';
+import { log } from '@/services/logger';
 import { colors } from '@/theme';
 
 export default function TuiHome() {
   const nav = useNavigation();
   const server = useServerStore((s) => s.active());
-  const client = useServerStore((s) => s.client());
+  // Stable client — only recreated when server config fields actually change.
+  // Do NOT use useServerStore(s => s.client()): that returns `new OpencodeClient`
+  // on every selector call, making the reference unstable and causing an infinite
+  // bootstrap loop (maximum update depth exceeded).
+  const client = useMemo(
+    () => (server ? new OpencodeClient(server) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [server?.id, server?.url, server?.username, server?.password],
+  );
 
   const session = useSessionStore((s) => s.session);
   const status = useSessionStore((s) => s.status);
@@ -48,7 +58,7 @@ export default function TuiHome() {
         const lastId = await loadLastSessionId(server.id);
         let sess = null;
         if (lastId) {
-          try { sess = await client.getSession(lastId); } catch { /* not found */ }
+          try { sess = await client.getSession(lastId); } catch { log.debug('bootstrap', `last session ${lastId} not found — skipping`); }
         }
         if (!sess) {
           const all = await client.listSessions();
@@ -74,20 +84,26 @@ export default function TuiHome() {
             if (firstProviderID && firstModelID) {
               setModel(firstProviderID, firstModelID);
             }
-          } catch { /* ignore */ }
+          } catch (e) { log.warn('bootstrap', 'configProviders failed', (e as Error).message); }
         }
 
         // Initial status.
         try {
           const all = await client.sessionStatus();
           setStatus(all[sess.id] ?? 'idle');
-        } catch { /* ignore */ }
+        } catch (e) { log.warn('bootstrap', 'sessionStatus failed', (e as Error).message); }
       } catch (e) {
-        Alert.alert('Failed to load session', (e as Error).message);
+        log.error('bootstrap', 'failed to load session', (e as Error).message);
+        // Only show an alert for API errors (server returned an error status).
+        // Bare fetch failures (network unavailable) are transient — SSE will
+        // reconnect and the next mount will retry bootstrap automatically.
+        if ((e as { status?: number }).status !== undefined) {
+          Alert.alert('Failed to load session', (e as Error).message);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [client, server?.id]);
+  }, [server?.id]); // client is memoized from server — no need to double-list it
 
   // ---- SSE event handler ----
   const onEvent = useCallback((e: ServerEvent) => {
@@ -120,7 +136,10 @@ export default function TuiHome() {
       }
       case 'session.error': {
         const p = e.properties as { sessionID: string };
-        if (sid && p.sessionID === sid) setStatus('error');
+        if (sid && p.sessionID === sid) {
+          log.error('sse', 'session.error received', { sessionID: p.sessionID });
+          setStatus('error');
+        }
         break;
       }
       case 'permission.requested': {
@@ -151,6 +170,7 @@ export default function TuiHome() {
         parts: [{ type: 'text', text }],
       });
     } catch (e) {
+      log.error('prompt', 'promptAsync failed', (e as Error).message);
       setStatus('error');
       Alert.alert('Send failed', (e as Error).message);
     }
@@ -162,7 +182,7 @@ export default function TuiHome() {
     try {
       await client.abortSession(session.id);
       setStatus('aborted');
-    } catch { /* ignore */ }
+    } catch (e) { log.warn('abort', 'abortSession failed', (e as Error).message); }
   };
 
   const onPermission = async (id: string, sessionID: string, response: 'always' | 'once' | 'reject') => {
@@ -171,6 +191,7 @@ export default function TuiHome() {
       await client.respondPermission(sessionID, id, { response, remember: response === 'always' });
       resolvePermission(id);
     } catch (e) {
+      log.error('permission', 'respondPermission failed', (e as Error).message);
       Alert.alert('Permission failed', (e as Error).message);
     }
   };
@@ -187,6 +208,7 @@ export default function TuiHome() {
   const title = session?.title ?? 'no session';
 
   const openDrawer = () => nav.dispatch(DrawerActions.openDrawer());
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -200,7 +222,7 @@ export default function TuiHome() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={0}
       >
         <View style={{ flex: 1 }}>
           <MessageStream turns={turns} permissions={permissions} onPermission={onPermission} />
@@ -220,6 +242,10 @@ export default function TuiHome() {
           onAgentPress={() => openModal({ kind: 'agent' })}
         />
       </KeyboardAvoidingView>
+      {/* Home-indicator spacer — lives outside KAV so keyboard height
+          (which already includes the home-indicator area on iOS) does not
+          double-count this padding when the keyboard is open. */}
+      <View style={{ height: insets.bottom, backgroundColor: colors.background }} />
     </SafeAreaView>
   );
 }

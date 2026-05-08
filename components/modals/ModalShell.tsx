@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, fontSizes } from '@/theme';
 
 type Props = {
@@ -21,7 +21,12 @@ export function ModalShell({ title, onClose, children, rightAction }: Props) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      {/* SafeAreaProvider must be re-declared inside Modal — React Native's
+          Modal renders in a separate native window so the root provider's
+          context does not propagate here. Without this the top inset is 0
+          and the header row is hidden under the notch / Dynamic Island. */}
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
         <View
           style={{
             flexDirection: 'row',
@@ -61,7 +66,8 @@ export function ModalShell({ title, onClose, children, rightAction }: Props) {
           ) : null}
         </View>
         <View style={{ flex: 1 }}>{children}</View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

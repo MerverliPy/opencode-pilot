@@ -1,4 +1,5 @@
 import { Drawer } from 'expo-router/drawer';
+import { View } from 'react-native';
 import { colors } from '@/theme';
 import { DrawerContent } from '@/components/drawer/DrawerContent';
 import { useUIStore } from '@/store/ui';
@@ -8,13 +9,14 @@ import { MentionModal } from '@/components/modals/MentionModal';
 import { ModelModal } from '@/components/modals/ModelModal';
 import { AgentModal } from '@/components/modals/AgentModal';
 import { FileViewModal } from '@/components/modals/FileViewModal';
+import { ErrorBadge } from '@/components/shared/ErrorBadge';
 
 export default function MainLayout() {
   const modal = useUIStore((s) => s.modal);
   const closeModal = useUIStore((s) => s.closeModal);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Drawer
         drawerContent={(props) => <DrawerContent {...props} />}
         screenOptions={{
@@ -25,7 +27,7 @@ export default function MainLayout() {
             width: '78%',
           },
           overlayColor: 'rgba(0,0,0,0.55)',
-          sceneContainerStyle: { backgroundColor: colors.background },
+          sceneStyle: { backgroundColor: colors.background },
           swipeEdgeWidth: 40,
         }}
       >
@@ -35,12 +37,14 @@ export default function MainLayout() {
         <Drawer.Screen name="settings" options={{ title: 'settings' }} />
       </Drawer>
 
+      <ErrorBadge />
+
       {modal?.kind === 'sessions' && <SessionsModal onClose={closeModal} />}
       {modal?.kind === 'slash' && <SlashModal onClose={closeModal} />}
       {modal?.kind === 'mention' && <MentionModal onClose={closeModal} />}
       {modal?.kind === 'model' && <ModelModal onClose={closeModal} />}
       {modal?.kind === 'agent' && <AgentModal onClose={closeModal} />}
       {modal?.kind === 'file-view' && <FileViewModal path={modal.path} onClose={closeModal} />}
-    </>
+    </View>
   );
 }

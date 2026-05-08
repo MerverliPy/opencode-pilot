@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,12 +12,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { colors, fonts, fontSizes } from '@/theme';
 import { useServerStore } from '@/store/server';
+import { OpencodeClient } from '@/services/api';
 import { useSessionStore } from '@/store/session';
 import type { FileDiff } from '@/services/types';
 
 export default function DiffScreen() {
   const nav = useNavigation();
-  const client = useServerStore((s) => s.client());
+  const server = useServerStore((s) => s.active());
+  const client = useMemo(
+    () => (server ? new OpencodeClient(server) : null),
+    [server?.id, server?.url, server?.username, server?.password],
+  );
   const session = useSessionStore((s) => s.session);
 
   const [diffs, setDiffs] = useState<FileDiff[]>([]);
@@ -48,7 +53,7 @@ export default function DiffScreen() {
 
   if (selected) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
         <Header
           title={selected.path.split('/').pop() ?? selected.path}
           subtitle={`+${selected.added} −${selected.removed}`}
@@ -64,7 +69,7 @@ export default function DiffScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <Header title="diff viewer" onMenu={openDrawer} subtitle={session?.title} />
       {loading && diffs.length === 0 ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />

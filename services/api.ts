@@ -1,4 +1,5 @@
 import { basicAuthHeader, ServerConfig } from './auth';
+import { log } from './logger';
 import type {
   Agent,
   Command,
@@ -50,6 +51,7 @@ export class OpencodeClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      log.error('api', `${method} ${path} → ${res.status}`, text || '(no body)');
       throw new ApiError(res.status, text);
     }
     if (res.status === 204) return undefined as T;

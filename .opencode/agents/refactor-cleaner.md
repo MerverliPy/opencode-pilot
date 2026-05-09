@@ -1,7 +1,7 @@
 ---
 description: Dead code cleanup and consolidation specialist. Use PROACTIVELY for removing unused code, duplicates, and refactoring. Runs analysis tools (knip, depcheck, ts-prune) to identify dead code and safely removes it.
 mode: subagent
-model: opencode/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

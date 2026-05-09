@@ -11,16 +11,17 @@ command: true
 Run the instinct CLI using the plugin root path:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" evolve [--generate]
+python3 "${OPENCODE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" evolve [--generate]
 ```
 
-Or if `CLAUDE_PLUGIN_ROOT` is not set (manual installation):
+Or if `OPENCODE_PLUGIN_ROOT` is not set (manual installation):
 
 ```bash
-python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py evolve [--generate]
+python3 ~/.opencode/skills/continuous-learning-v2/scripts/instinct-cli.py evolve [--generate]
 ```
 
 Analyzes instincts and clusters related ones into higher-level structures:
+
 - **Commands**: When instincts describe user-invoked actions
 - **Skills**: When instincts describe auto-triggered behaviors
 - **Agents**: When instincts describe complex, multi-step processes
@@ -37,12 +38,15 @@ Analyzes instincts and clusters related ones into higher-level structures:
 ## Evolution Rules
 
 ### → Command (User-Invoked)
+
 When instincts describe actions a user would explicitly request:
+
 - Multiple instincts about "when user asks to..."
 - Instincts with triggers like "when creating a new X"
 - Instincts that follow a repeatable sequence
 
 Example:
+
 - `new-table-step1`: "when adding a database table, create migration"
 - `new-table-step2`: "when adding a database table, update schema"
 - `new-table-step3`: "when adding a database table, regenerate types"
@@ -50,12 +54,15 @@ Example:
 → Creates: `/new-table` command
 
 ### → Skill (Auto-Triggered)
+
 When instincts describe behaviors that should happen automatically:
+
 - Pattern-matching triggers
 - Error handling responses
 - Code style enforcement
 
 Example:
+
 - `prefer-functional`: "when writing functions, prefer functional style"
 - `use-immutable`: "when modifying state, use immutable patterns"
 - `avoid-classes`: "when designing modules, avoid class-based design"
@@ -63,12 +70,15 @@ Example:
 → Creates: `functional-patterns` skill
 
 ### → Agent (Needs Depth/Isolation)
+
 When instincts describe complex, multi-step processes that benefit from isolation:
+
 - Debugging workflows
 - Refactoring sequences
 - Research tasks
 
 Example:
+
 - `debug-step1`: "when debugging, first check logs"
 - `debug-step2`: "when debugging, isolate the failing component"
 - `debug-step3`: "when debugging, create minimal reproduction"
@@ -78,7 +88,7 @@ Example:
 
 ## What to Do
 
-1. Read all instincts from `~/.claude/homunculus/instincts/`
+1. Read all instincts from `~/.opencode/homunculus/instincts/`
 2. Group instincts by:
    - Domain similarity
    - Trigger pattern overlap
@@ -86,7 +96,7 @@ Example:
 3. For each cluster of 3+ related instincts:
    - Determine evolution type (command/skill/agent)
    - Generate the appropriate file
-   - Save to `~/.claude/homunculus/evolved/{commands,skills,agents}/`
+   - Save to `~/.opencode/homunculus/evolved/{commands,skills,agents}/`
 4. Link evolved structure back to source instincts
 
 ## Output Format
@@ -104,7 +114,7 @@ Confidence: 85% (based on 12 observations)
 
 Would create: /new-table command
 Files:
-  - ~/.claude/homunculus/evolved/commands/new-table.md
+  - ~/.opencode/homunculus/evolved/commands/new-table.md
 
 ## Cluster 2: Functional Code Style
 Instincts: prefer-functional, use-immutable, avoid-classes, pure-functions
@@ -113,7 +123,7 @@ Confidence: 78% (based on 8 observations)
 
 Would create: functional-patterns skill
 Files:
-  - ~/.claude/homunculus/evolved/skills/functional-patterns.md
+  - ~/.opencode/homunculus/evolved/skills/functional-patterns.md
 
 ## Cluster 3: Debugging Process
 Instincts: debug-check-logs, debug-isolate, debug-reproduce, debug-verify
@@ -122,7 +132,7 @@ Confidence: 72% (based on 6 observations)
 
 Would create: debugger agent
 Files:
-  - ~/.claude/homunculus/evolved/agents/debugger.md
+  - ~/.opencode/homunculus/evolved/agents/debugger.md
 
 ---
 Run `/evolve --execute` to create these files.
@@ -139,6 +149,7 @@ Run `/evolve --execute` to create these files.
 ## Generated File Format
 
 ### Command
+
 ```markdown
 ---
 name: new-table
@@ -155,11 +166,13 @@ evolved_from:
 [Generated content based on clustered instincts]
 
 ## Steps
+
 1. ...
 2. ...
 ```
 
 ### Skill
+
 ```markdown
 ---
 name: functional-patterns
@@ -176,11 +189,12 @@ evolved_from:
 ```
 
 ### Agent
+
 ```markdown
 ---
 name: debugger
 description: Systematic debugging agent
-model: sonnet
+model: github-copilot/claude-sonnet-4
 evolved_from:
   - debug-check-logs
   - debug-isolate

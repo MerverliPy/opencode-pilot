@@ -1,7 +1,7 @@
 ---
 description: Test-Driven Development specialist enforcing write-tests-first methodology. Use PROACTIVELY when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage.
 mode: subagent
-model: opencode/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

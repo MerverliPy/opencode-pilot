@@ -12,10 +12,10 @@ When creating a checkpoint:
 
 1. Run `/verify quick` to ensure current state is clean
 2. Create a git stash or commit with checkpoint name
-3. Log checkpoint to `.claude/checkpoints.log`:
+3. Log checkpoint to `.opencode/checkpoints.log`:
 
 ```bash
-echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)" >> .claude/checkpoints.log
+echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)" >> .opencode/checkpoints.log
 ```
 
 4. Report checkpoint created

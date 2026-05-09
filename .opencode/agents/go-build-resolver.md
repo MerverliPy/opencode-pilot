@@ -1,7 +1,7 @@
 ---
 description: Go build, vet, and compilation error resolution specialist. Fixes build errors, go vet issues, and linter warnings with minimal changes. Use when Go builds fail.
 mode: subagent
-model: opencode/claude-haiku-4-5
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

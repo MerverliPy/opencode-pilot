@@ -21,7 +21,7 @@ Analyze your repository's git history to extract coding patterns and generate SK
 
 1. **Parses Git History** - Analyzes commits, file changes, and patterns
 2. **Detects Patterns** - Identifies recurring workflows and conventions
-3. **Generates SKILL.md** - Creates valid Claude Code skill files
+3. **Generates SKILL.md** - Creates valid OpenCode skill files
 4. **Optionally Creates Instincts** - For the continuous-learning-v2 system
 
 ## Analysis Steps
@@ -171,4 +171,4 @@ For advanced features (10k+ commits, team sharing, auto-PRs), use the [Skill Cre
 
 ---
 
-*Part of [Everything Claude Code](https://github.com/karma-works/everything-opencode)*
+*Part of [Everything OpenCode](https://github.com/karma-works/everything-opencode)*

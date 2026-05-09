@@ -11,7 +11,7 @@
 
 set -e
 
-CONFIG_DIR="${HOME}/.claude/homunculus"
+CONFIG_DIR="${HOME}/.opencode/homunculus"
 PID_FILE="${CONFIG_DIR}/.observer.pid"
 LOG_FILE="${CONFIG_DIR}/observer.log"
 OBSERVATIONS_FILE="${CONFIG_DIR}/observations.jsonl"
@@ -82,7 +82,7 @@ case "${1:-start}" in
 
         echo "[$(date)] Analyzing $obs_count observations..." >> "$LOG_FILE"
 
-        # Use Claude Code with Haiku to analyze observations
+        # Use OpenCode with Haiku to analyze observations
         # This spawns a quick analysis session
         if command -v claude &> /dev/null; then
           claude --model haiku --max-turns 3 --print \

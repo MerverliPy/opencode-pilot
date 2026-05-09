@@ -1,7 +1,7 @@
 ---
 description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
 mode: subagent
-model: opencode/claude-opus-4-7
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

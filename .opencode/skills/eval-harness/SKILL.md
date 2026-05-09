@@ -1,12 +1,12 @@
 ---
 name: eval-harness
-description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
+description: Formal evaluation framework for OpenCode sessions implementing eval-driven development (EDD) principles
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
 # Eval Harness Skill
 
-A formal evaluation framework for Claude Code sessions, implementing eval-driven development (EDD) principles.
+A formal evaluation framework for OpenCode sessions, implementing eval-driven development (EDD) principles.
 
 ## Philosophy
 
@@ -159,7 +159,7 @@ Status: READY FOR REVIEW
 ```
 /eval define feature-name
 ```
-Creates eval definition file at `.claude/evals/feature-name.md`
+Creates eval definition file at `.opencode/evals/feature-name.md`
 
 ### During Implementation
 ```
@@ -177,7 +177,7 @@ Generates full eval report
 
 Store evals in project:
 ```
-.claude/
+.opencode/
   evals/
     feature-xyz.md      # Eval definition
     feature-xyz.log     # Eval run history

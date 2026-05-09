@@ -1,7 +1,7 @@
 ---
 description: Expert Go code reviewer specializing in idiomatic Go, concurrency patterns, error handling, and performance. Use for all Go code changes. MUST BE USED for Go projects.
 mode: subagent
-model: opencode/claude-haiku-4-5
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

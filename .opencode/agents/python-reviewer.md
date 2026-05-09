@@ -1,7 +1,7 @@
 ---
 description: Expert Python code reviewer specializing in PEP 8 compliance, Pythonic idioms, type hints, security, and performance. Use for all Python code changes. MUST BE USED for Python projects.
 mode: subagent
-model: github-copilot/claude-haiku-4.5
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

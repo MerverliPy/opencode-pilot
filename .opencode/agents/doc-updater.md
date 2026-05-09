@@ -1,7 +1,7 @@
 ---
 description: Documentation and codemap specialist. Use PROACTIVELY for updating codemaps and documentation. Runs /update-codemaps and /update-docs, generates docs/CODEMAPS/*, updates READMEs and guides.
 mode: subagent
-model: opencode/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4
 temperature: 0.2
 tools:
   read: true

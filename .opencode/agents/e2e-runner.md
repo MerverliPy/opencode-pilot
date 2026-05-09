@@ -1,7 +1,7 @@
 ---
 description: End-to-end testing specialist using Vercel Agent Browser (preferred) with Playwright fallback. Use PROACTIVELY for generating, maintaining, and running E2E tests. Manages test journeys, quarantines flaky tests, uploads artifacts (screenshots, videos, traces), and ensures critical user flows work.
 mode: subagent
-model: github-copilot/claude-sonnet-4.6
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true
@@ -113,7 +113,7 @@ await browser.injectKeyboardEvent({
 await browser.startScreencast(); // Stream viewport frames
 ```
 
-### Agent Browser with Claude Code
+### Agent Browser with OpenCode
 
 If you have the `agent-browser` skill installed, use `/agent-browser` for interactive browser automation tasks.
 

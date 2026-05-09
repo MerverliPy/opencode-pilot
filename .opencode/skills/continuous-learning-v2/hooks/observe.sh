@@ -2,41 +2,41 @@
 # Continuous Learning v2 - Observation Hook
 #
 # Captures tool use events for pattern analysis.
-# Claude Code passes hook data via stdin as JSON.
+# OpenCode passes hook data via stdin as JSON.
 #
-# Hook config (in ~/.claude/settings.json):
+# Hook config (in ~/.opencode/settings.json):
 #
-# If installed as a plugin, use ${CLAUDE_PLUGIN_ROOT}:
+# If installed as a plugin, use ${OPENCODE_PLUGIN_ROOT}:
 # {
 #   "hooks": {
 #     "PreToolUse": [{
 #       "matcher": "*",
-#       "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh pre" }]
+#       "hooks": [{ "type": "command", "command": "${OPENCODE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh pre" }]
 #     }],
 #     "PostToolUse": [{
 #       "matcher": "*",
-#       "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh post" }]
+#       "hooks": [{ "type": "command", "command": "${OPENCODE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh post" }]
 #     }]
 #   }
 # }
 #
-# If installed manually to ~/.claude/skills:
+# If installed manually to ~/.opencode/skills:
 # {
 #   "hooks": {
 #     "PreToolUse": [{
 #       "matcher": "*",
-#       "hooks": [{ "type": "command", "command": "~/.claude/skills/continuous-learning-v2/hooks/observe.sh pre" }]
+#       "hooks": [{ "type": "command", "command": "~/.opencode/skills/continuous-learning-v2/hooks/observe.sh pre" }]
 #     }],
 #     "PostToolUse": [{
 #       "matcher": "*",
-#       "hooks": [{ "type": "command", "command": "~/.claude/skills/continuous-learning-v2/hooks/observe.sh post" }]
+#       "hooks": [{ "type": "command", "command": "~/.opencode/skills/continuous-learning-v2/hooks/observe.sh post" }]
 #     }]
 #   }
 # }
 
 set -e
 
-CONFIG_DIR="${HOME}/.claude/homunculus"
+CONFIG_DIR="${HOME}/.opencode/homunculus"
 OBSERVATIONS_FILE="${CONFIG_DIR}/observations.jsonl"
 MAX_FILE_SIZE_MB=10
 
@@ -48,7 +48,7 @@ if [ -f "$CONFIG_DIR/disabled" ]; then
   exit 0
 fi
 
-# Read JSON from stdin (Claude Code hook format)
+# Read JSON from stdin (OpenCode hook format)
 INPUT_JSON=$(cat)
 
 # Exit if no input
@@ -64,7 +64,7 @@ import sys
 try:
     data = json.loads('''$INPUT_JSON''')
 
-    # Extract fields - Claude Code hook format
+    # Extract fields - OpenCode hook format
     hook_type = data.get('hook_type', 'unknown')  # PreToolUse or PostToolUse
     tool_name = data.get('tool_name', data.get('tool', 'unknown'))
     tool_input = data.get('tool_input', data.get('input', {}))

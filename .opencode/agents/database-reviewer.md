@@ -1,7 +1,7 @@
 ---
 description: PostgreSQL database specialist for query optimization, schema design, security, and performance. Use PROACTIVELY when writing SQL, creating migrations, designing schemas, or troubleshooting database performance. Incorporates Supabase best practices.
 mode: subagent
-model: openrouter/anthropic/claude-sonnet-4.6
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

@@ -6,7 +6,7 @@ version: 2.0.0
 
 # Continuous Learning v2 - Instinct-Based Architecture
 
-An advanced learning system that turns your Claude Code sessions into reusable knowledge through atomic "instincts" - small learned behaviors with confidence scoring.
+An advanced learning system that turns your OpenCode sessions into reusable knowledge through atomic "instincts" - small learned behaviors with confidence scoring.
 
 ## What's New in v2
 
@@ -92,7 +92,7 @@ Session Activity
 
 ### 1. Enable Observation Hooks
 
-Add to your `~/.claude/settings.json`.
+Add to your `~/.opencode/settings.json`.
 
 **If installed as a plugin** (recommended):
 
@@ -103,21 +103,21 @@ Add to your `~/.claude/settings.json`.
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh pre"
+        "command": "${OPENCODE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh pre"
       }]
     }],
     "PostToolUse": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh post"
+        "command": "${OPENCODE_PLUGIN_ROOT}/skills/continuous-learning-v2/hooks/observe.sh post"
       }]
     }]
   }
 }
 ```
 
-**If installed manually** to `~/.claude/skills`:
+**If installed manually** to `~/.opencode/skills`:
 
 ```json
 {
@@ -126,14 +126,14 @@ Add to your `~/.claude/settings.json`.
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/skills/continuous-learning-v2/hooks/observe.sh pre"
+        "command": "~/.opencode/skills/continuous-learning-v2/hooks/observe.sh pre"
       }]
     }],
     "PostToolUse": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/skills/continuous-learning-v2/hooks/observe.sh post"
+        "command": "~/.opencode/skills/continuous-learning-v2/hooks/observe.sh post"
       }]
     }]
   }
@@ -145,8 +145,8 @@ Add to your `~/.claude/settings.json`.
 The Python CLI will create these automatically, but you can also create them manually:
 
 ```bash
-mkdir -p ~/.claude/homunculus/{instincts/{personal,inherited},evolved/{agents,skills,commands}}
-touch ~/.claude/homunculus/observations.jsonl
+mkdir -p ~/.opencode/homunculus/{instincts/{personal,inherited},evolved/{agents,skills,commands}}
+touch ~/.opencode/homunculus/observations.jsonl
 ```
 
 ### 3. Use the Instinct Commands
@@ -176,13 +176,13 @@ Edit `config.json`:
   "version": "2.0",
   "observation": {
     "enabled": true,
-    "store_path": "~/.claude/homunculus/observations.jsonl",
+    "store_path": "~/.opencode/homunculus/observations.jsonl",
     "max_file_size_mb": 10,
     "archive_after_days": 7
   },
   "instincts": {
-    "personal_path": "~/.claude/homunculus/instincts/personal/",
-    "inherited_path": "~/.claude/homunculus/instincts/inherited/",
+    "personal_path": "~/.opencode/homunculus/instincts/personal/",
+    "inherited_path": "~/.opencode/homunculus/instincts/inherited/",
     "min_confidence": 0.3,
     "auto_approve_threshold": 0.7,
     "confidence_decay_rate": 0.05
@@ -200,7 +200,7 @@ Edit `config.json`:
   },
   "evolution": {
     "cluster_threshold": 3,
-    "evolved_path": "~/.claude/homunculus/evolved/"
+    "evolved_path": "~/.opencode/homunculus/evolved/"
   }
 }
 ```
@@ -208,7 +208,7 @@ Edit `config.json`:
 ## File Structure
 
 ```
-~/.claude/homunculus/
+~/.opencode/homunculus/
 ├── identity.json           # Your profile, technical level
 ├── observations.jsonl      # Current session observations
 ├── observations.archive/   # Processed observations
@@ -262,7 +262,7 @@ Hooks fire **100% of the time**, deterministically. This means:
 ## Backward Compatibility
 
 v2 is fully compatible with v1:
-- Existing `~/.claude/skills/learned/` skills still work
+- Existing `~/.opencode/skills/learned/` skills still work
 - Stop hook still runs (but now also feeds into v2)
 - Gradual migration path: run both in parallel
 

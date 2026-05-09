@@ -1,7 +1,7 @@
 ---
 description: Build and TypeScript error resolution specialist. Use PROACTIVELY when build fails or type errors occur. Fixes build/type errors only with minimal diffs, no architectural edits. Focuses on getting the build green quickly.
 mode: subagent
-model: github-copilot/claude-haiku-4.5
+model: github-copilot/claude-sonnet-4
 temperature: 0.1
 tools:
   read: true

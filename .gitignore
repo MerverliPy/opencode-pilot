@@ -13,3 +13,4 @@ pilot-audit-*.html
 
 expo-env.d.ts
 # @end expo-cli
+services/.logger.ts.swp

@@ -44,11 +44,11 @@ A React Native iOS client that reskins the OpenCode TUI for iPhone, connecting t
 | Framework            | Expo SDK (React Native), TypeScript     |
 | Navigation           | Expo Router (file-based)                |
 | State                | Zustand                                 |
-| API client           | `opencode-ai` JS SDK                    |
+| API client           | Custom `fetch()` wrapper (`OpencodeClient`) |
 | SSE                  | `react-native-sse`                      |
-| Syntax highlighting  | `react-native-syntax-highlighter`       |
+| Syntax highlighting  | Custom lightweight tokenizer            |
 | Fonts                | JetBrains Mono via `expo-font`          |
-| Animations           | `react-native-reanimated` v3            |
+| Animations           | `react-native-reanimated` v4            |
 | Drawer               | `@react-navigation/drawer`              |
 | Secure storage       | `expo-secure-store`                     |
 | Notifications        | `expo-notifications` + custom relay     |
@@ -114,8 +114,8 @@ The drawer is a slide-over (~80% width), dims content, swipe-to-dismiss.
   - `/` → Slash Command Picker (uses `GET /command`)
   - `@` → File Mention Picker (uses `GET /find/file?query=`)
   - `⏎` → submit via `POST /session/:id/prompt_async`
-  - Model chip → Model Picker (uses `GET /config/providers`)
-  - Agent chip → Agent Picker (uses `GET /agent`); toggles build/plan
+  - Model chip → Model Picker modal (uses `GET /config/providers`)
+  - Agent chip → Agent Picker modal (uses `GET /agent`); toggles build/plan
 - **Real-time:** subscribe to `GET /event` SSE, dispatch updates into the Zustand session store.
 
 ## 7. Drawer Items
@@ -139,7 +139,7 @@ The drawer is a slide-over (~80% width), dims content, swipe-to-dismiss.
 
 - Servers: list configured servers (URL + optional basic auth), add/edit/delete, switch active.
 - Notifications: enable toggle + push token display + relay setup help.
-- Appearance: font size, theme (match server / dark / light).
+- Appearance: font size (theme switching planned).
 - Session: auto-resume last (default on), default agent.
 - About: version, links.
 
@@ -179,7 +179,7 @@ The SSE hook (`useEventStream`) writes directly into `useSessionStore` based on 
 
 ## 10. API Layer
 
-Thin wrapper around the official `opencode-ai` SDK with:
+Custom REST client built on plain `fetch()` with:
 
 - Base URL + basic auth header injection from active server config
 - Typed errors
@@ -223,14 +223,16 @@ pilot/
 │   │   ├── files.tsx
 │   │   ├── diff.tsx
 │   │   └── settings.tsx
-│   └── modals/
-│       ├── sessions.tsx
-│       ├── slash.tsx
-│       ├── mention.tsx
-│       ├── model.tsx
-│       ├── agent.tsx
-│       └── file-view.tsx
 ├── components/
+│   ├── modals/
+│   │   ├── SessionsModal.tsx
+│   │   ├── SlashModal.tsx
+│   │   ├── MentionModal.tsx
+│   │   ├── ModelModal.tsx
+│   │   ├── AgentModal.tsx
+│   │   ├── FileViewModal.tsx
+│   │   ├── WorkdirSheet.tsx
+│   │   └── ModalShell.tsx
 │   ├── tui/
 │   │   ├── TopBar.tsx
 │   │   ├── MessageStream.tsx
@@ -239,14 +241,14 @@ pilot/
 │   │   ├── CodeBlock.tsx
 │   │   ├── PermissionCard.tsx
 │   │   ├── PromptInput.tsx
-│   │   ├── PromptToolbar.tsx
 │   │   └── StatusBar.tsx
 │   ├── drawer/
-│   │   ├── DrawerContent.tsx
-│   │   └── DrawerItem.tsx
+│   │   └── DrawerContent.tsx
 │   └── shared/
-│       ├── Spinner.tsx            # braille-pattern, matches TUI
-│       └── Pill.tsx
+│       ├── ErrorBadge.tsx
+│       ├── ErrorBoundary.tsx
+│       ├── Pill.tsx
+│       └── Spinner.tsx
 ├── services/
 │   ├── api.ts
 │   ├── sse.ts
@@ -258,7 +260,7 @@ pilot/
 ├── theme/
 │   ├── colors.ts
 │   ├── fonts.ts
-│   └── syntax.ts
+│   └── index.ts
 ├── assets/
 │   └── fonts/JetBrainsMono-*.ttf
 ├── relay/
@@ -286,7 +288,7 @@ pilot/
 ## 14. Open Risks
 
 - **iOS background SSE:** confirmed unreliable; mitigated by relay + push.
-- **OpenCode SDK on RN:** the `opencode-ai` SDK targets Node; may need a thin re-export or use plain fetch with the OpenAPI types. To verify in phase 2.
+- **SDK decision:** Verified in phase 2 — the app uses a custom `fetch()` wrapper with hand-written types instead of the Node-targeted `opencode-ai` SDK.
 - **Token auth:** server only supports HTTP Basic Auth. We rely on TLS (recommend the user front the server with Caddy or run via Tailscale).
 - **No file write API:** file editing remains via chat only. Documented as a deliberate non-goal.
 

@@ -6,6 +6,8 @@ This file contains project-specific instructions and guidelines for OpenCode.
 
 This is a comprehensive collection of OpenCode configurations including agents, skills, commands, and rules. It provides production-ready tools for AI-assisted software development.
 
+This repository also contains **Pilot**, a native iOS client for OpenCode built with React Native / Expo.
+
 ## Quick Reference
 
 ### Available Agents
@@ -47,6 +49,13 @@ Use `/command-name` syntax:
 - `/update-docs` - Update documentation
 - `/setup-pm` - Configure package manager
 - `/orchestrate` - Orchestrate subagents
+- `/learn` - Extract reusable patterns from session
+- `/checkpoint` - Create checkpoint snapshot
+- `/evolve` - Evolve instincts into skills
+- `/instinct-export` - Export learned instincts
+- `/instinct-import` - Import instincts
+- `/instinct-status` - Check instinct status
+- `/skill-create` - Create new skill
 
 ### Available Skills
 
@@ -55,25 +64,55 @@ Skills are automatically loaded from `.opencode/skills/`:
 - `python-testing` - Pytest patterns and TDD
 - `python-patterns` - Python best practices
 - `golang-testing` - Go testing patterns
+- `golang-patterns` - Go best practices
 - `backend-patterns` - API and database patterns
+- `frontend-patterns` - React/Next.js patterns
 - `security-review` - Security checklist
-- `coding-standards` - Language best practices
+- `coding-standards` - TypeScript/JavaScript best practices
+- `java-coding-standards` - Java best practices
+- `springboot-patterns` - Spring Boot architecture
 - `springboot-security` - Spring Boot security
 - `springboot-tdd` - Spring Boot TDD
-- `django-patterns` - Django patterns
+- `springboot-verification` - Spring Boot verification loop
+- `jpa-patterns` - JPA/Hibernate patterns
+- `postgres-patterns` - PostgreSQL optimization
+- `django-patterns` - Django architecture
+- `django-security` - Django security
+- `django-tdd` - Django TDD
+- `django-verification` - Django verification loop
 - `clickhouse-io` - ClickHouse analytics
 - `eval-harness` - Verification loops
 - `strategic-compact` - Context compaction
+- `tdd-workflow` - Test-driven development workflow
+- `verification-loop` - Comprehensive verification system
+- `iterative-retrieval` - Progressive context retrieval
+- `continuous-learning` - Pattern extraction from sessions
+- `continuous-learning-v2` - Instinct-based learning system
+- `project-guidelines-example` - Project guidelines template
 
-## Core Principles
+### Available Rules
 
-1. **Security First**: Never hardcode secrets, always validate input
-2. **Test-Driven Development**: Write tests before code (Red-Green-Refactor)
-3. **Code Quality**: 80%+ coverage, immutability, small functions
-4. **Many Small Files**: 200-400 lines per file, high cohesion
-5. **Continuous Review**: Use @code-reviewer for all changes
+Rules in `.opencode/rules/`:
 
-## MCP Servers
+- `security.md` - Mandatory security checks
+- `coding-style.md` - Immutability, file organization, error handling
+- `testing.md` - 80%+ coverage, TDD workflow
+- `git-workflow.md` - Commit format, PR workflow
+- `agents.md` - Agent orchestration patterns
+- `performance.md` - Model selection, context management
+- `hooks.md` - PreToolUse, PostToolUse, Stop hooks
+- `patterns.md` - Common API response format, hooks, repository pattern
+
+### Available Plugins
+
+Plugins in `.opencode/plugins/`:
+
+- `session-manager.ts` - Session lifecycle tracking
+- `tool-guardrails.ts` - Tool execution guardrails
+- `code-quality.ts` - Write-time code quality enforcement
+- `strategic-compact.ts` - Context compaction suggestions
+
+### MCP Servers
 
 Configure MCP servers in `opencode.json`. Key servers available:
 
@@ -84,15 +123,29 @@ Configure MCP servers in `opencode.json`. Key servers available:
 
 **Warning**: Enable only 5-10 MCPs at a time to preserve context window.
 
-## Migration Notes
+## Pilot (iOS Client)
 
-This project was migrated from Claude Code to OpenCode. Key changes:
+This repo also contains **Pilot**, a React Native iOS app that connects to `opencode serve` over HTTP + SSE.
 
-- Agents now use OpenCode frontmatter format with `mode: subagent`
-- Tools specified as objects instead of arrays
-- Model names use provider/model format
-- MCP configuration uses `type: local` format
-- Skills remain backward compatible
+Key features:
+- Real-time message streaming via SSE
+- Session management with auto-resume
+- File browser with search
+- Diff viewer
+- Inline permission prompts
+- Push notifications via Node relay
+- Slash commands & @ mentions
+- Memory plugin with semantic extraction/injection
+
+See `README.md`, `DESIGN.md`, and `ROADMAP.md` for full Pilot documentation.
+
+## Core Principles
+
+1. **Security First**: Never hardcode secrets, always validate input
+2. **Test-Driven Development**: Write tests before code (Red-Green-Refactor)
+3. **Code Quality**: 80%+ coverage, immutability, small functions
+4. **Many Small Files**: 200-400 lines per file, high cohesion
+5. **Continuous Review**: Use @code-reviewer for all changes
 
 ## Customization
 
@@ -110,4 +163,4 @@ Add project-specific rules by:
 
 ---
 
-*Last Updated: 2026-02-02*
+*Last Updated: 2026-05-08*

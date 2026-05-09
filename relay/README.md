@@ -35,8 +35,7 @@ PILOT_RELAY_NAME=opencode
 Multiple devices? Comma-separate tokens, or set `PILOT_TOKENS_FILE` to a path
 with one token per line.
 
-You can find your push token in the iOS app: **Settings → about → push token**
-(once Phase 9 wiring is complete).
+You can find your push token in the iOS app: **Settings → about → push token**.
 
 ## Run
 

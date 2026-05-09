@@ -38,7 +38,7 @@ A native iOS client for [OpenCode](https://opencode.ai) — connects to `opencod
 | Navigation          | Expo Router (file-based)              |
 | State               | Zustand                               |
 | SSE                 | react-native-sse                      |
-| Syntax highlighting | react-native-syntax-highlighter       |
+| Syntax highlighting | Custom lightweight tokenizer          |
 | Fonts               | JetBrains Mono via expo-font          |
 | Animations          | react-native-reanimated v4            |
 | Drawer              | @react-navigation/drawer              |
@@ -90,9 +90,11 @@ pilot/
 │   ├── tui/                # TopBar, MessageStream, ToolCall, CodeBlock, etc.
 │   ├── drawer/             # DrawerContent, DrawerItem
 │   └── shared/             # Spinner, Pill
-├── services/               # api.ts, sse.ts, auth.ts
-├── store/                  # Zustand: server, session, ui
-├── theme/                  # colors.ts, fonts.ts, syntax.ts
+├── plugin/                 # Memory plugin: extraction, injection, UI
+│   └── memory/
+├── services/               # api.ts, sse.ts, auth.ts, logger.ts
+├── store/                  # Zustand: server, session, ui, log
+├── theme/                  # colors.ts, fonts.ts
 ├── relay/                  # Node SSE → Expo Push relay
 ├── app.json                # Expo config (bundle ID: ai.opencode.pilot)
 └── eas.json                # EAS Build config

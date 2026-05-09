@@ -1,6 +1,10 @@
 # Pilot Feature Roadmap
 
-A comprehensive roadmap for Pilot — the native iOS client for OpenCode. This document maps what is currently implemented, what is planned, and what is explicitly out of scope.
+**Project:** Pilot — Native iOS client for OpenCode
+**Last Updated:** 2026-05-09
+**Status:** Active Development
+
+> **Note:** This file was consolidated on **2026-05-09** by merging the original `ROADMAP.md` and `FEATURE-ROADMAP.md` into a single roadmap document. It combines detailed narrative feature documentation with structured phase-based tracking.
 
 ---
 
@@ -182,58 +186,126 @@ A comprehensive roadmap for Pilot — the native iOS client for OpenCode. This d
 
 ---
 
-## Planned Features (Not Yet Implemented)
+## Feature Roadmap by Phase
 
-### High Priority
+### Legend
 
-- [ ] **Light theme** — Full light palette variant (surface colors, syntax colors, status bar). Currently dark-only.
-- [ ] **Session title editing** — Inline rename or modal to edit session titles via `PATCH /session/:id`
-- [ ] **Memory timeline UI** — Screen or modal to view extraction/injection/dedup audit log
-- [ ] **Memory profile UI** — View and manage derived user profile facts from memories
-- [ ] **Session deep linking from push** — Open directly to the relevant session when tapping a notification
-- [ ] **Message retry / resend** — Retry failed prompts, cancel in-flight requests
-- [ ] **Offline indicator** — Show when SSE disconnects or server is unreachable
-- [ ] **Session sharing UI** — Copy share URL or open shared session
-- [ ] **Cost tracking display** — Show per-message and per-session cost in status bar or message metadata
+- `[ ]` — Not started
+- `[~]` — Partially implemented / stubbed
+- `[x]` — Complete
 
-### Medium Priority
+### Phase 2: High Priority Features
 
-- [ ] **Memory export / backup** — JSON export of all memories per server, with import/restore
-- [ ] **Memory bulk operations** — Multi-select memories for batch archive/delete
-- [ ] **Search memory by semantic similarity** — Embed search query and find relevant memories (currently only text search on content/tags)
-- [ ] **Memory confidence threshold UI** — Slider or picker to adjust extraction confidence filter (currently hardcoded 0.65)
-- [ ] **Image rendering** — Display images from `file` parts or image URLs in messages
-- [ ] **Markdown rendering** — Rich markdown support beyond fenced code blocks (headers, lists, links, tables)
-- [ ] **Message editing** — Edit sent user messages and re-run
-- [ ] **Message deletion** — Remove individual messages from a session
-- [ ] **Branching conversations** — Fork a session at a specific message to create a new thread
-- [ ] **Font family selection** — Toggle between JetBrains Mono, SF Mono, Fira Code, etc.
-- [ ] **Biometric auth** — Face ID / Touch ID to unlock app or protect server credentials
-- [ ] **Server URL QR code scanner** — Scan QR to add server instead of manual typing
-- [ ] **Session tags / folders** — Organize sessions with custom tags or folder groups
-- [ ] **Quick reply suggestions** — AI-generated follow-up prompts based on context
-- [ ] **Voice input** — Speech-to-text for prompt input
+Core user-facing features that significantly improve the experience.
 
-### Low Priority / Future Ideas
+| #    | Feature                                      | Status | Notes                                                                                                        |
+| ---- | -------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2.1  | Light theme support                          | `[ ]`  | Full light palette (surface, syntax, status bar). Currently dark-only. `syntax.ts` dead code may be related. |
+| 2.2  | Session title editing                        | `[~]`  | `Session.title` exists and is tappable, but no edit UI. Need `PATCH /session/:id` integration.               |
+| 2.3  | Memory timeline UI                           | `[~]`  | `memory_timeline` table + `TimelineRepository.ts` exist, but no screen to view extraction/injection history. |
+| 2.4  | Memory profile UI                            | `[~]`  | `user_profile` table + `ProfileRepository.ts` exist, but no UI to view/edit profile entries.                 |
+| 2.5  | Session deep linking from push notifications | `[~]`  | `sessionID` is in push payload, but `useNotificationDeepLink` only opens `/`. Need route param.              |
+| 2.6  | Message retry / resend                       | `[ ]`  | Retry failed prompts, cancel in-flight requests.                                                             |
+| 2.7  | Offline indicator                            | `[ ]`  | Show when SSE disconnects or server is unreachable.                                                          |
+| 2.8  | Session sharing UI                           | `[~]`  | `share.url` field exists in `Session` type but never rendered.                                               |
+| 2.9  | Cost tracking display                        | `[~]`  | `cost` field exists in `Message` type but never rendered in UI.                                              |
+| 2.10 | Message cost/reasoning token display         | `[~]`  | `tokens.reasoning` exists but not shown in status bar.                                                       |
 
-- [ ] **Android support** — Currently iOS-only (explicit non-goal, but could be expanded)
-- [ ] **iPad / tablet layout** — Optimized two-pane layout for larger screens
-- [ ] **Widget support** — iOS home screen widget showing last session status or quick prompt
-- [ ] **Apple Watch companion** — View session status, receive notifications, send quick prompts
-- [ ] **Siri Shortcuts integration** — "Ask OpenCode about..." voice commands
-- [ ] **Custom themes** — User-defined accent colors and background colors
-- [ ] **Session analytics** — Token usage charts, cost over time, model usage breakdown
-- [ ] **Memory visualization** — Graph view of memory relationships and clusters
-- [ ] **Collaborative sessions** — Share session with other Pilot users for pair programming
-- [ ] **Local model fallback** — Run small local LLM on-device when server is unreachable
-- [ ] **File upload** — Upload images/documents from device to server
-- [ ] **Haptic patterns** — Rich haptic feedback for different event types (success, warning, error)
-- [ ] **Accessibility audit** — VoiceOver labels, dynamic type support, color blindness modes
-- [ ] **Internationalization (i18n)** — Multi-language UI support
+### Phase 3: Medium Priority Features
+
+Quality-of-life improvements and power-user features.
+
+| #    | Feature                        | Status | Notes                                                                                        |
+| ---- | ------------------------------ | ------ | -------------------------------------------------------------------------------------------- |
+| 3.1  | Memory export / backup         | `[ ]`  | JSON export of all memories per server, with import/restore. Known limitation per MEMORY.md. |
+| 3.2  | Memory bulk operations         | `[ ]`  | Multi-select memories for batch archive/delete.                                              |
+| 3.3  | Semantic memory search         | `[ ]`  | Embed search query and find relevant memories. Currently only text search on content/tags.   |
+| 3.4  | Memory confidence threshold UI | `[ ]`  | Slider to adjust extraction confidence filter (currently hardcoded 0.65).                    |
+| 3.5  | Image rendering in messages    | `[ ]`  | Display images from `file` parts or image URLs.                                              |
+| 3.6  | Rich markdown rendering        | `[ ]`  | Headers, lists, links, tables beyond fenced code blocks.                                     |
+| 3.7  | Message editing                | `[ ]`  | Edit sent user messages and re-run.                                                          |
+| 3.8  | Message deletion               | `[ ]`  | Remove individual messages from a session.                                                   |
+| 3.9  | Branching conversations        | `[ ]`  | Fork a session at a specific message to create a new thread.                                 |
+| 3.10 | Font family selection          | `[ ]`  | Toggle between JetBrains Mono, SF Mono, Fira Code, etc.                                      |
+| 3.11 | Biometric auth                 | `[ ]`  | Face ID / Touch ID to unlock app or protect server credentials.                              |
+| 3.12 | Server URL QR code scanner     | `[ ]`  | Scan QR to add server instead of manual typing.                                              |
+| 3.13 | Session tags / folders         | `[ ]`  | Organize sessions with custom tags or folder groups.                                         |
+| 3.14 | Quick reply suggestions        | `[ ]`  | AI-generated follow-up prompts based on context.                                             |
+| 3.15 | Voice input                    | `[ ]`  | Speech-to-text for prompt input.                                                             |
+
+### Phase 4: Low Priority / Future Ideas
+
+Nice-to-have features for future releases.
+
+| #    | Feature                     | Status | Notes                                                             |
+| ---- | --------------------------- | ------ | ----------------------------------------------------------------- |
+| 4.1  | Android support             | `[ ]`  | Explicit non-goal, but `app.json` has `android` config. Untested. |
+| 4.2  | iPad / tablet layout        | `[ ]`  | Two-pane layout for larger screens.                               |
+| 4.3  | iOS home screen widget      | `[ ]`  | Show last session status or quick prompt.                         |
+| 4.4  | Apple Watch companion       | `[ ]`  | View status, receive notifications, send quick prompts.           |
+| 4.5  | Siri Shortcuts integration  | `[ ]`  | "Ask OpenCode about..." voice commands.                           |
+| 4.6  | Custom themes               | `[ ]`  | User-defined accent and background colors.                        |
+| 4.7  | Session analytics           | `[ ]`  | Token usage charts, cost over time, model usage breakdown.        |
+| 4.8  | Memory visualization        | `[ ]`  | Graph view of memory relationships and clusters.                  |
+| 4.9  | Collaborative sessions      | `[ ]`  | Share session with other Pilot users for pair programming.        |
+| 4.10 | Local model fallback        | `[ ]`  | Run small local LLM on-device when server is unreachable.         |
+| 4.11 | File upload                 | `[ ]`  | Upload images/documents from device to server.                    |
+| 4.12 | Rich haptic patterns        | `[ ]`  | Different haptic feedback for success, warning, error.            |
+| 4.13 | Accessibility audit         | `[ ]`  | VoiceOver labels, dynamic type support, color blindness modes.    |
+| 4.14 | Internationalization (i18n) | `[ ]`  | Multi-language UI support.                                        |
+
+### Phase 5: Technical Debt & Testing
+
+Infrastructure and quality improvements.
+
+| #   | Task                                                                                   | Status | Notes                                                                                                  |
+| --- | -------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| 5.1 | React Native unit tests                                                                | `[ ]`  | Zero tests for the mobile app. Only 2 plugin test files exist.                                         |
+| 5.2 | E2E tests for mobile app                                                               | `[ ]`  | `e2e-runner` agent exists but no actual Playwright tests for RN.                                       |
+| 5.3 | Type cleanup: remove unused `cost`, `share.url`, `tokens.reasoning` if not implemented | `[~]`  | Fields exist in types but no UI. Either implement or remove.                                           |
+| 5.4 | Remove empty `types/` directory at root                                                | `[ ]`  | Contains no files.                                                                                     |
+| 5.5 | Document `audit.sh` dev-server utility                                                 | `[ ]`  | No README mention of this script.                                                                      |
+| 5.6 | Plugin test coverage expansion                                                         | `[~]`  | Only `session-manager.test.ts` and `tool-guardrails.test.ts` exist.                                    |
+| 5.7 | Consolidate embedding provider registry                                                | `[~]`  | `embedding_providers` table exists in schema but providers are loaded from `ModelRegistry.ts` instead. |
+
+### Phase 6: Documentation Overhaul
+
+Comprehensive documentation updates to match the current codebase.
+
+| #   | Task                                                  | Status | Notes                                                       |
+| --- | ----------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| 6.1 | README: add `plugin/` to project structure            | `[ ]`  | Memory plugin is a major feature missing from README.       |
+| 6.2 | README: update tech stack table (remove false deps)   | `[ ]`  | Remove `react-native-syntax-highlighter`.                   |
+| 6.3 | AGENTS.md: add memory plugin section                  | `[ ]`  | Completely absent from project overview.                    |
+| 6.4 | AGENTS.md: refresh "Last Updated" and migration notes | `[ ]`  | Date is 2026-02-02; migration from Claude Code is complete. |
+| 6.5 | relay/README.md: remove "Phase 9" parenthetical       | `[ ]`  | Push notifications are complete.                            |
+| 6.6 | DESIGN.md: complete file structure overhaul           | `[ ]`  | Multiple paths and files are wrong.                         |
+| 6.7 | BENCH.md: correct `audit-report.mjs` usage docs       | `[ ]`  | `--out` behavior is misdocumented.                          |
 
 ---
 
 ## Recently Completed
+
+### Phase 1: Critical Fixes & Cleanup (2026-05-08)
+
+These items address bugs, dead code, and documentation inaccuracies identified in the 2026-05-08 audit.
+
+| #    | Task                                                                        | Status | Notes                                                                                                     |
+| ---- | --------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| 1.1  | Remove dead code: `theme/syntax.ts`                                         | `[x]`  | Deleted file and export from `theme/index.ts`                                                             |
+| 1.2  | Consolidate TUI noise fix scripts (`v2`, `v3`)                              | `[x]`  | All 3 versions deleted — were run-once repair scripts                                                     |
+| 1.3  | Fix README tech stack: remove `react-native-syntax-highlighter` claim       | `[x]`  | Updated to "Custom lightweight tokenizer"                                                                 |
+| 1.4  | Fix DESIGN.md tech stack: remove `opencode-ai JS SDK` claim                 | `[x]`  | Updated to "Custom `fetch()` wrapper"                                                                     |
+| 1.5  | Fix DESIGN.md reanimated version (v3 → v4)                                  | `[x]`  | Updated to v4                                                                                             |
+| 1.6  | Fix DESIGN.md file structure (modals path, remove non-existent files)       | `[x]`  | Corrected to `components/modals/`, removed `PromptToolbar.tsx`/`DrawerItem.tsx`, added missing components |
+| 1.7  | Fix or remove false ROADMAP claim about model standardization               | `[x]`  | Rephrased to note provider format variance                                                                |
+| 1.8  | Fix or remove false ROADMAP claim about "agent model tiering"               | `[x]`  | Rephrased to "agent model configuration"                                                                  |
+| 1.9  | Update AGENTS.md: add memory plugin, correct skill count (29), refresh date | `[x]`  | Full rewrite: all 29 skills, 24 commands, Pilot section, rules, plugins, MCP                              |
+| 1.10 | Archive old audit HTML reports                                              | `[~]`  | Already in `.gitignore`; files remain in repo root for now                                                |
+| 1.11 | Delete `.gitignore.bak` backup file                                         | `[x]`  | Deleted                                                                                                   |
+| 1.12 | Add `pilot-audit-*.html` to `.gitignore`                                    | `[x]`  | Already present in `.gitignore` line 8                                                                    |
+
+### Earlier Completions
 
 - **Per-session working directory support** (2026-05-08) — Added `workdir` state with directory picker, auto-persistence per session/server, and automatic prompt injection
 - **Memory plugin v1** (2026-05-08) — Full extraction/injection pipeline with 8 embedding providers, 37 models, SQLite storage, deduplication, and complete UI
@@ -269,3 +341,28 @@ A comprehensive roadmap for Pilot — the native iOS client for OpenCode. This d
 18. **Memory card no edit** — Memories cannot be edited after extraction (only pin/archive/delete).
 19. **No inline file creation** — Cannot create new files from the file browser (server has no write endpoint).
 20. **Push token refresh** — Token is fetched once at launch. If it changes, user must manually re-copy in settings.
+
+---
+
+## Milestones
+
+| Milestone  | Target     | Deliverables                                  |
+| ---------- | ---------- | --------------------------------------------- |
+| **v0.1.1** | 2026-05-15 | Phase 1 complete (all cleanup + doc fixes)    |
+| **v0.2.0** | 2026-06-01 | Phase 2 complete (high-priority features)     |
+| **v0.3.0** | 2026-07-01 | Phase 3 complete (medium-priority features)   |
+| **v0.4.0** | 2026-08-01 | Phase 5 complete (testing + tech debt)        |
+| **v1.0.0** | 2026-Q4    | Phase 4 features + polish + App Store release |
+
+---
+
+## How to Update This Roadmap
+
+1. When a feature is completed, change `[ ]` to `[x]` in the phase tables and add it to the **Recently Completed** section.
+2. When a feature is stubbed/partially done, use `[~]` in the phase tables and move details to the **Partially Implemented / Stubbed Features** narrative section.
+3. When new features are requested, add them to the appropriate phase.
+4. After each audit, update the **Last Updated** date and reconcile with `AUDIT-REPORT-*.md`.
+
+---
+
+_Generated from deep audit on 2026-05-08. See `AUDIT-REPORT-2026-05-08.md` for full findings._

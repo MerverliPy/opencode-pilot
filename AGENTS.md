@@ -8,6 +8,10 @@ This is a comprehensive collection of OpenCode configurations including agents, 
 
 This repository also contains **Pilot**, a native iOS client for OpenCode built with React Native / Expo.
 
+## Agent Workflow
+
+Before starting any work, read `TASKS.md` to see the active task and follow the instructions there. Execute tasks in order, then update `TASKS.md` after completion.
+
 ## Quick Reference
 
 ### Available Agents
@@ -149,7 +153,7 @@ Key features:
 - Slash commands & @ mentions
 - Memory plugin with semantic extraction/injection
 
-See `README.md`, `DESIGN.md`, and `ROADMAP.md` for full Pilot documentation.
+See `TASKS.md` for the active work agenda, and `README.md`, `DESIGN.md`, and `ROADMAP.md` for full Pilot documentation.
 
 ## Core Principles
 

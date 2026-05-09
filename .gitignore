@@ -3,6 +3,7 @@ node_modules/
 dist/
 web-build/
 *.log
+n9router-master/
 
 # Generated audit reports
 pilot-audit-*.html

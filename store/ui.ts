@@ -1,12 +1,13 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 type ModalKind =
-  | { kind: 'sessions' }
-  | { kind: 'slash' }
-  | { kind: 'mention' }
-  | { kind: 'model' }
-  | { kind: 'agent' }
-  | { kind: 'file-view'; path: string }
+  | { kind: "sessions" }
+  | { kind: "slash" }
+  | { kind: "mention" }
+  | { kind: "model" }
+  | { kind: "agent" }
+  | { kind: "file-view"; path: string }
+  | { kind: "workdir" }
   | null;
 
 type UIState = {

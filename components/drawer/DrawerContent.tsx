@@ -1,23 +1,23 @@
-import { DrawerContentComponentProps } from '@react-navigation/drawer';
-import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { colors, fonts, fontSizes } from '@/theme';
-import { useServerStore } from '@/store/server';
-import { useMemoryStore } from '@/plugin/memory/store/memoryStore';
+import { DrawerContentComponentProps } from "@react-navigation/drawer";
+import { Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { colors, fonts, fontSizes } from "@/theme";
+import { useServerStore } from "@/store/server";
+import { useMemoryStore } from "@/plugin/memory/store/memoryStore";
 
 type Item = {
   label: string;
   icon: string;
-  route: '/' | '/files' | '/diff' | '/settings' | '/memory';
+  route: "/" | "/files" | "/diff" | "/settings" | "/memory";
 };
 
 const ITEMS: Item[] = [
-  { label: 'opencode',     icon: '◆', route: '/' },
-  { label: 'file browser', icon: '▤', route: '/files' },
-  { label: 'diff viewer',  icon: '±', route: '/diff' },
-  { label: 'memory',       icon: '◉', route: '/memory' },
-  { label: 'settings',     icon: '⚙', route: '/settings' },
+  { label: "opencode", icon: "◆", route: "/" },
+  { label: "file browser", icon: "▤", route: "/files" },
+  { label: "diff viewer", icon: "±", route: "/diff" },
+  { label: "memory", icon: "◉", route: "/memory" },
+  { label: "settings", icon: "⚙", route: "/settings" },
 ];
 
 export function DrawerContent(props: DrawerContentComponentProps) {
@@ -37,7 +37,11 @@ export function DrawerContent(props: DrawerContentComponentProps) {
           borderBottomColor: colors.border,
         }}
       >
-        <Text style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: 22 }}>pilot</Text>
+        <Text
+          style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: 22 }}
+        >
+          pilot
+        </Text>
         <Text
           numberOfLines={1}
           style={{
@@ -47,33 +51,34 @@ export function DrawerContent(props: DrawerContentComponentProps) {
             marginTop: 4,
           }}
         >
-          {active ? `● ${active.name}` : '○ no server'}
+          {active ? `● ${active.name}` : "○ no server"}
         </Text>
       </View>
 
       <View style={{ paddingVertical: 8 }}>
         {ITEMS.map((it) => {
-          const isActive = props.state.routes[props.state.index]?.name === routeToName(it.route);
+          const isActive =
+            props.state.routes[props.state.index]?.name ===
+            routeToName(it.route);
           return (
             <Pressable
               key={it.route}
               onPress={() => {
                 props.navigation.closeDrawer();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 router.push(it.route as any);
               }}
               style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
+                flexDirection: "row",
+                alignItems: "center",
                 paddingHorizontal: 18,
                 paddingVertical: 12,
                 backgroundColor: pressed
                   ? colors.surfaceAlt
                   : isActive
-                  ? colors.surface
-                  : 'transparent',
+                    ? colors.surface
+                    : "transparent",
                 borderLeftWidth: 2,
-                borderLeftColor: isActive ? colors.accent : 'transparent',
+                borderLeftColor: isActive ? colors.accent : "transparent",
               })}
             >
               <Text
@@ -95,16 +100,18 @@ export function DrawerContent(props: DrawerContentComponentProps) {
               >
                 {it.label}
               </Text>
-              {it.route === '/memory' && memoryCount > 0 && (
+              {it.route === "/memory" && memoryCount > 0 && (
                 <View
                   style={{
                     marginLeft: 8,
-                    backgroundColor: isExtracting ? colors.accentDim : colors.surfaceAlt,
+                    backgroundColor: isExtracting
+                      ? colors.accentDim
+                      : colors.surfaceAlt,
                     borderRadius: 8,
                     paddingHorizontal: 6,
                     paddingVertical: 1,
                     minWidth: 20,
-                    alignItems: 'center',
+                    alignItems: "center",
                   }}
                 >
                   <Text
@@ -114,7 +121,7 @@ export function DrawerContent(props: DrawerContentComponentProps) {
                       fontSize: fontSizes.xs,
                     }}
                   >
-                    {isExtracting ? '…' : String(memoryCount)}
+                    {isExtracting ? "…" : String(memoryCount)}
                   </Text>
                 </View>
               )}
@@ -133,7 +140,13 @@ export function DrawerContent(props: DrawerContentComponentProps) {
           borderTopColor: colors.border,
         }}
       >
-        <Text style={{ color: colors.mutedAlt, fontFamily: fonts.mono, fontSize: fontSizes.xs }}>
+        <Text
+          style={{
+            color: colors.mutedAlt,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.xs,
+          }}
+        >
           v0.1.0 — pilot for opencode
         </Text>
       </View>
@@ -142,6 +155,6 @@ export function DrawerContent(props: DrawerContentComponentProps) {
 }
 
 function routeToName(route: string): string {
-  if (route === '/') return 'index';
-  return route.replace(/^\//, '');
+  if (route === "/") return "index";
+  return route.replace(/^\//, "");
 }

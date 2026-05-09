@@ -1,5 +1,11 @@
-import { create } from 'zustand';
-import type { Message, Part, PermissionRequest, Session, SessionStatus } from '@/services/types';
+import { create } from "zustand";
+import type {
+  Message,
+  Part,
+  PermissionRequest,
+  Session,
+  SessionStatus,
+} from "@/services/types";
 
 export type Turn = {
   message: Message;
@@ -14,12 +20,14 @@ type SessionState = {
   providerID: string | null;
   agent: string;
   permissions: PermissionRequest[];
+  workdir: string | null;
 
   setSession: (s: Session | null) => void;
   reset: () => void;
   setStatus: (s: SessionStatus) => void;
   setModel: (providerID: string | null, modelID: string | null) => void;
   setAgent: (agent: string) => void;
+  setWorkdir: (path: string | null) => void;
 
   /** Replace all turns from a fresh GET. */
   hydrateTurns: (turns: Turn[]) => void;
@@ -39,28 +47,31 @@ type SessionState = {
 
 export const useSessionStore = create<SessionState>((set) => ({
   session: null,
-  status: 'idle',
+  status: "idle",
   turns: [],
   modelID: null,
   providerID: null,
-  agent: 'build',
+  agent: "build",
   permissions: [],
+  workdir: null,
 
   setSession: (session) => set({ session }),
 
   reset: () =>
     set({
       session: null,
-      status: 'idle',
+      status: "idle",
       turns: [],
       modelID: null,
       providerID: null,
       permissions: [],
+      workdir: null,
     }),
 
   setStatus: (status) => set({ status }),
   setModel: (providerID, modelID) => set({ providerID, modelID }),
   setAgent: (agent) => set({ agent }),
+  setWorkdir: (workdir) => set({ workdir }),
 
   hydrateTurns: (turns) => set({ turns }),
 
@@ -83,7 +94,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         const placeholder: Message = {
           id: p.messageID,
           sessionID: p.sessionID,
-          role: 'assistant',
+          role: "assistant",
           time: { created: Date.now() },
         };
         return {
@@ -92,9 +103,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
       const turn = state.turns[idx];
       const partIdx = turn.parts.findIndex((x) => x.id === p.id);
-      const nextParts = partIdx >= 0
-        ? turn.parts.map((x, i) => (i === partIdx ? p : x))
-        : [...turn.parts, p];
+      const nextParts =
+        partIdx >= 0
+          ? turn.parts.map((x, i) => (i === partIdx ? p : x))
+          : [...turn.parts, p];
       const turns = state.turns.slice();
       turns[idx] = { ...turn, parts: nextParts };
       return { turns };
@@ -102,7 +114,9 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   removeMessage: (sessionID, messageID) =>
     set((state) => ({
-      turns: state.turns.filter((t) => t.message.id !== messageID || t.message.sessionID !== sessionID),
+      turns: state.turns.filter(
+        (t) => t.message.id !== messageID || t.message.sessionID !== sessionID,
+      ),
     })),
 
   removePart: (sessionID, messageID, partID) =>
@@ -116,9 +130,13 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   pushPermission: (p) =>
     set((state) => ({
-      permissions: state.permissions.some((x) => x.id === p.id) ? state.permissions : [...state.permissions, p],
+      permissions: state.permissions.some((x) => x.id === p.id)
+        ? state.permissions
+        : [...state.permissions, p],
     })),
 
   resolvePermission: (id) =>
-    set((state) => ({ permissions: state.permissions.filter((p) => p.id !== id) })),
+    set((state) => ({
+      permissions: state.permissions.filter((p) => p.id !== id),
+    })),
 }));

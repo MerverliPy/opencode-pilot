@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
-import { ModalShell } from './ModalShell';
-import { colors, fonts, fontSizes } from '@/theme';
-import { useServerStore } from '@/store/server';
-import { useSessionStore } from '@/store/session';
-import { saveLastSessionId } from '@/services/auth';
-import type { Session } from '@/services/types';
+import { useEffect, useState } from "react";
+import { Alert, FlatList, Pressable, Text, View } from "react-native";
+import { ModalShell } from "./ModalShell";
+import { colors, fonts, fontSizes } from "@/theme";
+import { useServerStore } from "@/store/server";
+import { useSessionStore } from "@/store/session";
+import { useUIStore } from "@/store/ui";
+import { saveLastSessionId } from "@/services/auth";
+import type { Session } from "@/services/types";
 
 type Props = { onClose: () => void };
 
@@ -16,6 +17,7 @@ export function SessionsModal({ onClose }: Props) {
   const setSession = useSessionStore((s) => s.setSession);
   const hydrateTurns = useSessionStore((s) => s.hydrateTurns);
   const reset = useSessionStore((s) => s.reset);
+  const openModal = useUIStore((s) => s.openModal);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export function SessionsModal({ onClose }: Props) {
       const list = await client.listSessions();
       setSessions(list.sort((a, b) => b.time.updated - a.time.updated));
     } catch (e) {
-      Alert.alert('Failed to load sessions', (e as Error).message);
+      Alert.alert("Failed to load sessions", (e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -48,30 +50,31 @@ export function SessionsModal({ onClose }: Props) {
       hydrateTurns(msgs.map((m) => ({ message: m.info, parts: m.parts })));
       onClose();
     } catch (e) {
-      Alert.alert('Failed to load session', (e as Error).message);
+      Alert.alert("Failed to load session", (e as Error).message);
     }
   };
 
   const onCreate = async () => {
     if (!client || !server) return;
     try {
-      const s = await client.createSession({ title: 'new session' });
+      const s = await client.createSession({ title: "new session" });
       reset();
       setSession(s);
       await saveLastSessionId(server.id, s.id);
       hydrateTurns([]);
       onClose();
+      openModal({ kind: "workdir" });
     } catch (e) {
-      Alert.alert('Failed to create session', (e as Error).message);
+      Alert.alert("Failed to create session", (e as Error).message);
     }
   };
 
   const onDelete = (s: Session) => {
-    Alert.alert('Delete session', `Delete "${s.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Delete session", `Delete "${s.title}"?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: async () => {
           if (!client) return;
           try {
@@ -81,7 +84,7 @@ export function SessionsModal({ onClose }: Props) {
               reset();
             }
           } catch (e) {
-            Alert.alert('Delete failed', (e as Error).message);
+            Alert.alert("Delete failed", (e as Error).message);
           }
         },
       },
@@ -89,7 +92,11 @@ export function SessionsModal({ onClose }: Props) {
   };
 
   return (
-    <ModalShell title="sessions" onClose={onClose} rightAction={{ label: '+ new', onPress: onCreate }}>
+    <ModalShell
+      title="sessions"
+      onClose={onClose}
+      rightAction={{ label: "+ new", onPress: onCreate }}
+    >
       <FlatList
         data={sessions}
         keyExtractor={(s) => s.id}
@@ -101,10 +108,10 @@ export function SessionsModal({ onClose }: Props) {
               fontFamily: fonts.mono,
               fontSize: fontSizes.sm,
               padding: 16,
-              textAlign: 'center',
+              textAlign: "center",
             }}
           >
-            {loading ? 'loading…' : 'no sessions'}
+            {loading ? "loading…" : "no sessions"}
           </Text>
         }
         renderItem={({ item }) => {
@@ -118,9 +125,9 @@ export function SessionsModal({ onClose }: Props) {
                 paddingVertical: 12,
                 borderBottomWidth: 1,
                 borderBottomColor: colors.borderSubtle,
-                backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
-                flexDirection: 'row',
-                alignItems: 'center',
+                backgroundColor: pressed ? colors.surfaceAlt : "transparent",
+                flexDirection: "row",
+                alignItems: "center",
                 gap: 8,
               })}
             >
@@ -132,7 +139,7 @@ export function SessionsModal({ onClose }: Props) {
                   width: 14,
                 }}
               >
-                {isCurrent ? '●' : '○'}
+                {isCurrent ? "●" : "○"}
               </Text>
               <View style={{ flex: 1 }}>
                 <Text
@@ -143,7 +150,7 @@ export function SessionsModal({ onClose }: Props) {
                   }}
                   numberOfLines={1}
                 >
-                  {item.title || '(untitled)'}
+                  {item.title || "(untitled)"}
                 </Text>
                 <Text
                   style={{
@@ -167,7 +174,7 @@ export function SessionsModal({ onClose }: Props) {
 function relTime(ms: number): string {
   const diff = Date.now() - ms;
   const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
+  if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;

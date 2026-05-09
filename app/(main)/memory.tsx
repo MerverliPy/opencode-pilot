@@ -2,7 +2,7 @@
  * Memory screen — browse, filter, pin, archive, and delete extracted memories.
  * Also exposes configuration toggles and the embedding model selector.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -12,65 +12,70 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
-import { colors, fonts, fontSizes } from '@/theme';
-import { useServerStore } from '@/store/server';
-import { useMemoryStore } from '@/plugin/memory/store/memoryStore';
-import { MemoryCard } from '@/plugin/memory/ui/components/MemoryCard';
-import { CategoryFilter, FilterCategory } from '@/plugin/memory/ui/components/CategoryFilter';
-import { EmptyState } from '@/plugin/memory/ui/components/EmptyState';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { colors, fonts, fontSizes } from "@/theme";
+import { useServerStore } from "@/store/server";
+import { useMemoryStore } from "@/plugin/memory/store/memoryStore";
+import { MemoryCard } from "@/plugin/memory/ui/components/MemoryCard";
+import {
+  CategoryFilter,
+  FilterCategory,
+} from "@/plugin/memory/ui/components/CategoryFilter";
+import { EmptyState } from "@/plugin/memory/ui/components/EmptyState";
 import {
   MODELS_BY_PROVIDER,
   PROVIDER_DISPLAY,
-} from '@/plugin/memory/embeddings/ModelRegistry';
-import type { EmbeddingProviderType } from '@/plugin/memory/embeddings/types';
+} from "@/plugin/memory/embeddings/ModelRegistry";
+import type { EmbeddingProviderType } from "@/plugin/memory/embeddings/types";
 import {
   getStoredApiKey,
   storeApiKey,
-} from '@/plugin/memory/embeddings/EmbeddingProviderFactory';
-import type { Memory } from '@/plugin/memory/db/schema';
+} from "@/plugin/memory/embeddings/EmbeddingProviderFactory";
+import type { Memory } from "@/plugin/memory/db/schema";
 
-type Tab = 'memories' | 'config';
+type Tab = "memories" | "config";
 
 export default function MemoryScreen() {
   const nav = useNavigation();
   const server = useServerStore((s) => s.active());
 
-  const memories       = useMemoryStore((s) => s.memories);
-  const memoryCount    = useMemoryStore((s) => s.memoryCount);
-  const config         = useMemoryStore((s) => s.config);
-  const isExtracting   = useMemoryStore((s) => s.isExtracting);
-  const saveConfig     = useMemoryStore((s) => s.saveConfig);
-  const deleteMemory   = useMemoryStore((s) => s.deleteMemory);
-  const pinMemory      = useMemoryStore((s) => s.pinMemory);
-  const archiveMemory  = useMemoryStore((s) => s.archiveMemory);
-  const loadForServer  = useMemoryStore((s) => s.loadForServer);
+  const memories = useMemoryStore((s) => s.memories);
+  const memoryCount = useMemoryStore((s) => s.memoryCount);
+  const config = useMemoryStore((s) => s.config);
+  const isExtracting = useMemoryStore((s) => s.isExtracting);
+  const saveConfig = useMemoryStore((s) => s.saveConfig);
+  const deleteMemory = useMemoryStore((s) => s.deleteMemory);
+  const pinMemory = useMemoryStore((s) => s.pinMemory);
+  const archiveMemory = useMemoryStore((s) => s.archiveMemory);
+  const loadForServer = useMemoryStore((s) => s.loadForServer);
   const refreshMemories = useMemoryStore((s) => s.refreshMemories);
 
-  const [tab, setTab] = useState<Tab>('memories');
-  const [filter, setFilter] = useState<FilterCategory>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [tab, setTab] = useState<Tab>("memories");
+  const [filter, setFilter] = useState<FilterCategory>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [apiKeyInput, setApiKeyInput] = useState("");
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
 
   // Load memories when screen mounts / server changes.
   useEffect(() => {
     if (server?.id) void loadForServer(server.id);
-  }, [server?.id]);
+  }, [server?.id, loadForServer]);
 
   // Pre-fill API key field from SecureStore when config is loaded.
   useEffect(() => {
     if (!config) return;
-    getStoredApiKey(config.embeddingProvider).then((k) => setApiKeyInput(k ?? ''));
-  }, [config?.embeddingProvider]);
+    getStoredApiKey(config.embeddingProvider).then((k) =>
+      setApiKeyInput(k ?? ""),
+    );
+  }, [config]);
 
   const openDrawer = () => nav.dispatch(DrawerActions.openDrawer());
 
   const filteredMemories = useMemo((): Memory[] => {
     let list = memories;
-    if (filter !== 'all') list = list.filter((m) => m.category === filter);
+    if (filter !== "all") list = list.filter((m) => m.category === filter);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -84,9 +89,13 @@ export default function MemoryScreen() {
 
   const handleDelete = useCallback(
     (id: string) => {
-      Alert.alert('Delete memory', 'This cannot be undone.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => void deleteMemory(id) },
+      Alert.alert("Delete memory", "This cannot be undone.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void deleteMemory(id),
+        },
       ]);
     },
     [deleteMemory],
@@ -95,7 +104,7 @@ export default function MemoryScreen() {
   const handleSaveApiKey = async () => {
     if (!config) return;
     await storeApiKey(config.embeddingProvider, apiKeyInput.trim());
-    Alert.alert('Saved', 'API key stored securely.');
+    Alert.alert("Saved", "API key stored securely.");
   };
 
   const handleToggleEnabled = async (v: boolean) => {
@@ -122,7 +131,7 @@ export default function MemoryScreen() {
       embeddingModel: firstModel?.id ?? config.embeddingModel,
     });
     const key = await getStoredApiKey(provider);
-    setApiKeyInput(key ?? '');
+    setApiKeyInput(key ?? "");
   };
 
   const handleSelectModel = async (modelId: string) => {
@@ -131,20 +140,35 @@ export default function MemoryScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      edges={["top", "bottom"]}
+    >
       {/* Header */}
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           height: 44,
           paddingHorizontal: 10,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         }}
       >
-        <Pressable onPress={openDrawer} hitSlop={12} style={{ width: 32, alignItems: 'center' }}>
-          <Text style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: 20 }}>☰</Text>
+        <Pressable
+          onPress={openDrawer}
+          hitSlop={12}
+          style={{ width: 32, alignItems: "center" }}
+        >
+          <Text
+            style={{
+              color: colors.foreground,
+              fontFamily: fonts.mono,
+              fontSize: 20,
+            }}
+          >
+            ☰
+          </Text>
         </Pressable>
         <Text
           style={{
@@ -152,14 +176,24 @@ export default function MemoryScreen() {
             color: colors.foreground,
             fontFamily: fonts.mono,
             fontSize: fontSizes.md,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           memory
         </Text>
-        <Pressable onPress={() => void refreshMemories()} hitSlop={12} style={{ width: 32, alignItems: 'center' }}>
-          <Text style={{ color: isExtracting ? colors.accent : colors.muted, fontFamily: fonts.mono, fontSize: 16 }}>
-            {isExtracting ? '⟳' : '↺'}
+        <Pressable
+          onPress={() => void refreshMemories()}
+          hitSlop={12}
+          style={{ width: 32, alignItems: "center" }}
+        >
+          <Text
+            style={{
+              color: isExtracting ? colors.accent : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: 16,
+            }}
+          >
+            {isExtracting ? "⟳" : "↺"}
           </Text>
         </Pressable>
       </View>
@@ -167,21 +201,21 @@ export default function MemoryScreen() {
       {/* Tab bar */}
       <View
         style={{
-          flexDirection: 'row',
+          flexDirection: "row",
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         }}
       >
-        {(['memories', 'config'] as Tab[]).map((t) => (
+        {(["memories", "config"] as Tab[]).map((t) => (
           <Pressable
             key={t}
             onPress={() => setTab(t)}
             style={{
               flex: 1,
               paddingVertical: 10,
-              alignItems: 'center',
+              alignItems: "center",
               borderBottomWidth: 2,
-              borderBottomColor: tab === t ? colors.accent : 'transparent',
+              borderBottomColor: tab === t ? colors.accent : "transparent",
             }}
           >
             <Text
@@ -191,13 +225,13 @@ export default function MemoryScreen() {
                 fontSize: fontSizes.sm,
               }}
             >
-              {t === 'memories' ? `memories (${memoryCount})` : 'config'}
+              {t === "memories" ? `memories (${memoryCount})` : "config"}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {tab === 'memories' ? (
+      {tab === "memories" ? (
         <>
           {/* Search bar */}
           <View
@@ -239,12 +273,18 @@ export default function MemoryScreen() {
                 backgroundColor: colors.surface,
                 borderBottomWidth: 1,
                 borderBottomColor: colors.border,
-                flexDirection: 'row',
-                alignItems: 'center',
+                flexDirection: "row",
+                alignItems: "center",
                 gap: 8,
               }}
             >
-              <Text style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: fontSizes.xs }}>
+              <Text
+                style={{
+                  color: colors.accent,
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.xs,
+                }}
+              >
                 ⟳ extracting memories…
               </Text>
             </View>
@@ -266,10 +306,10 @@ export default function MemoryScreen() {
               <EmptyState
                 message={
                   searchQuery
-                    ? 'no matching memories'
-                    : filter !== 'all'
-                    ? `no ${filter} memories`
-                    : undefined
+                    ? "no matching memories"
+                    : filter !== "all"
+                      ? `no ${filter} memories`
+                      : undefined
                 }
               />
             }
@@ -303,66 +343,85 @@ export default function MemoryScreen() {
 
           {/* Embedding provider */}
           <ConfigSection title="embedding provider">
-            {(Object.keys(PROVIDER_DISPLAY) as EmbeddingProviderType[]).map((p) => {
-              const isActive = config?.embeddingProvider === p;
-              return (
-                <Pressable
-                  key={p}
-                  onPress={() => void handleSelectProvider(p)}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.borderSubtle,
-                    backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
-                  })}
-                >
-                  <Text
-                    style={{
-                      color: isActive ? colors.accent : colors.mutedAlt,
-                      fontFamily: fonts.mono,
-                      fontSize: fontSizes.sm,
-                      width: 14,
-                    }}
+            {(Object.keys(PROVIDER_DISPLAY) as EmbeddingProviderType[]).map(
+              (p) => {
+                const isActive = config?.embeddingProvider === p;
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => void handleSelectProvider(p)}
+                    style={({ pressed }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.borderSubtle,
+                      backgroundColor: pressed
+                        ? colors.surfaceAlt
+                        : "transparent",
+                    })}
                   >
-                    {isActive ? '●' : '○'}
-                  </Text>
-                  <View style={{ flex: 1, marginLeft: 8 }}>
                     <Text
-                      style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: fontSizes.sm }}
+                      style={{
+                        color: isActive ? colors.accent : colors.mutedAlt,
+                        fontFamily: fonts.mono,
+                        fontSize: fontSizes.sm,
+                        width: 14,
+                      }}
                     >
-                      {PROVIDER_DISPLAY[p].label}
+                      {isActive ? "●" : "○"}
                     </Text>
-                    <Text
-                      style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.xs, marginTop: 2 }}
-                    >
-                      {PROVIDER_DISPLAY[p].note}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text
+                        style={{
+                          color: colors.foreground,
+                          fontFamily: fonts.mono,
+                          fontSize: fontSizes.sm,
+                        }}
+                      >
+                        {PROVIDER_DISPLAY[p].label}
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontFamily: fonts.mono,
+                          fontSize: fontSizes.xs,
+                          marginTop: 2,
+                        }}
+                      >
+                        {PROVIDER_DISPLAY[p].note}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              },
+            )}
           </ConfigSection>
 
           {/* Embedding model */}
           {config && (
             <ConfigSection title={`model — ${config.embeddingProvider}`}>
-              {(MODELS_BY_PROVIDER[config.embeddingProvider as EmbeddingProviderType] ?? []).map((m) => {
+              {(
+                MODELS_BY_PROVIDER[
+                  config.embeddingProvider as EmbeddingProviderType
+                ] ?? []
+              ).map((m) => {
                 const isActive = config.embeddingModel === m.id;
                 return (
                   <Pressable
                     key={m.id}
                     onPress={() => void handleSelectModel(m.id)}
                     style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'flex-start',
+                      flexDirection: "row",
+                      alignItems: "flex-start",
                       paddingHorizontal: 16,
                       paddingVertical: 12,
                       borderBottomWidth: 1,
                       borderBottomColor: colors.borderSubtle,
-                      backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                      backgroundColor: pressed
+                        ? colors.surfaceAlt
+                        : "transparent",
                     })}
                   >
                     <Text
@@ -374,11 +433,15 @@ export default function MemoryScreen() {
                         marginTop: 1,
                       }}
                     >
-                      {isActive ? '●' : '○'}
+                      {isActive ? "●" : "○"}
                     </Text>
                     <View style={{ flex: 1, marginLeft: 8 }}>
                       <Text
-                        style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: fontSizes.sm }}
+                        style={{
+                          color: colors.foreground,
+                          fontFamily: fonts.mono,
+                          fontSize: fontSizes.sm,
+                        }}
                         numberOfLines={1}
                       >
                         {m.displayName}
@@ -415,73 +478,95 @@ export default function MemoryScreen() {
           )}
 
           {/* API key (for providers that need one) */}
-          {config && config.embeddingProvider !== 'ollama' && config.embeddingProvider !== 'lmstudio' && (
-            <ConfigSection title="api key">
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  gap: 8,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <TextInput
-                    value={apiKeyInput}
-                    onChangeText={setApiKeyInput}
-                    placeholder={`${config.embeddingProvider} API key`}
-                    placeholderTextColor={colors.mutedAlt}
-                    secureTextEntry={!apiKeyVisible}
-                    autoCapitalize="none"
-                    autoCorrect={false}
+          {config &&
+            config.embeddingProvider !== "ollama" &&
+            config.embeddingProvider !== "lmstudio" && (
+              <ConfigSection title="api key">
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    gap: 8,
+                  }}
+                >
+                  <View
                     style={{
-                      flex: 1,
-                      color: colors.foreground,
-                      fontFamily: fonts.mono,
-                      fontSize: fontSizes.xs,
-                      height: 36,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 4,
-                      paddingHorizontal: 10,
-                      backgroundColor: colors.surface,
-                    }}
-                  />
-                  <Pressable
-                    onPress={() => setApiKeyVisible((v) => !v)}
-                    hitSlop={8}
-                    style={{
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 4,
-                      backgroundColor: colors.surface,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
                     }}
                   >
-                    <Text style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.xs }}>
-                      {apiKeyVisible ? 'hide' : 'show'}
+                    <TextInput
+                      value={apiKeyInput}
+                      onChangeText={setApiKeyInput}
+                      placeholder={`${config.embeddingProvider} API key`}
+                      placeholderTextColor={colors.mutedAlt}
+                      secureTextEntry={!apiKeyVisible}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      style={{
+                        flex: 1,
+                        color: colors.foreground,
+                        fontFamily: fonts.mono,
+                        fontSize: fontSizes.xs,
+                        height: 36,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 4,
+                        paddingHorizontal: 10,
+                        backgroundColor: colors.surface,
+                      }}
+                    />
+                    <Pressable
+                      onPress={() => setApiKeyVisible((v) => !v)}
+                      hitSlop={8}
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 4,
+                        backgroundColor: colors.surface,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontFamily: fonts.mono,
+                          fontSize: fontSizes.xs,
+                        }}
+                      >
+                        {apiKeyVisible ? "hide" : "show"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Pressable
+                    onPress={() => void handleSaveApiKey()}
+                    style={({ pressed }) => ({
+                      alignSelf: "flex-start",
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 4,
+                      backgroundColor: pressed
+                        ? colors.accentDim
+                        : colors.surface,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: colors.accent,
+                        fontFamily: fonts.mono,
+                        fontSize: fontSizes.sm,
+                      }}
+                    >
+                      save key
                     </Text>
                   </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => void handleSaveApiKey()}
-                  style={({ pressed }) => ({
-                    alignSelf: 'flex-start',
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 4,
-                    backgroundColor: pressed ? colors.accentDim : colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  })}
-                >
-                  <Text style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: fontSizes.sm }}>
-                    save key
-                  </Text>
-                </Pressable>
-              </View>
-            </ConfigSection>
-          )}
+              </ConfigSection>
+            )}
 
           {/* Danger zone */}
           <ConfigSection title="danger zone">
@@ -489,17 +574,16 @@ export default function MemoryScreen() {
               onPress={() => {
                 if (!server?.id) return;
                 Alert.alert(
-                  'Clear all memories',
+                  "Clear all memories",
                   `Delete all memories for "${server.name}"? This cannot be undone.`,
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: "Cancel", style: "cancel" },
                     {
-                      text: 'Clear all',
-                      style: 'destructive',
+                      text: "Clear all",
+                      style: "destructive",
                       onPress: async () => {
-                        const { deleteAllMemoriesByServer } = await import(
-                          '@/plugin/memory/db/MemoryRepository'
-                        );
+                        const { deleteAllMemoriesByServer } =
+                          await import("@/plugin/memory/db/MemoryRepository");
                         await deleteAllMemoriesByServer(server.id);
                         await loadForServer(server.id);
                       },
@@ -510,10 +594,16 @@ export default function MemoryScreen() {
               style={({ pressed }) => ({
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                backgroundColor: pressed ? colors.surfaceAlt : "transparent",
               })}
             >
-              <Text style={{ color: colors.error, fontFamily: fonts.mono, fontSize: fontSizes.sm }}>
+              <Text
+                style={{
+                  color: colors.error,
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.sm,
+                }}
+              >
                 clear all memories
               </Text>
             </Pressable>
@@ -526,7 +616,13 @@ export default function MemoryScreen() {
 
 // ── Local sub-components ───────────────────────────────────────────────────────
 
-function ConfigSection({ title, children }: { title: string; children: React.ReactNode }) {
+function ConfigSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={{ marginTop: 18 }}>
       <Text
@@ -541,7 +637,13 @@ function ConfigSection({ title, children }: { title: string; children: React.Rea
       >
         {title.toUpperCase()}
       </Text>
-      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border }}>
+      <View
+        style={{
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: colors.border,
+        }}
+      >
         {children}
       </View>
     </View>
@@ -562,8 +664,8 @@ function ConfigToggle({
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
@@ -571,11 +673,24 @@ function ConfigToggle({
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: fontSizes.sm }}>
+        <Text
+          style={{
+            color: colors.foreground,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.sm,
+          }}
+        >
           {label}
         </Text>
         {note && (
-          <Text style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.xs, marginTop: 2 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              marginTop: 2,
+            }}
+          >
             {note}
           </Text>
         )}

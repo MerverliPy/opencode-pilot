@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,20 +7,21 @@ import {
   ScrollView,
   Text,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
-import { colors, fonts, fontSizes } from '@/theme';
-import { useServerStore } from '@/store/server';
-import { OpencodeClient } from '@/services/api';
-import { useSessionStore } from '@/store/session';
-import type { FileDiff } from '@/services/types';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { colors, fonts, fontSizes } from "@/theme";
+import { useServerStore } from "@/store/server";
+import { OpencodeClient } from "@/services/api";
+import { useSessionStore } from "@/store/session";
+import type { FileDiff } from "@/services/types";
 
 export default function DiffScreen() {
   const nav = useNavigation();
   const server = useServerStore((s) => s.active());
   const client = useMemo(
     () => (server ? new OpencodeClient(server) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [server?.id, server?.url, server?.username, server?.password],
   );
   const session = useSessionStore((s) => s.session);
@@ -53,9 +54,12 @@ export default function DiffScreen() {
 
   if (selected) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        edges={["top", "bottom"]}
+      >
         <Header
-          title={selected.path.split('/').pop() ?? selected.path}
+          title={selected.path.split("/").pop() ?? selected.path}
           subtitle={`+${selected.added} −${selected.removed}`}
           onBack={() => setSelected(null)}
         />
@@ -69,8 +73,15 @@ export default function DiffScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <Header title="diff viewer" onMenu={openDrawer} subtitle={session?.title} />
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      edges={["top", "bottom"]}
+    >
+      <Header
+        title="diff viewer"
+        onMenu={openDrawer}
+        subtitle={session?.title}
+      />
       {loading && diffs.length === 0 ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
       ) : error ? (
@@ -89,7 +100,11 @@ export default function DiffScreen() {
           data={diffs}
           keyExtractor={(d) => d.path}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.accent} />
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={load}
+              tintColor={colors.accent}
+            />
           }
           ListEmptyComponent={
             <Text
@@ -97,7 +112,7 @@ export default function DiffScreen() {
                 color: colors.muted,
                 fontFamily: fonts.mono,
                 fontSize: fontSizes.sm,
-                textAlign: 'center',
+                textAlign: "center",
                 padding: 24,
               }}
             >
@@ -112,7 +127,7 @@ export default function DiffScreen() {
                 paddingVertical: 12,
                 borderBottomWidth: 1,
                 borderBottomColor: colors.borderSubtle,
-                backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+                backgroundColor: pressed ? colors.surfaceAlt : "transparent",
               })}
             >
               <Text
@@ -125,7 +140,7 @@ export default function DiffScreen() {
               >
                 {item.path}
               </Text>
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+              <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
                 <Text
                   style={{
                     color: colors.diffAddText,
@@ -167,8 +182,8 @@ function Header({
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         height: 44,
         paddingHorizontal: 10,
         backgroundColor: colors.background,
@@ -177,27 +192,57 @@ function Header({
       }}
     >
       {onMenu ? (
-        <Pressable onPress={onMenu} hitSlop={12} style={{ width: 32, alignItems: 'center' }}>
-          <Text style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: 20 }}>☰</Text>
+        <Pressable
+          onPress={onMenu}
+          hitSlop={12}
+          style={{ width: 32, alignItems: "center" }}
+        >
+          <Text
+            style={{
+              color: colors.foreground,
+              fontFamily: fonts.mono,
+              fontSize: 20,
+            }}
+          >
+            ☰
+          </Text>
         </Pressable>
       ) : null}
       {onBack ? (
-        <Pressable onPress={onBack} hitSlop={12} style={{ width: 32, alignItems: 'center' }}>
-          <Text style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: fontSizes.md }}>
+        <Pressable
+          onPress={onBack}
+          hitSlop={12}
+          style={{ width: 32, alignItems: "center" }}
+        >
+          <Text
+            style={{
+              color: colors.accent,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.md,
+            }}
+          >
             ‹
           </Text>
         </Pressable>
       ) : null}
-      <View style={{ flex: 1, alignItems: 'center' }}>
+      <View style={{ flex: 1, alignItems: "center" }}>
         <Text
-          style={{ color: colors.foreground, fontFamily: fonts.mono, fontSize: fontSizes.md }}
+          style={{
+            color: colors.foreground,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.md,
+          }}
           numberOfLines={1}
         >
           {title}
         </Text>
         {subtitle ? (
           <Text
-            style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: fontSizes.xs }}
+            style={{
+              color: colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+            }}
             numberOfLines={1}
           >
             {subtitle}
@@ -210,9 +255,9 @@ function Header({
 }
 
 function DiffBody({ diff }: { diff: string }) {
-  const lines = diff.split('\n');
+  const lines = diff.split("\n");
   return (
-    <View style={{ padding: 8, minWidth: '100%' }}>
+    <View style={{ padding: 8, minWidth: "100%" }}>
       {lines.map((line, i) => {
         const { color, bg } = colorForLine(line);
         return (
@@ -233,7 +278,7 @@ function DiffBody({ diff }: { diff: string }) {
                 lineHeight: fontSizes.xs * 1.5,
               }}
             >
-              {line || ' '}
+              {line || " "}
             </Text>
           </View>
         );
@@ -243,17 +288,17 @@ function DiffBody({ diff }: { diff: string }) {
 }
 
 function colorForLine(line: string): { color: string; bg: string } {
-  if (line.startsWith('+++') || line.startsWith('---')) {
-    return { color: colors.muted, bg: 'transparent' };
+  if (line.startsWith("+++") || line.startsWith("---")) {
+    return { color: colors.muted, bg: "transparent" };
   }
-  if (line.startsWith('@@')) {
+  if (line.startsWith("@@")) {
     return { color: colors.info, bg: colors.surfaceAlt };
   }
-  if (line.startsWith('+')) {
+  if (line.startsWith("+")) {
     return { color: colors.diffAddText, bg: colors.diffAdd };
   }
-  if (line.startsWith('-')) {
+  if (line.startsWith("-")) {
     return { color: colors.diffRemoveText, bg: colors.diffRemove };
   }
-  return { color: colors.foreground, bg: 'transparent' };
+  return { color: colors.foreground, bg: "transparent" };
 }

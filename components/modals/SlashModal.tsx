@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { ModalShell } from './ModalShell';
-import { colors, fonts, fontSizes } from '@/theme';
-import { useServerStore } from '@/store/server';
-import { useSessionStore } from '@/store/session';
-import type { Command } from '@/services/types';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { ModalShell } from "./ModalShell";
+import { colors, fonts, fontSizes } from "@/theme";
+import { useServerStore } from "@/store/server";
+import { useSessionStore } from "@/store/session";
+import type { Command } from "@/services/types";
 
 type Props = {
   onClose: () => void;
@@ -21,8 +28,8 @@ export function SlashModal({ onClose }: Props) {
   const providerID = useSessionStore((s) => s.providerID);
 
   const [commands, setCommands] = useState<Command[]>([]);
-  const [filter, setFilter] = useState('');
-  const [args, setArgs] = useState('');
+  const [filter, setFilter] = useState("");
+  const [args, setArgs] = useState("");
   const [selected, setSelected] = useState<Command | null>(null);
 
   useEffect(() => {
@@ -41,7 +48,9 @@ export function SlashModal({ onClose }: Props) {
     const f = filter.trim().toLowerCase();
     if (!f) return commands;
     return commands.filter(
-      (c) => c.name.toLowerCase().includes(f) || (c.description ?? '').toLowerCase().includes(f),
+      (c) =>
+        c.name.toLowerCase().includes(f) ||
+        (c.description ?? "").toLowerCase().includes(f),
     );
   }, [commands, filter]);
 
@@ -52,11 +61,11 @@ export function SlashModal({ onClose }: Props) {
         command: cmd.name,
         arguments: withArgs || undefined,
         agent,
-        model: modelID && providerID ? { providerID, modelID } : undefined,
+        model: modelID && providerID ? `${providerID}/${modelID}` : undefined,
       });
       onClose();
     } catch (e) {
-      Alert.alert('Command failed', (e as Error).message);
+      Alert.alert("Command failed", (e as Error).message);
     }
   };
 
@@ -66,7 +75,7 @@ export function SlashModal({ onClose }: Props) {
         title={`/${selected.name}`}
         onClose={() => setSelected(null)}
         rightAction={{
-          label: 'run',
+          label: "run",
           onPress: () => run(selected, args),
         }}
       >
@@ -139,7 +148,7 @@ export function SlashModal({ onClose }: Props) {
               fontFamily: fonts.mono,
               fontSize: fontSizes.sm,
               padding: 16,
-              textAlign: 'center',
+              textAlign: "center",
             }}
           >
             no commands
@@ -148,7 +157,7 @@ export function SlashModal({ onClose }: Props) {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => {
-              setArgs('');
+              setArgs("");
               setSelected(item);
             }}
             style={({ pressed }) => ({
@@ -156,11 +165,15 @@ export function SlashModal({ onClose }: Props) {
               paddingVertical: 10,
               borderBottomWidth: 1,
               borderBottomColor: colors.borderSubtle,
-              backgroundColor: pressed ? colors.surfaceAlt : 'transparent',
+              backgroundColor: pressed ? colors.surfaceAlt : "transparent",
             })}
           >
             <Text
-              style={{ color: colors.accent, fontFamily: fonts.mono, fontSize: fontSizes.sm }}
+              style={{
+                color: colors.accent,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.sm,
+              }}
             >
               /{item.name}
             </Text>

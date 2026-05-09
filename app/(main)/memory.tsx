@@ -522,10 +522,31 @@ export default function MemoryScreen() {
             </ConfigSection>
           )}
 
+          {/* n9router: no API key needed here — uses n9router settings config */}
+          {config && config.embeddingProvider === "n9router" && (
+            <ConfigSection title="api key">
+              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontFamily: fonts.mono,
+                    fontSize: fontSizes.xs,
+                    lineHeight: 18,
+                  }}
+                >
+                  {
+                    "n9router uses the URL and API key configured in Settings → n9router. No separate key needed here."
+                  }
+                </Text>
+              </View>
+            </ConfigSection>
+          )}
+
           {/* API key (for providers that need one) */}
           {config &&
             config.embeddingProvider !== "ollama" &&
-            config.embeddingProvider !== "lmstudio" && (
+            config.embeddingProvider !== "lmstudio" &&
+            config.embeddingProvider !== "n9router" && (
               <ConfigSection title="api key">
                 <View
                   style={{

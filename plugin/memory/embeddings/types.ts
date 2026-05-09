@@ -1,6 +1,6 @@
 /** Shared types for all embedding providers. */
 
-export type EmbeddingTaskType = 'query' | 'document';
+export type EmbeddingTaskType = "query" | "document";
 
 export interface EmbeddingProvider {
   /** Embed one or more texts. Returns parallel array of float vectors. */
@@ -10,14 +10,15 @@ export interface EmbeddingProvider {
 }
 
 export type EmbeddingProviderType =
-  | 'openai'
-  | 'voyage'
-  | 'jina'
-  | 'mistral'
-  | 'openrouter'
-  | 'cohere'
-  | 'ollama'
-  | 'lmstudio';
+  | "openai"
+  | "voyage"
+  | "jina"
+  | "mistral"
+  | "openrouter"
+  | "cohere"
+  | "ollama"
+  | "lmstudio"
+  | "n9router";
 
 export type EmbeddingModel = {
   /** Stable ID used in DB and config */
@@ -39,7 +40,7 @@ export type EmbeddingModel = {
   /** Supports task-type hints (retrieval.query vs retrieval.passage) */
   supportsTaskType: boolean;
   /** Best use-case tag for UI display */
-  bestFor?: 'code' | 'multilingual' | 'speed' | 'quality' | 'free';
+  bestFor?: "code" | "multilingual" | "speed" | "quality" | "free";
   /** Short note shown in picker */
   note?: string;
 };

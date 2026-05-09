@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import {
@@ -61,6 +62,7 @@ export default function TuiHome() {
   const resolvePermission = useSessionStore((s) => s.resolvePermission);
 
   const openModal = useUIStore((s) => s.openModal);
+  const openTitleEdit = useUIStore((s) => s.openTitleEdit);
 
   // Track if the current session was just created so we can prompt for workdir.
   const newlyCreatedRef = useRef(false);
@@ -85,27 +87,47 @@ export default function TuiHome() {
     serverUrl: server?.url,
   });
   // ---- Initial bootstrap: pick / create a session ----
+  const { sessionId: deepLinkSessionId } = useLocalSearchParams<{
+    sessionId?: string;
+  }>();
+
   useEffect(() => {
     if (!client || !server) return;
     let cancelled = false;
     (async () => {
       try {
-        const lastId = await loadLastSessionId(server.id);
         let sess = null;
-        if (lastId) {
+        // Priority 1: session from deep-link push notification.
+        if (deepLinkSessionId) {
           try {
-            sess = await client.getSession(lastId);
+            sess = await client.getSession(deepLinkSessionId);
           } catch {
             log.debug(
               "bootstrap",
-              `last session ${lastId} not found — skipping`,
+              `deep-link session ${deepLinkSessionId} not found — falling back`,
             );
           }
         }
+        // Priority 2: last used session.
+        if (!sess) {
+          const lastId = await loadLastSessionId(server.id);
+          if (lastId) {
+            try {
+              sess = await client.getSession(lastId);
+            } catch {
+              log.debug(
+                "bootstrap",
+                `last session ${lastId} not found — skipping`,
+              );
+            }
+          }
+        }
+        // Priority 3: most recently updated session.
         if (!sess) {
           const all = await client.listSessions();
           sess = all.sort((a, b) => b.time.updated - a.time.updated)[0] ?? null;
         }
+        // Priority 4: create a new session.
         if (!sess) {
           sess = await client.createSession({ title: "new session" });
           newlyCreatedRef.current = true;
@@ -170,7 +192,7 @@ export default function TuiHome() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [server?.id]); // client is memoized from server — no need to double-list it
+  }, [server?.id, deepLinkSessionId]); // client is memoized from server — no need to double-list it
 
   // Load persisted workdir whenever the active session changes.
   useEffect(() => {
@@ -326,9 +348,23 @@ export default function TuiHome() {
   const tokens = useMemo(() => {
     return turns.reduce(
       (sum, t) =>
-        sum + (t.message.tokens?.input ?? 0) + (t.message.tokens?.output ?? 0),
+        sum +
+        (t.message.tokens?.input ?? 0) +
+        (t.message.tokens?.output ?? 0) +
+        (t.message.tokens?.reasoning ?? 0),
       0,
     );
+  }, [turns]);
+
+  const reasoningTokens = useMemo(() => {
+    return turns.reduce(
+      (sum, t) => sum + (t.message.tokens?.reasoning ?? 0),
+      0,
+    );
+  }, [turns]);
+
+  const totalCost = useMemo(() => {
+    return turns.reduce((sum, t) => sum + (t.message.cost ?? 0), 0);
   }, [turns]);
 
   const title = session?.title ?? "no session";
@@ -346,8 +382,10 @@ export default function TuiHome() {
         title={title}
         repoName={repoNameLabel}
         status={status}
+        shareUrl={session?.share?.url}
         onMenu={openDrawer}
         onTitlePress={() => openModal({ kind: "sessions" })}
+        onTitleEdit={openTitleEdit}
         onRepoPress={() => openModal({ kind: "workdir" })}
         onAbort={onAbort}
       />
@@ -374,6 +412,8 @@ export default function TuiHome() {
           modelLabel={modelLabel}
           agent={agent}
           tokens={tokens || undefined}
+          reasoningTokens={reasoningTokens || undefined}
+          cost={totalCost || undefined}
           onModelPress={() => openModal({ kind: "model" })}
           onAgentPress={() => openModal({ kind: "agent" })}
         />

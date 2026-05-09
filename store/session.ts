@@ -23,6 +23,7 @@ type SessionState = {
   workdir: string | null;
 
   setSession: (s: Session | null) => void;
+  updateTitle: (title: string) => void;
   reset: () => void;
   setStatus: (s: SessionStatus) => void;
   setModel: (providerID: string | null, modelID: string | null) => void;
@@ -56,6 +57,12 @@ export const useSessionStore = create<SessionState>((set) => ({
   workdir: null,
 
   setSession: (session) => set({ session }),
+
+  updateTitle: (title) =>
+    set((state) => {
+      if (!state.session) return {};
+      return { session: { ...state.session, title } };
+    }),
 
   reset: () =>
     set({

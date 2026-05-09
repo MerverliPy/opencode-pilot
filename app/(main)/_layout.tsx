@@ -14,6 +14,7 @@ import { AgentModal } from "@/components/modals/AgentModal";
 import { FileViewModal } from "@/components/modals/FileViewModal";
 import { WorkdirSheet } from "@/components/modals/WorkdirSheet";
 import { ErrorBadge } from "@/components/shared/ErrorBadge";
+import { TitleEditModal } from "@/components/modals/TitleEditModal";
 
 export default function MainLayout() {
   const modal = useUIStore((s) => s.modal);
@@ -69,6 +70,7 @@ export default function MainLayout() {
           }}
         />
       )}
+      {modal?.kind === "title-edit" && <TitleEditModal onClose={closeModal} />}
     </View>
   );
 }

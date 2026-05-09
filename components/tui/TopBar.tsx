@@ -1,3 +1,4 @@
+import * as Linking from "expo-linking";
 import { Pressable, Text, View } from "react-native";
 import { colors, fonts, fontSizes } from "@/theme";
 import { Spinner } from "@/components/shared/Spinner";
@@ -7,8 +8,10 @@ type Props = {
   title: string;
   repoName?: string | null;
   status: SessionStatus;
+  shareUrl?: string | null;
   onMenu: () => void;
   onTitlePress: () => void;
+  onTitleEdit?: () => void;
   onRepoPress?: () => void;
   onAbort: () => void;
 };
@@ -21,8 +24,10 @@ export function TopBar({
   title,
   repoName,
   status,
+  shareUrl,
   onMenu,
   onTitlePress,
+  onTitleEdit,
   onRepoPress,
   onAbort,
 }: Props) {
@@ -63,17 +68,32 @@ export function TopBar({
         onPress={onTitlePress}
         style={{ flex: 1, paddingHorizontal: 8, alignItems: "center" }}
       >
-        <Text
-          numberOfLines={1}
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.md,
-            textAlign: "center",
-          }}
-        >
-          {title}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              color: colors.foreground,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.md,
+              textAlign: "center",
+            }}
+          >
+            {title}
+          </Text>
+          {onTitleEdit && (
+            <Pressable onPress={onTitleEdit} hitSlop={6}>
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.sm,
+                }}
+              >
+                ✎
+              </Text>
+            </Pressable>
+          )}
+        </View>
         <Pressable onPress={onRepoPress} hitSlop={4}>
           <Text
             numberOfLines={1}
@@ -88,6 +108,27 @@ export function TopBar({
             {repoName ? `📁 ${repoName}` : "📁 set directory"}
           </Text>
         </Pressable>
+      </Pressable>
+
+      <Pressable
+        onPress={shareUrl ? () => Linking.openURL(shareUrl) : undefined}
+        hitSlop={12}
+        style={{
+          width: 32,
+          height: 32,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: shareUrl ? colors.accent : colors.mutedAlt,
+            fontFamily: fonts.mono,
+            fontSize: 16,
+          }}
+        >
+          ⧉
+        </Text>
       </Pressable>
 
       <Pressable

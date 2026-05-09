@@ -1,22 +1,22 @@
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
-import { savePushToken } from './auth';
-import { OpencodeClient } from './api';
-import { useServerStore } from '@/store/server';
-import { log } from './logger';
+import { useEffect } from "react";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { useRouter } from "expo-router";
+import { savePushToken } from "./auth";
+import { OpencodeClient } from "./api";
+import { useServerStore } from "@/store/server";
+import { log } from "./logger";
 
 /** Identifier for the permission-request notification category. */
-const PERMISSION_CATEGORY = 'PILOT_PERMISSION';
+const PERMISSION_CATEGORY = "PILOT_PERMISSION";
 
 /** Action identifier for "allow once". */
-const ACTION_ALLOW_ONCE = 'ALLOW_ONCE';
+const ACTION_ALLOW_ONCE = "ALLOW_ONCE";
 
 /** Action identifier for "deny". */
-const ACTION_DENY = 'DENY';
+const ACTION_DENY = "DENY";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -37,15 +37,15 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   const { status: existing } = await Notifications.getPermissionsAsync();
   let status = existing;
-  if (existing !== 'granted') {
+  if (existing !== "granted") {
     const { status: req } = await Notifications.requestPermissionsAsync();
     status = req;
   }
-  if (status !== 'granted') return null;
+  if (status !== "granted") return null;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -62,7 +62,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
     if (token) await savePushToken(token);
     return token;
   } catch (e) {
-    console.warn('failed to get expo push token:', (e as Error).message);
+    console.warn("failed to get expo push token:", (e as Error).message);
     return null;
   }
 }
@@ -70,18 +70,27 @@ export async function registerForPushNotifications(): Promise<string | null> {
 /**
  * Set up a tap-on-notification listener that deep-links into the app.
  * The relay sends `data: { sessionID, permissionID? }`.
- *
- * For now the deep-link is "open the main TUI" — the session bootstrap will
- * pick up the latest session. A more granular jump-to-session can be added
- * by exposing a session-id param on the index route.
+ * Navigates to `/?sessionId={sessionID}` so the bootstrap effect in index.tsx
+ * can load the specific session directly.
  */
 export function useNotificationDeepLink() {
   const router = useRouter();
 
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(() => {
-      router.push('/');
-    });
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as Record<
+          string,
+          string | undefined
+        >;
+        const sessionID = data?.sessionID;
+        if (sessionID) {
+          router.push({ pathname: "/", params: { sessionId: sessionID } });
+        } else {
+          router.push("/");
+        }
+      },
+    );
     return () => sub.remove();
   }, [router]);
 }
@@ -95,12 +104,12 @@ export async function registerPermissionCategory(): Promise<void> {
   await Notifications.setNotificationCategoryAsync(PERMISSION_CATEGORY, [
     {
       identifier: ACTION_ALLOW_ONCE,
-      buttonTitle: 'Allow Once',
+      buttonTitle: "Allow Once",
       options: { opensAppToForeground: false },
     },
     {
       identifier: ACTION_DENY,
-      buttonTitle: 'Deny',
+      buttonTitle: "Deny",
       options: { opensAppToForeground: false, isDestructive: true },
     },
   ]);
@@ -110,7 +119,9 @@ export async function registerPermissionCategory(): Promise<void> {
  * Respond to a permission notification action (allow once / deny).
  * Reads the active server from the store directly — safe to call outside React.
  */
-async function handlePermissionAction(response: Notifications.NotificationResponse): Promise<void> {
+async function handlePermissionAction(
+  response: Notifications.NotificationResponse,
+): Promise<void> {
   const { actionIdentifier, notification } = response;
 
   // Ignore plain taps (handled by useNotificationDeepLink).
@@ -119,31 +130,45 @@ async function handlePermissionAction(response: Notifications.NotificationRespon
     return;
   }
 
-  const data = notification.request.content.data as Record<string, string | undefined>;
+  const data = notification.request.content.data as Record<
+    string,
+    string | undefined
+  >;
   const sessionID = data.sessionID;
   const permissionID = data.permissionID;
 
   if (!sessionID || !permissionID) {
-    log.warn('notification', 'permission action missing sessionID or permissionID');
+    log.warn(
+      "notification",
+      "permission action missing sessionID or permissionID",
+    );
     return;
   }
 
   const server = useServerStore.getState().active();
   if (!server) {
-    log.warn('notification', 'permission action: no active server configured');
+    log.warn("notification", "permission action: no active server configured");
     return;
   }
 
-  const permResponse: 'once' | 'reject' =
-    actionIdentifier === ACTION_ALLOW_ONCE ? 'once' : 'reject';
+  const permResponse: "once" | "reject" =
+    actionIdentifier === ACTION_ALLOW_ONCE ? "once" : "reject";
 
   try {
     const client = new OpencodeClient(server);
-    await client.respondPermission(sessionID, permissionID, { response: permResponse });
-    log.info('notification', `permission ${permResponse} sent for ${permissionID}`);
+    await client.respondPermission(sessionID, permissionID, {
+      response: permResponse,
+    });
+    log.info(
+      "notification",
+      `permission ${permResponse} sent for ${permissionID}`,
+    );
   } catch (e) {
     // The permission may have already been resolved (race between app and notification).
-    log.warn('notification', `permission response failed (may be resolved): ${(e as Error).message}`);
+    log.warn(
+      "notification",
+      `permission response failed (may be resolved): ${(e as Error).message}`,
+    );
   }
 }
 
@@ -165,9 +190,11 @@ export function useNotificationActionHandler(enabled: boolean): void {
     });
 
     // Handle actions while the app is in the foreground or background.
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      void handlePermissionAction(response);
-    });
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        void handlePermissionAction(response);
+      },
+    );
 
     return () => sub.remove();
   }, [enabled]);

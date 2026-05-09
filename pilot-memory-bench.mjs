@@ -13,88 +13,28 @@
  *
  * Usage:
  *   node pilot-memory-bench.mjs [--url http://host:port] [--user u] [--pass p]
- *                               [--out /path/to/out.json]
+ *                               [--out /tmp/pilot-memory.json]
  *
  * Defaults:
  *   --url  http://100.81.83.98:4096
- *   --out  /tmp/pilot-results.json
+ *   --out  /tmp/pilot-memory.json
  */
 
-import http  from 'http';
-import https from 'https';
-import fs    from 'fs';
-import path  from 'path';
+import { getArg, C, fmt, createClient, createRunner, writeJson, sleep } from './bench-lib.mjs';
 
 // ─── CLI args ────────────────────────────────────────────────────────────────
 
-const args   = process.argv.slice(2);
-const getArg = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
+const args     = process.argv.slice(2);
+const BASE_URL = getArg(args, '--url')  ?? 'http://100.81.83.98:4096';
+const USERNAME = getArg(args, '--user') ?? '';
+const PASSWORD = getArg(args, '--pass') ?? '';
+const JSON_OUT = getArg(args, '--out')  ?? '/tmp/pilot-memory.json';
 
-const BASE_URL = getArg('--url')  ?? 'http://100.81.83.98:4096';
-const USERNAME = getArg('--user') ?? '';
-const PASSWORD = getArg('--pass') ?? '';
-const JSON_OUT = getArg('--out')  ?? '/tmp/pilot-results.json';
+// ─── Client + runner ─────────────────────────────────────────────────────────
 
-// ─── ANSI ────────────────────────────────────────────────────────────────────
-
-const C = {
-  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
-  green: '\x1b[32m', red: '\x1b[31m', yellow: '\x1b[33m',
-  cyan: '\x1b[36m', white: '\x1b[97m', gray: '\x1b[90m',
-};
-
-const pass = (msg)      => `${C.green}✓${C.reset} ${msg}`;
-const fail = (msg, err) => `${C.red}✗${C.reset} ${msg}${err ? `\n  ${C.red}${err}${C.reset}` : ''}`;
-const skip = (msg, why) => `${C.yellow}−${C.reset} ${C.dim}${msg}${why ? ` (${why})` : ''}${C.reset}`;
-const info = (msg)      => `${C.cyan}ℹ${C.reset} ${C.dim}${msg}${C.reset}`;
-const hdr  = (msg)      => `\n${C.bold}${C.white}▸ ${msg}${C.reset}`;
-const ms   = (n)        => `${C.gray}${n}ms${C.reset}`;
-
-// ─── HTTP client ─────────────────────────────────────────────────────────────
-
-function request(method, urlPath, body, timeoutMs = 10000) {
-  return new Promise((resolve, reject) => {
-    const url     = new URL(BASE_URL + urlPath);
-    const lib     = url.protocol === 'https:' ? https : http;
-    const bodyStr = body !== undefined ? JSON.stringify(body) : undefined;
-
-    const headers = { Accept: 'application/json' };
-    if (USERNAME) headers['Authorization'] = 'Basic ' + Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
-    if (bodyStr) {
-      headers['Content-Type']   = 'application/json';
-      headers['Content-Length'] = Buffer.byteLength(bodyStr);
-    }
-
-    const start = Date.now();
-    const req = lib.request({
-      hostname: url.hostname,
-      port:     url.port || (url.protocol === 'https:' ? 443 : 80),
-      path:     url.pathname + url.search,
-      method, headers,
-      timeout: timeoutMs,
-    }, (res) => {
-      let raw = '';
-      res.on('data', (c) => raw += c);
-      res.on('end', () => {
-        const elapsed = Date.now() - start;
-        const ct      = res.headers['content-type'] ?? '';
-        let data      = raw;
-        if (ct.includes('application/json') && raw) {
-          try { data = JSON.parse(raw); } catch { /* leave as string */ }
-        }
-        resolve({ status: res.statusCode, data, elapsed });
-      });
-    });
-    req.on('error',   (e) => reject(Object.assign(e, { elapsed: Date.now() - start })));
-    req.on('timeout', () => { req.destroy(); reject(new Error(`timeout after ${timeoutMs}ms`)); });
-    if (bodyStr) req.write(bodyStr);
-    req.end();
-  });
-}
-
-const GET    = (p, to)    => request('GET',    p, undefined, to);
-const POST   = (p, b, to) => request('POST',   p, b, to);
-const DELETE = (p)        => request('DELETE', p);
+const { GET, POST, DELETE } = createClient(BASE_URL, USERNAME, PASSWORD);
+const runner = createRunner();
+const { test, suite, assert, assertStatus } = runner;
 
 // ─── Polling helper ───────────────────────────────────────────────────────────
 
@@ -106,54 +46,9 @@ async function pollUntilIdle(sessionId, { intervalMs = 600, timeoutMs = 30000 } 
       const status = r.data[sessionId];
       if (status === 'idle' || status === 'error' || status === undefined) return status ?? 'idle';
     }
-    await new Promise((res) => setTimeout(res, intervalMs));
+    await sleep(intervalMs);
   }
   throw new Error(`session ${sessionId} did not reach idle within ${timeoutMs}ms`);
-}
-
-// ─── Test runner ─────────────────────────────────────────────────────────────
-
-let passed = 0, failed = 0, skipped = 0;
-const failures = [];
-const allTests = [];
-let   suiteName = '';
-
-function assert(cond, msg) { if (!cond) throw new Error(msg ?? 'assertion failed'); }
-function assertStatus(res, expected, ctx = '') {
-  if (res.status !== expected) {
-    throw new Error(`${ctx}expected HTTP ${expected}, got ${res.status} — ${
-      typeof res.data === 'string' ? res.data.slice(0, 120) : JSON.stringify(res.data).slice(0, 120)
-    }`);
-  }
-}
-
-async function test(name, fn) {
-  const t0 = Date.now();
-  try {
-    const result = await fn();
-    const dur    = Date.now() - t0;
-    if (typeof result === 'string' && result.startsWith('skip')) {
-      console.log(skip(name, result !== 'skip' ? result.replace(/^skip[:\s]*/, '') : ''));
-      skipped++;
-      allTests.push({ suite: suiteName, name, status: 'skip', durationMs: dur, detail: result, error: null });
-    } else {
-      console.log(pass(name) + (result ? ` ${result}` : ''));
-      passed++;
-      allTests.push({ suite: suiteName, name, status: 'pass', durationMs: dur, detail: result ?? null, error: null });
-    }
-  } catch (e) {
-    const dur = Date.now() - t0;
-    const msg = e?.message ?? String(e);
-    console.log(fail(name, msg));
-    failures.push({ name, error: msg });
-    failed++;
-    allTests.push({ suite: suiteName, name, status: 'fail', durationMs: dur, detail: null, error: msg });
-  }
-}
-
-function suite(name) {
-  suiteName = name;
-  console.log(hdr(name));
 }
 
 // ─── Banner ──────────────────────────────────────────────────────────────────
@@ -164,9 +59,9 @@ console.log(`${C.bold}${C.cyan}
 ╔══════════════════════════════════════════════╗
 ║      Pilot Memory Plugin Bench Suite         ║
 ╚══════════════════════════════════════════════╝${C.reset}`);
-console.log(info(`target : ${BASE_URL}`));
-console.log(info(`auth   : ${USERNAME ? `basic (${USERNAME})` : 'none'}`));
-console.log(info(`output : ${JSON_OUT}`));
+console.log(fmt.info(`target : ${BASE_URL}`));
+console.log(fmt.info(`auth   : ${USERNAME ? `basic (${USERNAME})` : 'none'}`));
+console.log(fmt.info(`output : ${JSON_OUT}`));
 
 // ─── Inline logic (mirrors plugin source, no TS imports needed) ───────────────
 
@@ -185,10 +80,12 @@ function parseExtractionResponse(raw) {
     const result = [];
     for (const item of arr) {
       if (typeof item !== 'object' || item === null) continue;
-      const content    = typeof item.content    === 'string' ? item.content.trim()                                  : '';
-      const category   = isValidCategory(item.category)      ? item.category                                       : 'fact';
-      const confidence = typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence))           : 0.8;
-      const tags       = Array.isArray(item.tags)
+      const content    = typeof item.content    === 'string' ? item.content.trim()                        : '';
+      const category   = isValidCategory(item.category)      ? item.category                              : 'fact';
+      const confidence = typeof item.confidence === 'number'
+        ? Math.min(1, Math.max(0, item.confidence))
+        : 0.8;
+      const tags = Array.isArray(item.tags)
         ? item.tags.filter((t) => typeof t === 'string')
         : [];
       if (content.length < 10 || confidence < 0.65) continue;
@@ -257,7 +154,7 @@ await test('POST /session creates extraction shadow session', async () => {
   assertStatus(r, 200, 'create session: ');
   assert(r.data?.id, 'no id in response');
   shadowSessionId = r.data.id;
-  return `id=${shadowSessionId} ${ms(r.elapsed)}`;
+  return `id=${shadowSessionId} ${fmt.ms(r.elapsed)}`;
 });
 
 await test('POST /session/:id/prompt_async accepts extraction prompt (204 fire-and-forget)', async () => {
@@ -268,9 +165,8 @@ await test('POST /session/:id/prompt_async accepts extraction prompt (204 fire-a
       text: 'Extract memories from: "User prefers tabs over spaces. Project uses React 19."',
     }],
   }, 12000);
-  // Server returns 204 (no content) for async prompts.
   assert(r.status === 204 || r.status === 200, `expected 204 or 200, got ${r.status}`);
-  return `HTTP ${r.status} ${ms(r.elapsed)}`;
+  return `HTTP ${r.status} ${fmt.ms(r.elapsed)}`;
 });
 
 await test('GET /session/status returns status map including shadow session', async () => {
@@ -279,7 +175,7 @@ await test('GET /session/status returns status map including shadow session', as
   assertStatus(r, 200, 'status map: ');
   assert(r.data && typeof r.data === 'object', 'not an object');
   const status = r.data[shadowSessionId];
-  return `shadow session status="${status ?? 'not yet visible'}" ${ms(r.elapsed)}`;
+  return `shadow session status="${status ?? 'not yet visible'}" ${fmt.ms(r.elapsed)}`;
 });
 
 await test('poll until shadow session is idle (30 s timeout)', async () => {
@@ -289,10 +185,9 @@ await test('poll until shadow session is idle (30 s timeout)', async () => {
   try {
     finalStatus = await pollUntilIdle(shadowSessionId, { intervalMs: 600, timeoutMs: 30000 });
   } catch (e) {
-    // Idle polling may time out on a busy server — skip rather than fail.
     return `skip (${e.message})`;
   }
-  return `status="${finalStatus}" after ${ms(Date.now() - t0)}`;
+  return `status="${finalStatus}" after ${fmt.ms(Date.now() - t0)}`;
 });
 
 await test('GET /session/:id/message returns messages array after prompt', async () => {
@@ -300,21 +195,21 @@ await test('GET /session/:id/message returns messages array after prompt', async
   const r = await GET(`/session/${shadowSessionId}/message`, 8000);
   assertStatus(r, 200, 'messages: ');
   assert(Array.isArray(r.data), 'not an array');
-  return `${r.data.length} message(s) ${ms(r.elapsed)}`;
+  return `${r.data.length} message(s) ${fmt.ms(r.elapsed)}`;
 });
 
 await test('DELETE /session/:id cleans up shadow session', async () => {
   assert(shadowSessionId, 'no shadow session id');
   const r = await DELETE(`/session/${shadowSessionId}`);
   assert(r.status === 200 || r.status === 204, `unexpected ${r.status}`);
-  return ms(r.elapsed);
+  return fmt.ms(r.elapsed);
 });
 
 await test('GET /session/:id after delete returns 4xx (shadow session gone)', async () => {
   assert(shadowSessionId, 'no shadow session id');
   const r = await GET(`/session/${shadowSessionId}`);
   assert(r.status >= 400, `expected 4xx after delete, got ${r.status}`);
-  return `HTTP ${r.status} ${ms(r.elapsed)}`;
+  return `HTTP ${r.status} ${fmt.ms(r.elapsed)}`;
 });
 
 // ─── Suite 2: Extraction JSON Parser ─────────────────────────────────────────
@@ -356,7 +251,7 @@ await test('invalid category ("unknown") defaults to "fact"', () => {
 
 await test('content shorter than 10 chars is filtered out', () => {
   const raw = JSON.stringify([
-    { content: 'short', category: 'fact', confidence: 0.9 },                    // 5 chars — skipped
+    { content: 'short', category: 'fact', confidence: 0.9 },
     { content: 'Use async/await over raw promises', category: 'preference', confidence: 0.88 },
   ]);
   const result = parseExtractionResponse(raw);
@@ -367,7 +262,7 @@ await test('content shorter than 10 chars is filtered out', () => {
 
 await test('confidence below 0.65 is filtered out', () => {
   const raw = JSON.stringify([
-    { content: 'Maybe use Redux for state management?', category: 'decision', confidence: 0.5 },  // skipped
+    { content: 'Maybe use Redux for state management?', category: 'decision', confidence: 0.5 },
     { content: 'Project always uses ESLint with Airbnb config', category: 'fact', confidence: 0.9 },
   ]);
   const result = parseExtractionResponse(raw);
@@ -439,9 +334,9 @@ await test('topK returns at most K results', () => {
 await test('topK filters results below minScore threshold', () => {
   const query = [1, 0];
   const items = [
-    { memoryId: 'a', vector: [1, 0]   },   // sim = 1.0 — included
-    { memoryId: 'b', vector: [0, 1]   },   // sim = 0.0 — excluded at threshold 0.5
-    { memoryId: 'c', vector: [0.7, 0.7] }, // sim ≈ 0.707 — included
+    { memoryId: 'a', vector: [1, 0]    },   // sim = 1.0 — included
+    { memoryId: 'b', vector: [0, 1]    },   // sim = 0.0 — excluded at threshold 0.5
+    { memoryId: 'c', vector: [0.7, 0.7] },  // sim ≈ 0.707 — included
   ];
   const results = topK(query, items, (e) => e.vector, 10, 0.5);
   assert(results.length === 2, `expected 2 above threshold, got ${results.length}`);
@@ -466,19 +361,6 @@ await test('topK returns results sorted descending by score', () => {
 
 suite('4. Config & Schema Defaults (pure logic — no network)');
 
-// These constants mirror plugin/memory/db/schema.ts CREATE_MEMORY_CONFIG defaults.
-const EXPECTED_DEFAULTS = {
-  embeddingProvider: 'ollama',
-  embeddingModel:    'nomic-embed-text',
-  dedupThreshold:    0.92,
-  topK:              5,
-  maxMemories:       2000,
-  enabled:           true,
-  extractEnabled:    true,
-  injectEnabled:     true,
-};
-
-// Parse the defaults out of the DDL string (same as the schema file).
 const CREATE_MEMORY_CONFIG_DDL = `
 CREATE TABLE IF NOT EXISTS memory_config (
   server_id            TEXT PRIMARY KEY,
@@ -532,8 +414,8 @@ await test('embedding_model default = "nomic-embed-text"', () => {
 });
 
 await test('enabled, extract_enabled, inject_enabled all default to 1 (true)', () => {
-  const e  = extractDefault(CREATE_MEMORY_CONFIG_DDL, 'enabled');
-  const ex = extractDefault(CREATE_MEMORY_CONFIG_DDL, 'extract_enabled');
+  const e   = extractDefault(CREATE_MEMORY_CONFIG_DDL, 'enabled');
+  const ex  = extractDefault(CREATE_MEMORY_CONFIG_DDL, 'extract_enabled');
   const inj = extractDefault(CREATE_MEMORY_CONFIG_DDL, 'inject_enabled');
   assert(e === 1 && ex === 1 && inj === 1,
     `expected all 1, got enabled=${e} extract=${ex} inject=${inj}`);
@@ -557,15 +439,13 @@ const MOCK_MEMORIES = [
   { id: 'm3', content: 'Always run tsc --noEmit before committing changes' },
 ];
 
-// Build mock embeddings where m1 is most similar to a code-style query.
-// Using simple 3D unit vectors for clarity.
 const MOCK_EMBEDDINGS = [
   { memoryId: 'm1', vector: [0.9, 0.3, 0.1] },   // most similar to [1,0,0]
   { memoryId: 'm2', vector: [0.2, 0.8, 0.5] },
   { memoryId: 'm3', vector: [0.5, 0.5, 0.7] },
 ];
 
-const QUERY_VEC_CODE_STYLE = [1, 0, 0]; // close to m1
+const QUERY_VEC_CODE_STYLE = [1, 0, 0];
 
 await test('context block includes CONTEXT_HEADER', () => {
   const ctx = buildContext(QUERY_VEC_CODE_STYLE, MOCK_MEMORIES, MOCK_EMBEDDINGS, 5, 0.0);
@@ -592,7 +472,6 @@ await test('each injected memory line starts with "- "', () => {
 await test('highest-scoring memory is first in the context block', () => {
   const ctx = buildContext(QUERY_VEC_CODE_STYLE, MOCK_MEMORIES, MOCK_EMBEDDINGS, 5, 0.0);
   const lines = ctx.split('\n').filter((l) => l.startsWith('- '));
-  // m1 has highest cosine with [1,0,0] so should be first.
   assert(lines[0].includes('tabs for indentation'), `expected m1 first, got: ${lines[0]}`);
   return `first line: "${lines[0].slice(0, 50)}…"`;
 });
@@ -610,15 +489,13 @@ await test('empty embeddings array returns empty string', () => {
 });
 
 await test('all memories below minScore returns empty string', () => {
-  // Use a query vec that is orthogonal to all mock embeddings.
-  const queryVecOrthogonal = [0, 0, 0]; // zero vector → all similarities = 0
+  const queryVecOrthogonal = [0, 0, 0];
   const ctx = buildContext(queryVecOrthogonal, MOCK_MEMORIES, MOCK_EMBEDDINGS, 5, 0.5);
   assert(ctx === '', `expected "" when nothing scores above 0.5, got: ${ctx.slice(0, 60)}`);
   return 'empty string returned when no memories score ≥ 0.5';
 });
 
 await test('topK limit is respected in context output', () => {
-  // Pass topK=1 — only the best match should appear.
   const ctx = buildContext(QUERY_VEC_CODE_STYLE, MOCK_MEMORIES, MOCK_EMBEDDINGS, 1, 0.0);
   const lines = ctx.split('\n').filter((l) => l.startsWith('- '));
   assert(lines.length === 1, `expected 1 memory line, got ${lines.length}`);
@@ -634,38 +511,22 @@ await test('context block ends with double newline (prompt separator)', () => {
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
 const totalDuration = Date.now() - runStart;
-const total         = passed + failed + skipped;
+const total         = runner.passed + runner.failed + runner.skipped;
 
-console.log(`
-${C.bold}${C.white}══════════════════════════════════════════════${C.reset}
-${C.bold}  Results: ${C.green}${passed} passed${C.reset}  ${failed > 0 ? C.red : C.gray}${failed} failed${C.reset}  ${C.yellow}${skipped} skipped${C.reset}  ${C.dim}(${total} total)${C.reset}
-${C.bold}${C.white}══════════════════════════════════════════════${C.reset}`);
+runner.printSummary('Memory Results');
+console.log(fmt.info(`JSON results → ${JSON_OUT}`));
 
-if (failures.length > 0) {
-  console.log(`\n${C.red}${C.bold}Failures:${C.reset}`);
-  for (const { name, error } of failures) {
-    console.log(`  ${C.red}✗${C.reset} ${name}`);
-    console.log(`    ${C.dim}${error}${C.reset}`);
-  }
-  console.log('');
-}
+// ─── Write JSON ───────────────────────────────────────────────────────────────
 
-// ─── Write / merge JSON ──────────────────────────────────────────────────────
+writeJson(JSON_OUT, {
+  memory: {
+    passed:     runner.passed,
+    failed:     runner.failed,
+    skipped:    runner.skipped,
+    total,
+    durationMs: totalDuration,
+    tests:      runner.allTests,
+  },
+});
 
-let existing = {};
-try { existing = JSON.parse(fs.readFileSync(JSON_OUT, 'utf8')); } catch { /* fresh run */ }
-
-existing.memory = {
-  passed,
-  failed,
-  skipped,
-  total,
-  durationMs: totalDuration,
-  tests: allTests,
-};
-
-fs.mkdirSync(path.dirname(JSON_OUT), { recursive: true });
-fs.writeFileSync(JSON_OUT, JSON.stringify(existing, null, 2));
-console.log(info(`JSON results → ${JSON_OUT}`));
-
-process.exit(failed > 0 ? 1 : 0);
+process.exit(runner.failed > 0 ? 1 : 0);

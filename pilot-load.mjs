@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pilot-load.mjs — Ramping VU load test for the OpenCode API
+ * pilot-load.mjs — Ramping VU load test for the OpenCode API.
  *
  * Stages:
  *   warm-up      5s   1 VU       baseline
@@ -21,45 +21,33 @@
  *
  * Usage:
  *   node pilot-load.mjs [--url http://host:port] [--user u] [--pass p]
- *                       [--vus 25] [--out /tmp/pilot-results.json]
+ *                       [--vus 25] [--out /tmp/pilot-load.json]
  */
 
 import http  from 'http';
 import https from 'https';
-import fs    from 'fs';
-import path  from 'path';
 
-// ─── CLI ─────────────────────────────────────────────────────────────────────
+import { getArg, C, fmt, percentile, writeJson } from './bench-lib.mjs';
 
-const args   = process.argv.slice(2);
-const getArg = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
+// ─── CLI ──────────────────────────────────────────────────────────────────────
 
-const BASE_URL  = getArg('--url')  ?? 'http://100.81.83.98:4096';
-const USERNAME  = getArg('--user') ?? '';
-const PASSWORD  = getArg('--pass') ?? '';
-const PEAK_VUS  = parseInt(getArg('--vus') ?? '25', 10);
-const JSON_OUT  = getArg('--out')  ?? '/tmp/pilot-results.json';
+const args     = process.argv.slice(2);
+const BASE_URL = getArg(args, '--url')  ?? 'http://100.81.83.98:4096';
+const USERNAME = getArg(args, '--user') ?? '';
+const PASSWORD = getArg(args, '--pass') ?? '';
+const PEAK_VUS = parseInt(getArg(args, '--vus') ?? '25', 10);
+const JSON_OUT = getArg(args, '--out')  ?? '/tmp/pilot-results.json';
 
-// ─── ANSI ────────────────────────────────────────────────────────────────────
-
-const C = {
-  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
-  green: '\x1b[32m', red: '\x1b[31m', yellow: '\x1b[33m',
-  cyan: '\x1b[36m', white: '\x1b[97m', gray: '\x1b[90m',
-  blue: '\x1b[34m',
-};
-
-const info = (m) => `${C.cyan}ℹ${C.reset} ${C.dim}${m}${C.reset}`;
-const hdr  = (m) => `\n${C.bold}${C.white}▸ ${m}${C.reset}`;
-
-// ─── HTTP (fire + collect) ───────────────────────────────────────────────────
+// ─── Lightweight fire-and-resolve HTTP client (no body parsing needed) ────────
 
 function req(urlPath, timeoutMs = 5000) {
   return new Promise((resolve) => {
     const url     = new URL(BASE_URL + urlPath);
     const lib     = url.protocol === 'https:' ? https : http;
     const headers = { Accept: 'application/json' };
-    if (USERNAME) headers['Authorization'] = 'Basic ' + Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
+    if (USERNAME) {
+      headers['Authorization'] = 'Basic ' + Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
+    }
 
     const start = Date.now();
     const r = lib.request({
@@ -70,16 +58,21 @@ function req(urlPath, timeoutMs = 5000) {
       headers,
       timeout:  timeoutMs,
     }, (res) => {
-      res.resume(); // drain
-      res.on('end', () => resolve({ ok: res.statusCode < 400, status: res.statusCode, elapsed: Date.now() - start, path: urlPath }));
+      res.resume(); // drain without parsing
+      res.on('end', () => resolve({
+        ok:      res.statusCode < 400,
+        status:  res.statusCode,
+        elapsed: Date.now() - start,
+        path:    urlPath,
+      }));
     });
-    r.on('error',   () => resolve({ ok: false, status: 0,   elapsed: Date.now() - start, path: urlPath }));
+    r.on('error',   () => resolve({ ok: false, status: 0, elapsed: Date.now() - start, path: urlPath }));
     r.on('timeout', () => { r.destroy(); resolve({ ok: false, status: 0, elapsed: Date.now() - start, path: urlPath }); });
     r.end();
   });
 }
 
-// ─── Endpoints ───────────────────────────────────────────────────────────────
+// ─── Endpoints ────────────────────────────────────────────────────────────────
 
 const ENDPOINTS = [
   '/global/health',
@@ -91,34 +84,26 @@ const ENDPOINTS = [
   '/find/file?query=package&limit=5',
 ];
 
-// ─── Percentile ──────────────────────────────────────────────────────────────
+// ─── Stage runner ─────────────────────────────────────────────────────────────
 
-function pct(sorted, p) { return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)] ?? 0; }
+const runStartTs = Date.now();
 
-// ─── Stage runner ────────────────────────────────────────────────────────────
-
-/**
- * Runs one load stage.
- * @param {string} label
- * @param {number} durationMs
- * @param {number} startVUs
- * @param {number} endVUs
- * @param {object} metrics — mutated in place
- * @param {Array}  timeSeries — mutated in place
- */
 async function runStage(label, durationMs, startVUs, endVUs, metrics, timeSeries) {
-  const stageEnd   = Date.now() + durationMs;
-  const activeReqs = new Set();
-  let   epIdx      = 0;
-  let   ticker;
+  const stageEnd = Date.now() + durationMs;
 
-  console.log(`  ${C.cyan}◆${C.reset} ${label.padEnd(18)} ${C.dim}${startVUs}→${endVUs} VUs  ${durationMs / 1000}s${C.reset}`);
+  console.log(
+    `  ${C.cyan}◆${C.reset} ${label.padEnd(18)} ` +
+    `${C.dim}${startVUs}→${endVUs} VUs  ${durationMs / 1000}s${C.reset}`
+  );
 
-  // 1-second ticker for time series + live print
-  let tickCount = 0;
-  ticker = setInterval(() => {
+  let windowReqs   = 0;
+  let windowErrors = 0;
+  let lastWindowTs = Date.now();
+  let tickCount    = 0;
+
+  const ticker = setInterval(() => {
     const snapshot = timeSeries[timeSeries.length - 1];
-    const rps      = snapshot?.rps ?? 0;
+    const rps      = snapshot?.rps      ?? 0;
     const errs     = snapshot?.errorsPerSec ?? 0;
     const vu       = snapshot?.activeVUs ?? 0;
     process.stdout.write(
@@ -129,10 +114,6 @@ async function runStage(label, durationMs, startVUs, endVUs, metrics, timeSeries
     );
     tickCount++;
   }, 1000);
-
-  let windowReqs   = 0;
-  let windowErrors = 0;
-  let lastWindowTs = Date.now();
 
   const tick = () => {
     const now     = Date.now();
@@ -149,45 +130,32 @@ async function runStage(label, durationMs, startVUs, endVUs, metrics, timeSeries
     }
   };
 
-  // VU loop — continuously fire requests until stage ends
   const vuLoop = async (vuId) => {
-    let epOff = vuId % ENDPOINTS.length; // stagger starting endpoint per VU
+    let epOff = vuId % ENDPOINTS.length;
     while (Date.now() < stageEnd) {
-      const ep      = ENDPOINTS[epOff % ENDPOINTS.length];
+      const ep     = ENDPOINTS[epOff % ENDPOINTS.length];
       epOff++;
-      const id      = Symbol();
-      activeReqs.add(id);
-      const result  = await req(ep);
-      activeReqs.delete(id);
-
+      const result = await req(ep);
       windowReqs++;
       if (!result.ok) windowErrors++;
-
-      // Record per-endpoint metrics
       if (!metrics[ep]) metrics[ep] = { requests: 0, errors: 0, latencies: [] };
       metrics[ep].requests++;
       if (!result.ok) metrics[ep].errors++;
       metrics[ep].latencies.push(Math.max(0, result.elapsed));
-
       tick();
     }
   };
 
-  // Build initial VU pool
   const vuPromises = [];
   for (let i = 0; i < startVUs; i++) vuPromises.push(vuLoop(i));
 
-  // Ramp: add more VUs over duration if startVUs !== endVUs
   if (startVUs !== endVUs) {
     const delta    = endVUs - startVUs;
     const interval = durationMs / Math.abs(delta);
     let   added    = 0;
     const rampInt  = setInterval(() => {
       if (Date.now() >= stageEnd) { clearInterval(rampInt); return; }
-      if (delta > 0 && added < delta) {
-        vuPromises.push(vuLoop(startVUs + added));
-        added++;
-      }
+      if (delta > 0 && added < delta) { vuPromises.push(vuLoop(startVUs + added)); added++; }
     }, interval);
     vuPromises.push(new Promise((res) => setTimeout(res, durationMs + 200)).then(() => clearInterval(rampInt)));
   }
@@ -197,34 +165,32 @@ async function runStage(label, durationMs, startVUs, endVUs, metrics, timeSeries
   process.stdout.write('\n');
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
-const runStartTs = Date.now();
+// ─── Banner ───────────────────────────────────────────────────────────────────
 
 console.log(`${C.bold}${C.cyan}
 ╔══════════════════════════════════════════════╗
 ║         Pilot Load Test Suite                ║
 ╚══════════════════════════════════════════════╝${C.reset}`);
-console.log(info(`target  : ${BASE_URL}`));
-console.log(info(`peak    : ${PEAK_VUS} VUs`));
-console.log(info(`spike   : ${PEAK_VUS * 2} VUs`));
-console.log(info(`output  : ${JSON_OUT}`));
+console.log(fmt.info(`target  : ${BASE_URL}`));
+console.log(fmt.info(`peak    : ${PEAK_VUS} VUs`));
+console.log(fmt.info(`spike   : ${PEAK_VUS * 2} VUs`));
+console.log(fmt.info(`output  : ${JSON_OUT}`));
 
-// Shared metrics across all stages
-const metrics    = {};   // { [endpoint]: { requests, errors, latencies[] } }
-const timeSeries = [];   // [{ t, rps, errorsPerSec, activeVUs, stage }]
+// ─── Run stages ───────────────────────────────────────────────────────────────
 
-// Stage definitions
+const metrics    = {};
+const timeSeries = [];
+
 const stages = [
-  { label: 'warm-up',    durationMs: 5_000,  startVUs: 1,             endVUs: 1 },
-  { label: 'ramp',       durationMs: 10_000, startVUs: 1,             endVUs: PEAK_VUS },
-  { label: 'sustain',    durationMs: 30_000, startVUs: PEAK_VUS,      endVUs: PEAK_VUS },
-  { label: 'spike',      durationMs: 10_000, startVUs: PEAK_VUS,      endVUs: PEAK_VUS * 2 },
-  { label: 'sustain-2',  durationMs: 20_000, startVUs: PEAK_VUS * 2,  endVUs: PEAK_VUS * 2 },
-  { label: 'cool-down',  durationMs: 10_000, startVUs: PEAK_VUS * 2,  endVUs: 0 },
+  { label: 'warm-up',   durationMs: 5_000,  startVUs: 1,            endVUs: 1 },
+  { label: 'ramp',      durationMs: 10_000, startVUs: 1,            endVUs: PEAK_VUS },
+  { label: 'sustain',   durationMs: 30_000, startVUs: PEAK_VUS,     endVUs: PEAK_VUS },
+  { label: 'spike',     durationMs: 10_000, startVUs: PEAK_VUS,     endVUs: PEAK_VUS * 2 },
+  { label: 'sustain-2', durationMs: 20_000, startVUs: PEAK_VUS * 2, endVUs: PEAK_VUS * 2 },
+  { label: 'cool-down', durationMs: 10_000, startVUs: PEAK_VUS * 2, endVUs: 0 },
 ];
 
-console.log(hdr('Stages'));
+console.log(fmt.hdr('Stages'));
 for (const s of stages) {
   await runStage(s.label, s.durationMs, s.startVUs, s.endVUs, metrics, timeSeries);
 }
@@ -245,12 +211,14 @@ for (const [ep, m] of Object.entries(metrics)) {
     requests:  m.requests,
     errors:    m.errors,
     errorRate: m.requests > 0 ? +((m.errors / m.requests) * 100).toFixed(2) : 0,
-    p50:       pct(sorted, 50),
-    p95:       pct(sorted, 95),
-    p99:       pct(sorted, 99),
-    min:       sorted[0]                    ?? 0,
-    max:       sorted[sorted.length - 1]    ?? 0,
-    avg:       sorted.length > 0 ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length) : 0,
+    p50:       percentile(sorted, 50),
+    p95:       percentile(sorted, 95),
+    p99:       percentile(sorted, 99),
+    min:       sorted[0]                 ?? 0,
+    max:       sorted[sorted.length - 1] ?? 0,
+    avg:       sorted.length > 0
+      ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length)
+      : 0,
   };
 }
 
@@ -258,7 +226,7 @@ const peakRps = timeSeries.length > 0 ? Math.max(...timeSeries.map((t) => t.rps)
 
 // ─── Terminal summary ─────────────────────────────────────────────────────────
 
-console.log(hdr('Results'));
+console.log(fmt.hdr('Results'));
 
 const colW = [34, 9, 7, 7, 7, 7, 8];
 const row  = (cells) => cells.map((c, i) => String(c).padEnd(colW[i])).join('  ');
@@ -273,26 +241,32 @@ for (const [ep, s] of Object.entries(endpointStats)) {
 }
 
 console.log(`  ${'─'.repeat(70)}`);
-console.log(`  ${C.bold}Total: ${grandTotal} requests  |  ${grandErrors} errors  |  ${((grandErrors / grandTotal) * 100 || 0).toFixed(2)}% error rate  |  peak ${Math.round(peakRps)} req/s${C.reset}`);
+console.log(
+  `  ${C.bold}Total: ${grandTotal} requests  |  ${grandErrors} errors  |  ` +
+  `${((grandErrors / grandTotal) * 100 || 0).toFixed(2)}% error rate  |  ` +
+  `peak ${Math.round(peakRps)} req/s${C.reset}`
+);
 console.log(`  ${C.dim}Duration: ${(totalDuration / 1000).toFixed(1)}s${C.reset}`);
 
-// ─── Merge into JSON out ──────────────────────────────────────────────────────
+// ─── Write JSON ───────────────────────────────────────────────────────────────
 
-let existing = {};
-try { existing = JSON.parse(fs.readFileSync(JSON_OUT, 'utf8')); } catch { /* fresh */ }
+console.log(`\n${fmt.info(`JSON results → ${JSON_OUT}`)}`);
 
-existing.load = {
-  peakVUs:      PEAK_VUS,
-  totalRequests: grandTotal,
-  totalErrors:   grandErrors,
-  errorRate:     +((grandErrors / grandTotal) * 100 || 0).toFixed(2),
-  peakRps:       +peakRps.toFixed(1),
-  durationMs:    totalDuration,
-  stages:        stages.map((s) => ({ label: s.label, durationMs: s.durationMs, startVUs: s.startVUs, endVUs: s.endVUs })),
-  endpoints:     endpointStats,
-  timeSeries,
-};
-
-fs.mkdirSync(path.dirname(JSON_OUT), { recursive: true });
-fs.writeFileSync(JSON_OUT, JSON.stringify(existing, null, 2));
-console.log(`\n${info(`JSON results → ${JSON_OUT}`)}`);
+writeJson(JSON_OUT, {
+  load: {
+    peakVUs:       PEAK_VUS,
+    totalRequests: grandTotal,
+    totalErrors:   grandErrors,
+    errorRate:     +((grandErrors / grandTotal) * 100 || 0).toFixed(2),
+    peakRps:       +peakRps.toFixed(1),
+    durationMs:    totalDuration,
+    stages:        stages.map((s) => ({
+      label:      s.label,
+      durationMs: s.durationMs,
+      startVUs:   s.startVUs,
+      endVUs:     s.endVUs,
+    })),
+    endpoints:  endpointStats,
+    timeSeries,
+  },
+});

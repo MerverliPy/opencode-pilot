@@ -1,0 +1,46 @@
+# n9router Docker Compose
+#
+# Prerequisites:
+#   Unzip the bundled n9router source next to this file:
+#     cd pilot/
+#     unzip n9router-master.zip
+#
+# Then start:
+#     docker compose -f docker/docker-compose.yml up -d
+#
+# n9router will be available at http://localhost:20128
+# Data is persisted in the 'n9router-data' Docker volume.
+#
+# Optional env overrides — copy to docker/.env and fill in:
+#   NINEROUTER_PORT=20128          # host port to expose
+#   NINEROUTER_REQUIRE_API_KEY=false
+#   DEBUG=false
+
+services:
+  n9router:
+    build:
+      context: ../n9router-master
+      dockerfile: Dockerfile
+    image: n9router:local
+    container_name: n9router
+    ports:
+      - "${NINEROUTER_PORT:-20128}:20128"
+    volumes:
+      - n9router-data:/app/data
+    environment:
+      - DATA_DIR=/app/data
+      - PORT=20128
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      - DEBUG=${DEBUG:-false}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:20128/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  n9router-data:
+    name: n9router-data

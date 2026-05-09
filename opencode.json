@@ -15,7 +15,8 @@
     "./.opencode/plugins/session-manager.ts",
     "./.opencode/plugins/tool-guardrails.ts",
     "./.opencode/plugins/code-quality.ts",
-    "./.opencode/plugins/strategic-compact.ts"
+    "./.opencode/plugins/strategic-compact.ts",
+    "./.opencode/plugins/rtk-compressor.ts"
   ],
   "agent": {
     "code-reviewer": {

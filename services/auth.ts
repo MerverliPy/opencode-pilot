@@ -13,6 +13,26 @@ const KEY_ACTIVE = "pilot.activeServer";
 const KEY_LAST_SESSION = "pilot.lastSession";
 const KEY_PUSH_TOKEN = "pilot.pushToken";
 const KEY_WORKDIR = "pilot.workdir";
+const KEY_N9ROUTER = "pilot.n9router";
+
+export type N9RouterConfig = {
+  url: string;
+  key: string;
+};
+
+export async function loadN9RouterConfig(): Promise<N9RouterConfig> {
+  const raw = await SecureStore.getItemAsync(KEY_N9ROUTER);
+  if (!raw) return { url: "", key: "" };
+  try {
+    return JSON.parse(raw) as N9RouterConfig;
+  } catch {
+    return { url: "", key: "" };
+  }
+}
+
+export async function saveN9RouterConfig(cfg: N9RouterConfig): Promise<void> {
+  await SecureStore.setItemAsync(KEY_N9ROUTER, JSON.stringify(cfg));
+}
 
 export async function loadServers(): Promise<ServerConfig[]> {
   const raw = await SecureStore.getItemAsync(KEY_SERVERS);

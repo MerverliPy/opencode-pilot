@@ -45,6 +45,7 @@ export default function MainLayout() {
         <Drawer.Screen name="diff" options={{ title: "diff viewer" }} />
         <Drawer.Screen name="settings" options={{ title: "settings" }} />
         <Drawer.Screen name="memory" options={{ title: "memory" }} />
+        <Drawer.Screen name="usage" options={{ title: "usage" }} />
       </Drawer>
 
       <ErrorBadge />

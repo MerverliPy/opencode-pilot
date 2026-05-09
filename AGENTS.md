@@ -48,6 +48,8 @@ Use `/command-name` syntax:
 - `/update-codemaps` - Update codemaps
 - `/update-docs` - Update documentation
 - `/setup-pm` - Configure package manager
+- `/setup-n9router` - Connect to a running n9router instance
+- `/caveman [lite|full|ultra]` - Enable terse output mode; `/caveman off` to revert
 - `/orchestrate` - Orchestrate subagents
 - `/learn` - Extract reusable patterns from session
 - `/checkpoint` - Create checkpoint snapshot
@@ -89,6 +91,14 @@ Skills are automatically loaded from `.opencode/skills/`:
 - `continuous-learning` - Pattern extraction from sessions
 - `continuous-learning-v2` - Instinct-based learning system
 - `project-guidelines-example` - Project guidelines template
+- `9router` - n9router setup and capability index (entry point)
+- `9router-chat` - Chat / code generation via n9router
+- `9router-embeddings` - Vector embeddings via n9router
+- `9router-image` - Image generation via n9router
+- `9router-stt` - Speech-to-text via n9router
+- `9router-tts` - Text-to-speech via n9router
+- `9router-web-fetch` - Fetch URL → markdown via n9router
+- `9router-web-search` - Web search via n9router
 
 ### Available Rules
 
@@ -111,6 +121,7 @@ Plugins in `.opencode/plugins/`:
 - `tool-guardrails.ts` - Tool execution guardrails
 - `code-quality.ts` - Write-time code quality enforcement
 - `strategic-compact.ts` - Context compaction suggestions
+- `rtk-compressor.ts` - RTK tool output compression (conservative, >2KB threshold)
 
 ### MCP Servers
 
@@ -128,6 +139,7 @@ Configure MCP servers in `opencode.json`. Key servers available:
 This repo also contains **Pilot**, a React Native iOS app that connects to `opencode serve` over HTTP + SSE.
 
 Key features:
+
 - Real-time message streaming via SSE
 - Session management with auto-resume
 - File browser with search
@@ -163,4 +175,4 @@ Add project-specific rules by:
 
 ---
 
-*Last Updated: 2026-05-08*
+_Last Updated: 2026-05-08_

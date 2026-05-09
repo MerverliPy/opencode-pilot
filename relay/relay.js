@@ -18,51 +18,62 @@
  *   PILOT_RELAY_NAME          Optional friendly name shown in notifications.
  *                             Defaults to "opencode".
  *
+ * n9router bridge (optional):
+ *
+ *   NINEROUTER_URL            If set, starts the n9router bridge alongside
+ *                             this relay. See n9router-bridge.js for full
+ *                             options (NINEROUTER_KEY, PILOT_BRIDGE_PORT, …).
+ *
  * Run as a long-lived process (systemd unit included alongside this file).
  */
 
-import { Expo } from 'expo-server-sdk';
-import EventSource from 'eventsource';
-import fs from 'node:fs';
+import { Expo } from "expo-server-sdk";
+import EventSource from "eventsource";
+import fs from "node:fs";
+import { startBridge } from "./n9router-bridge.js";
 
 const URL = process.env.OPENCODE_URL;
 const USER = process.env.OPENCODE_USERNAME;
 const PASS = process.env.OPENCODE_PASSWORD;
-const NAME = process.env.PILOT_RELAY_NAME || 'opencode';
+const NAME = process.env.PILOT_RELAY_NAME || "opencode";
 
 if (!URL) {
-  console.error('OPENCODE_URL is required');
+  console.error("OPENCODE_URL is required");
   process.exit(1);
 }
 
-let tokens = (process.env.PILOT_TOKENS || '')
-  .split(',')
+let tokens = (process.env.PILOT_TOKENS || "")
+  .split(",")
   .map((t) => t.trim())
   .filter(Boolean);
 
 if (tokens.length === 0 && process.env.PILOT_TOKENS_FILE) {
   try {
     tokens = fs
-      .readFileSync(process.env.PILOT_TOKENS_FILE, 'utf8')
-      .split('\n')
+      .readFileSync(process.env.PILOT_TOKENS_FILE, "utf8")
+      .split("\n")
       .map((t) => t.trim())
       .filter(Boolean);
   } catch (e) {
-    console.error('Could not read PILOT_TOKENS_FILE:', e.message);
+    console.error("Could not read PILOT_TOKENS_FILE:", e.message);
   }
 }
 
 if (tokens.length === 0) {
-  console.error('No push tokens configured. Set PILOT_TOKENS or PILOT_TOKENS_FILE.');
+  console.error(
+    "No push tokens configured. Set PILOT_TOKENS or PILOT_TOKENS_FILE.",
+  );
   process.exit(1);
 }
 
 const validTokens = tokens.filter((t) => Expo.isExpoPushToken(t));
 if (validTokens.length !== tokens.length) {
-  console.warn(`Ignoring ${tokens.length - validTokens.length} invalid token(s).`);
+  console.warn(
+    `Ignoring ${tokens.length - validTokens.length} invalid token(s).`,
+  );
 }
 if (validTokens.length === 0) {
-  console.error('No valid Expo push tokens after filtering.');
+  console.error("No valid Expo push tokens after filtering.");
   process.exit(1);
 }
 
@@ -70,14 +81,16 @@ const expo = new Expo();
 
 function authHeaders() {
   if (!USER && !PASS) return {};
-  const b64 = Buffer.from(`${USER ?? 'opencode'}:${PASS ?? ''}`).toString('base64');
+  const b64 = Buffer.from(`${USER ?? "opencode"}:${PASS ?? ""}`).toString(
+    "base64",
+  );
   return { Authorization: `Basic ${b64}` };
 }
 
 async function send(title, body, data, categoryId) {
   const messages = validTokens.map((to) => ({
     to,
-    sound: 'default',
+    sound: "default",
     title,
     body,
     data,
@@ -89,12 +102,12 @@ async function send(title, body, data, categoryId) {
     try {
       const tickets = await expo.sendPushNotificationsAsync(chunk);
       for (const t of tickets) {
-        if (t.status === 'error') {
-          console.warn('push error:', t.message, t.details);
+        if (t.status === "error") {
+          console.warn("push error:", t.message, t.details);
         }
       }
     } catch (e) {
-      console.error('failed to send chunk:', e.message);
+      console.error("failed to send chunk:", e.message);
     }
   }
 }
@@ -106,20 +119,25 @@ function handleEvent(evt) {
   const p = evt.properties || {};
   const sessionID = p.sessionID;
   // Cache session.updated titles so we can include them in notifications.
-  if (t === 'session.updated' && p.info) {
+  if (t === "session.updated" && p.info) {
     lastTitleBySession.set(p.info.id, p.info.title);
     return;
   }
   if (!sessionID) return;
-  const title = lastTitleBySession.get(sessionID) || 'session';
+  const title = lastTitleBySession.get(sessionID) || "session";
 
-  if (t === 'session.idle') {
+  if (t === "session.idle") {
     send(`${NAME}: idle`, title, { sessionID });
-  } else if (t === 'session.error') {
+  } else if (t === "session.error") {
     send(`${NAME}: error`, title, { sessionID });
-  } else if (t === 'permission.requested') {
-    const what = p.title || 'permission requested';
-    send(`${NAME}: permission`, `${title} — ${what}`, { sessionID, permissionID: p.id }, 'PILOT_PERMISSION');
+  } else if (t === "permission.requested") {
+    const what = p.title || "permission requested";
+    send(
+      `${NAME}: permission`,
+      `${title} — ${what}`,
+      { sessionID, permissionID: p.id },
+      "PILOT_PERMISSION",
+    );
   }
 }
 
@@ -127,12 +145,12 @@ let backoffMs = 1000;
 const maxBackoffMs = 30_000;
 
 function connect() {
-  const url = `${URL.replace(/\/$/, '')}/event`;
+  const url = `${URL.replace(/\/$/, "")}/event`;
   console.log(`[pilot-relay] connecting to ${url}`);
   const es = new EventSource(url, { headers: authHeaders() });
 
   es.onopen = () => {
-    console.log('[pilot-relay] connected');
+    console.log("[pilot-relay] connected");
     backoffMs = 1000;
   };
 
@@ -142,12 +160,17 @@ function connect() {
       const evt = JSON.parse(msg.data);
       handleEvent(evt);
     } catch (e) {
-      console.warn('bad event:', e.message);
+      console.warn("bad event:", e.message);
     }
   };
 
   es.onerror = (err) => {
-    console.warn('[pilot-relay] sse error, reconnecting in', backoffMs, 'ms', err?.message ?? '');
+    console.warn(
+      "[pilot-relay] sse error, reconnecting in",
+      backoffMs,
+      "ms",
+      err?.message ?? "",
+    );
     es.close();
     setTimeout(connect, backoffMs);
     backoffMs = Math.min(backoffMs * 2, maxBackoffMs);
@@ -156,7 +179,14 @@ function connect() {
 
 connect();
 
-process.on('SIGINT', () => {
-  console.log('[pilot-relay] shutting down');
+// Start n9router bridge if NINEROUTER_URL is configured
+if (process.env.NINEROUTER_URL) {
+  startBridge({ send }).catch((err) => {
+    console.error("[n9r-bridge] failed to start:", err.message);
+  });
+}
+
+process.on("SIGINT", () => {
+  console.log("[pilot-relay] shutting down");
   process.exit(0);
 });

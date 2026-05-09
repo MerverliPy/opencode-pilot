@@ -9,7 +9,7 @@ import { useMemoryStore } from "@/plugin/memory/store/memoryStore";
 type Item = {
   label: string;
   icon: string;
-  route: "/" | "/files" | "/diff" | "/settings" | "/memory";
+  route: "/" | "/files" | "/diff" | "/settings" | "/memory" | "/usage";
 };
 
 const ITEMS: Item[] = [
@@ -17,6 +17,7 @@ const ITEMS: Item[] = [
   { label: "file browser", icon: "▤", route: "/files" },
   { label: "diff viewer", icon: "±", route: "/diff" },
   { label: "memory", icon: "◉", route: "/memory" },
+  { label: "usage", icon: "◈", route: "/usage" },
   { label: "settings", icon: "⚙", route: "/settings" },
 ];
 

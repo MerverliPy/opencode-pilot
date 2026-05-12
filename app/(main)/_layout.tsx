@@ -61,7 +61,7 @@ export default function MainLayout() {
       {modal?.kind === "workdir" && (
         <WorkdirSheet
           visible
-          initialPath={workdir}
+          repoName={workdir ? lastSegment(workdir) : null}
           onClose={closeModal}
           onSelect={async (path) => {
             setWorkdir(path);
@@ -74,4 +74,10 @@ export default function MainLayout() {
       {modal?.kind === "title-edit" && <TitleEditModal onClose={closeModal} />}
     </View>
   );
+}
+
+function lastSegment(path: string): string {
+  const trimmed = path.replace(/\/+$/, "");
+  const i = trimmed.lastIndexOf("/");
+  return i >= 0 ? trimmed.slice(i + 1) : trimmed;
 }

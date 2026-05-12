@@ -13,74 +13,34 @@ import { useServerStore } from "@/store/server";
 import { OpencodeClient } from "@/services/api";
 import type { FileNode } from "@/services/types";
 
-type Props = {
+type ViewProps = {
   visible: boolean;
-  initialPath?: string | null;
+  repoName?: string | null;
+  path: string;
+  parent: string | null;
+  nodes: FileNode[];
+  loading: boolean;
   onClose: () => void;
-  onSelect: (path: string) => void;
+  onSelect: () => void;
+  onNavigate: (path: string) => void;
 };
 
 /**
- * Bottom-sheet directory picker.
- * Slides up from the bottom, shows only directories, and lets the user
- * navigate into subdirectories and select a project root.
+ * Pure presentational directory-picker sheet.
+ * Renders a modal with breadcrumb, file list, and select button.
  */
-export function WorkdirSheet({
+export function WorkdirSheetView({
   visible,
-  initialPath,
+  repoName,
+  path,
+  parent,
+  nodes,
+  loading,
   onClose,
   onSelect,
-}: Props) {
-  const server = useServerStore((s) => s.active());
-  const client = useMemo(
-    () => (server ? new OpencodeClient(server) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [server?.id, server?.url, server?.username, server?.password],
-  );
-
-  const [path, setPath] = useState(initialPath ?? ".");
-  const [nodes, setNodes] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Reset path when the sheet opens.
-  useEffect(() => {
-    if (visible) {
-      setPath(initialPath ?? ".");
-    }
-  }, [visible, initialPath]);
-
-  // Load directories for the current path.
-  useEffect(() => {
-    if (!visible || !client) return;
-    let cancelled = false;
-    setLoading(true);
-    client
-      .listFiles(path)
-      .then((n) => {
-        if (!cancelled)
-          setNodes(sortNodes(n.filter((node) => node.type === "directory")));
-      })
-      .catch(() => {
-        if (!cancelled) setNodes([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client, path, visible]);
-
-  const parent = useMemo(() => {
-    if (path === "." || path === "/") return null;
-    const i = path.lastIndexOf("/");
-    return i <= 0 ? "." : path.slice(0, i);
-  }, [path]);
-
-  const handleSelect = () => {
-    onSelect(path);
-    onClose();
-  };
+  onNavigate,
+}: ViewProps) {
+  const title = path === "." ? (repoName ?? "Project Root") : lastSegment(path);
 
   return (
     <Modal
@@ -129,7 +89,7 @@ export function WorkdirSheet({
               }}
               numberOfLines={1}
             >
-              select directory
+              {title}
             </Text>
             <View style={{ width: 32 }} />
           </View>
@@ -147,7 +107,7 @@ export function WorkdirSheet({
             }}
           >
             {parent !== null && (
-              <Pressable onPress={() => setPath(parent)} hitSlop={8}>
+              <Pressable onPress={() => onNavigate(parent)} hitSlop={8}>
                 <Text
                   style={{
                     color: colors.accent,
@@ -172,7 +132,7 @@ export function WorkdirSheet({
             </Text>
           </View>
 
-          {/* Directory list */}
+          {/* File list */}
           {loading ? (
             <ActivityIndicator
               color={colors.accent}
@@ -182,10 +142,14 @@ export function WorkdirSheet({
             <FlatList
               data={nodes}
               keyExtractor={(n) => n.path}
-              ListEmptyComponent={<EmptyHint text="no directories" />}
+              ListEmptyComponent={<EmptyHint text="empty directory" />}
               renderItem={({ item }) => (
                 <Pressable
-                  onPress={() => setPath(item.path)}
+                  onPress={() =>
+                    item.type === "directory"
+                      ? onNavigate(item.path)
+                      : undefined
+                  }
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -198,13 +162,16 @@ export function WorkdirSheet({
                 >
                   <Text
                     style={{
-                      color: colors.accent,
+                      color:
+                        item.type === "directory"
+                          ? colors.accent
+                          : colors.muted,
                       fontFamily: fonts.mono,
                       fontSize: fontSizes.md,
                       width: 24,
                     }}
                   >
-                    ▸
+                    {item.type === "directory" ? "▸" : "•"}
                   </Text>
                   <Text
                     numberOfLines={1}
@@ -215,7 +182,8 @@ export function WorkdirSheet({
                       fontSize: fontSizes.sm,
                     }}
                   >
-                    {item.name}/
+                    {item.name}
+                    {item.type === "directory" ? "/" : ""}
                   </Text>
                 </Pressable>
               )}
@@ -231,7 +199,7 @@ export function WorkdirSheet({
             }}
           >
             <Pressable
-              onPress={handleSelect}
+              onPress={onSelect}
               style={({ pressed }) => ({
                 backgroundColor: pressed ? colors.accentDim : colors.accent,
                 paddingVertical: 12,
@@ -257,6 +225,84 @@ export function WorkdirSheet({
   );
 }
 
+type Props = {
+  visible: boolean;
+  repoName?: string | null;
+  onClose: () => void;
+  onSelect: (path: string) => void;
+};
+
+/**
+ * Connected directory picker.
+ * Loads the server root, fetches nodes on navigation, and delegates
+ * rendering to the pure {@link WorkdirSheetView}.
+ */
+export function WorkdirSheet({ visible, repoName, onClose, onSelect }: Props) {
+  const server = useServerStore((s) => s.active());
+  const client = useMemo(
+    () => (server ? new OpencodeClient(server) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [server?.id, server?.url, server?.username, server?.password],
+  );
+
+  const [path, setPath] = useState(".");
+  const [nodes, setNodes] = useState<FileNode[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Reset to server root whenever the sheet opens.
+  useEffect(() => {
+    if (visible) {
+      setPath(".");
+    }
+  }, [visible]);
+
+  // Load nodes for the current path.
+  useEffect(() => {
+    if (!visible || !client) return;
+    let cancelled = false;
+    setLoading(true);
+    client
+      .listFiles(path)
+      .then((n) => {
+        if (!cancelled) setNodes(sortNodes(n));
+      })
+      .catch(() => {
+        if (!cancelled) setNodes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, path, visible]);
+
+  const parent = useMemo(() => {
+    if (path === "." || path === "/") return null;
+    const i = path.lastIndexOf("/");
+    return i <= 0 ? "." : path.slice(0, i);
+  }, [path]);
+
+  const handleSelect = () => {
+    onSelect(path);
+    onClose();
+  };
+
+  return (
+    <WorkdirSheetView
+      visible={visible}
+      repoName={repoName}
+      path={path}
+      parent={parent}
+      nodes={nodes}
+      loading={loading}
+      onClose={onClose}
+      onSelect={handleSelect}
+      onNavigate={setPath}
+    />
+  );
+}
+
 function EmptyHint({ text }: { text: string }) {
   return (
     <Text
@@ -274,5 +320,14 @@ function EmptyHint({ text }: { text: string }) {
 }
 
 function sortNodes(nodes: FileNode[]): FileNode[] {
-  return [...nodes].sort((a, b) => a.name.localeCompare(b.name));
+  return [...nodes].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function lastSegment(path: string): string {
+  const trimmed = path.replace(/\/+$/, "");
+  const i = trimmed.lastIndexOf("/");
+  return i >= 0 ? trimmed.slice(i + 1) : trimmed;
 }

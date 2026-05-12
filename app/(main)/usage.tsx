@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -20,7 +20,8 @@ import { ScreenHeader } from "@/components/shared/ScreenHeader";
 
 export default function UsageScreen() {
   const nav = useNavigation();
-  const n9Client = useN9RouterStore((s) => s.client());
+  const n9ClientRef = useRef<N9RouterClient | null>(null);
+  n9ClientRef.current = useN9RouterStore((s) => s.client());
 
   const [period, setPeriod] = useState<PeriodOption>("24h");
   const [summaries, setSummaries] = useState<ProviderSummary[]>([]);
@@ -32,14 +33,15 @@ export default function UsageScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!n9Client) {
+    const client = n9ClientRef.current;
+    if (!client) {
       setError("n9router not configured. Add URL in Settings.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const stats = await n9Client.usageStats(period);
+      const stats = await client.usageStats(period);
       const s = N9RouterClient.summarizeByProvider(stats);
       setSummaries(s);
       const reqs = stats.recentRequests ?? [];
@@ -54,7 +56,7 @@ export default function UsageScreen() {
     } finally {
       setLoading(false);
     }
-  }, [n9Client, period]);
+  }, [period]);
 
   useEffect(() => {
     void load();

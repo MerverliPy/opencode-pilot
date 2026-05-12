@@ -64,6 +64,7 @@
     "typescript": "~5.9.2"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "react-dom": "$react"
   }
 }

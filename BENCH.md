@@ -48,7 +48,7 @@ Open that file in any browser — it is fully self-contained (no CDN, no externa
 Individual suites accept flags:
 
 ```bash
-node pilot-bench.mjs        --url http://host:4096 --json /tmp/out.json
+node pilot-bench.mjs        --url http://host:4096 --out /tmp/out.json
 node pilot-load.mjs         --url http://host:4096 --vus 50 --out /tmp/out.json
 node pilot-sse-bench.mjs    --url http://host:4096 --out /tmp/out.json
 node pilot-memory-bench.mjs --url http://host:4096 --out /tmp/out.json
@@ -257,10 +257,14 @@ Validates the output of the inline `buildContext()` function (mirrors `MemoryInj
 
 ## Output files
 
-| File                                | Description                                                            |
-| ----------------------------------- | ---------------------------------------------------------------------- |
-| `/tmp/pilot-results.json`           | Raw merged results from all four suites; overwritten each full run     |
-| `pilot-audit-YYYY-MM-DD-HH-MM.html` | Self-contained HTML report; one file per run, kept in the project root |
+| File                                | Description                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| `/tmp/pilot-correctness.json`       | Per-suite temp results (correctness); overwritten each run                      |
+| `/tmp/pilot-load.json`              | Per-suite temp results (load); overwritten each run                             |
+| `/tmp/pilot-sse.json`               | Per-suite temp results (SSE); overwritten each run                              |
+| `/tmp/pilot-memory.json`            | Per-suite temp results (memory); overwritten each run                           |
+| `pilot-audit-YYYY-MM-DD-HH-MM.json` | Merged results from all four suites; one file per run, kept in the project root |
+| `pilot-audit-YYYY-MM-DD-HH-MM.html` | Self-contained HTML report; one file per run, kept in the project root          |
 
 ---
 

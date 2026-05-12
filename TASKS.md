@@ -19,15 +19,16 @@
 
 ## Recently Completed
 
-| Date       | Task                            | Files Changed                                                               | Notes                                                                                            |
-| ---------- | ------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 2026-05-09 | Commit + push doc consolidation | `AGENTS.md`, `ROADMAP.md`, `FEATURE-ROADMAP.md` (deleted), `TASKS.md` (new) | Commit `7fa1fd2a` on main. Remote updated.                                                       |
-| 2026-05-09 | Consolidate ROADMAP files       | `ROADMAP.md` (rewrite), `FEATURE-ROADMAP.md` (delete)                       | Merged Phase 1-6 tables into single roadmap. Reduced from 430 → 368 lines.                       |
-| 2026-05-09 | Fix README stale refs           | No changes needed                                                           | Phase 1 audit already fixed syntax.ts + plugin/ references.                                      |
-| 2026-05-09 | Fix DESIGN.md SDK claim         | No changes needed                                                           | Phase 1 audit already replaced false SDK claim with "Custom REST client built on plain fetch()". |
-| 2026-05-09 | Update AGENTS.md                | `AGENTS.md`                                                                 | Added "Agent Workflow" section referencing TASKS.md; updated Pilot doc link.                     |
-| 2026-05-09 | Fix AGENTS.md skill count       | No changes needed                                                           | Prose already reads "29 skills".                                                                 |
-| 2026-05-09 | Fix README.md plugin/ dir       | No changes needed                                                           | Phase 1 already added to project structure.                                                      |
+| Date       | Task                            | Files Changed                                                                              | Notes                                                                                            |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 2026-05-09 | Commit + push doc consolidation | `AGENTS.md`, `ROADMAP.md`, `FEATURE-ROADMAP.md` (deleted), `TASKS.md` (new)                | Commit `7fa1fd2a` on main. Remote updated.                                                       |
+| 2026-05-09 | Consolidate ROADMAP files       | `ROADMAP.md` (rewrite), `FEATURE-ROADMAP.md` (delete)                                      | Merged Phase 1-6 tables into single roadmap. Reduced from 430 → 368 lines.                       |
+| 2026-05-09 | Fix README stale refs           | No changes needed                                                                          | Phase 1 audit already fixed syntax.ts + plugin/ references.                                      |
+| 2026-05-09 | Fix DESIGN.md SDK claim         | No changes needed                                                                          | Phase 1 audit already replaced false SDK claim with "Custom REST client built on plain fetch()". |
+| 2026-05-09 | Update AGENTS.md                | `AGENTS.md`                                                                                | Added "Agent Workflow" section referencing TASKS.md; updated Pilot doc link.                     |
+| 2026-05-09 | Fix AGENTS.md skill count       | No changes needed                                                                          | Prose already reads "29 skills".                                                                 |
+| 2026-05-09 | Fix README.md plugin/ dir       | No changes needed                                                                          | Phase 1 already added to project structure.                                                      |
+| 2026-05-09 | Phase 5: Jest test suite        | `jest.config.js`, `jest.setup.js`, `__mocks__/`, `services/__tests__/`, `store/__tests__/` | Commit `c9e42c26` on main. 118 tests, all passing. Remote updated.                               |
 
 ---
 
@@ -39,11 +40,11 @@
 
 | #   | Task                                        | Priority    | Files                                                                                                | Validation                    |
 | --- | ------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 1   | Set up Jest test infrastructure             | 🔴 Critical | `jest.config.js`, `package.json`, `__mocks__/`                                                       | `npm test` runs without error |
-| 2   | Unit tests for `services/`                  | 🔴 Critical | `services/__tests__/api.test.ts`, `logger.test.ts`, `auth.test.ts`                                   | `npm test` passes             |
-| 3   | Unit tests for `store/`                     | 🔴 Critical | `store/__tests__/session.test.ts`, `server.test.ts`, `log.test.ts`, `ui.test.ts`, `n9router.test.ts` | `npm test` passes             |
+| 1   | ~~Set up Jest test infrastructure~~         | ✅ Done     | `jest.config.js`, `package.json`, `__mocks__/`                                                       | `npm test` runs without error |
+| 2   | ~~Unit tests for `services/`~~              | ✅ Done     | `services/__tests__/api.test.ts`, `logger.test.ts`, `auth.test.ts`                                   | `npm test` passes             |
+| 3   | ~~Unit tests for `store/`~~                 | ✅ Done     | `store/__tests__/session.test.ts`, `server.test.ts`, `log.test.ts`, `ui.test.ts`, `n9router.test.ts` | `npm test` passes             |
 | 4   | Unit tests for `plugin/memory/`             | 🔴 Critical | `plugin/memory/__tests__/`                                                                           | `npm test` passes             |
-| 5   | Clean ESLint warnings                       | 🟠 High     | `components/modals/ModelModal.tsx`, `TitleEditModal.tsx`                                             | `npm run lint` → 0 warnings   |
+| 5   | ~~Clean ESLint warnings~~                   | ✅ Done     | `components/modals/ModelModal.tsx`, `TitleEditModal.tsx`                                             | `npm run lint` → 0 warnings   |
 | 6   | Fix BENCH.md `--out` docs                   | 🟡 Medium   | `BENCH.md`                                                                                           | Docs match actual behavior    |
 | 7   | Extract sub-components from oversized files | 🟡 Medium   | `app/(main)/memory.tsx`, `settings.tsx`                                                              | `npx tsc --noEmit` passes     |
 | 8   | Plan Expo SDK 55 upgrade                    | 🟢 Low      | `package.json`                                                                                       | Research only                 |
@@ -174,7 +175,7 @@
 
 ### Phase 5: Technical Debt & Testing
 
-- `[ ]` 5.1 React Native unit tests — Zero tests.
+- `[x]` 5.1 React Native unit tests — 118 tests across services/ and store/. Jest + ts-jest configured.
 - `[ ]` 5.2 E2E tests for mobile app — No Playwright tests for RN.
 - `[~]` 5.3 Type cleanup: remove unused `cost`, `share.url`, `tokens.reasoning` if not implemented.
 - `[ ]` 5.4 Remove empty `types/` directory — Already removed (directory does not exist).

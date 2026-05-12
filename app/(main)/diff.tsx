@@ -61,7 +61,7 @@ export default function DiffScreen() {
         edges={["top", "bottom"]}
       >
         <ScreenHeader
-          title={selected.path.split("/").pop() ?? selected.path}
+          title={selected.path?.split("/").pop() ?? selected.path ?? "untitled"}
           subtitle={`+${selected.added} −${selected.removed}`}
           onBack={() => setSelected(null)}
         />

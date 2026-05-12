@@ -23,6 +23,12 @@ import { loadPushToken } from "@/services/auth";
 import { registerForPushNotifications } from "@/services/notifications";
 import type { ServerConfig } from "@/services/auth";
 
+import { ScreenHeader } from "@/components/shared/ScreenHeader";
+import { SettingsSection } from "@/components/shared/SettingsSection";
+import { SettingsRow } from "@/components/shared/SettingsRow";
+import { Stepper } from "@/components/shared/Stepper";
+import { LogRow } from "@/components/shared/LogRow";
+
 export default function SettingsScreen() {
   const nav = useNavigation();
   const router = useRouter();
@@ -174,9 +180,9 @@ export default function SettingsScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <Header title="settings" onMenu={openDrawer} />
+      <ScreenHeader title="settings" onMenu={openDrawer} />
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-        <Section title="servers">
+        <SettingsSection title="servers">
           <FlatList
             data={servers}
             keyExtractor={(s) => s.id}
@@ -263,9 +269,9 @@ export default function SettingsScreen() {
               + add server
             </Text>
           </Pressable>
-        </Section>
+        </SettingsSection>
 
-        <Section title="memory">
+        <SettingsSection title="memory">
           <Pressable
             onPress={() =>
               router.push("/memory" as Parameters<typeof router.push>[0])
@@ -298,10 +304,10 @@ export default function SettingsScreen() {
               ›
             </Text>
           </Pressable>
-        </Section>
+        </SettingsSection>
 
         {/* ── n9router ─────────────────────────────────────────────── */}
-        <Section title="n9router">
+        <SettingsSection title="n9router">
           {/* URL */}
           <View
             style={{
@@ -490,10 +496,10 @@ export default function SettingsScreen() {
               ›
             </Text>
           </Pressable>
-        </Section>
+        </SettingsSection>
 
-        <Section title="appearance">
-          <Row label="font size">
+        <SettingsSection title="appearance">
+          <SettingsRow label="font size">
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
@@ -517,10 +523,10 @@ export default function SettingsScreen() {
                 onPress={() => setFontSize(Math.min(20, fontSize + 1))}
               />
             </View>
-          </Row>
-        </Section>
+          </SettingsRow>
+        </SettingsSection>
 
-        <Section title="notifications">
+        <SettingsSection title="notifications">
           <Pressable
             onPress={copyToken}
             style={({ pressed }) => ({
@@ -552,10 +558,10 @@ export default function SettingsScreen() {
               {pushToken ?? "tap to register with apple push servers"}
             </Text>
           </Pressable>
-        </Section>
+        </SettingsSection>
 
-        <Section title="about">
-          <Row label="version">
+        <SettingsSection title="about">
+          <SettingsRow label="version">
             <Text
               style={{
                 color: colors.muted,
@@ -565,8 +571,8 @@ export default function SettingsScreen() {
             >
               0.1.0
             </Text>
-          </Row>
-          <Row label="opencode">
+          </SettingsRow>
+          <SettingsRow label="opencode">
             <Text
               style={{
                 color: colors.muted,
@@ -576,8 +582,8 @@ export default function SettingsScreen() {
             >
               pilot
             </Text>
-          </Row>
-        </Section>
+          </SettingsRow>
+        </SettingsSection>
 
         {/* ── Error / Debug Log ───────────────────────────────────────── */}
         <View style={{ marginTop: 18 }}>
@@ -647,231 +653,5 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Header({ title, onMenu }: { title: string; onMenu: () => void }) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        height: 44,
-        paddingHorizontal: 10,
-        backgroundColor: colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}
-    >
-      <Pressable
-        onPress={onMenu}
-        hitSlop={12}
-        style={{ width: 32, alignItems: "center" }}
-      >
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: 20,
-          }}
-        >
-          ☰
-        </Text>
-      </Pressable>
-      <Text
-        style={{
-          flex: 1,
-          color: colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.md,
-          textAlign: "center",
-        }}
-      >
-        {title}
-      </Text>
-      <View style={{ width: 32 }} />
-    </View>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={{ marginTop: 18 }}>
-      <Text
-        style={{
-          color: colors.muted,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.xs,
-          paddingHorizontal: 16,
-          paddingVertical: 6,
-          letterSpacing: 1,
-        }}
-      >
-        {title.toUpperCase()}
-      </Text>
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
-          borderColor: colors.border,
-        }}
-      >
-        {children}
-      </View>
-    </View>
-  );
-}
-
-function Row({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSubtle,
-      }}
-    >
-      <Text
-        style={{
-          flex: 1,
-          color: colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.sm,
-        }}
-      >
-        {label}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
-function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => ({
-        width: 30,
-        height: 28,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 4,
-        backgroundColor: pressed ? colors.surfaceAlt : colors.surface,
-      })}
-    >
-      <Text
-        style={{
-          color: colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.md,
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-const LEVEL_COLOR: Record<string, string> = {
-  debug: "#6c7a89",
-  info: "#5b9bd5",
-  warn: "#e5a639",
-  error: "#e05252",
-};
-
-function LogRow({ entry }: { entry: LogEntry }) {
-  const d = new Date(entry.ts);
-  const hms = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-  const levelColor = LEVEL_COLOR[entry.level] ?? colors.muted;
-
-  return (
-    <View
-      style={{
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSubtle,
-      }}
-    >
-      {/* Header row */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        <Text
-          style={{ color: colors.muted, fontFamily: fonts.mono, fontSize: 10 }}
-        >
-          {hms}
-        </Text>
-        <Text
-          style={{
-            color: levelColor,
-            fontFamily: fonts.mono,
-            fontSize: 10,
-            fontWeight: "700",
-          }}
-        >
-          {entry.level.toUpperCase()}
-        </Text>
-        <Text
-          style={{
-            color: colors.mutedAlt ?? colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: 10,
-          }}
-        >
-          {entry.tag}
-        </Text>
-      </View>
-      {/* Message */}
-      <Text
-        selectable
-        style={{
-          color: entry.level === "error" ? levelColor : colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.xs,
-          marginTop: 2,
-        }}
-      >
-        {entry.message}
-      </Text>
-      {/* Extra data */}
-      {!!entry.data && (
-        <Text
-          selectable
-          style={{
-            color: colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: 10,
-            marginTop: 4,
-          }}
-          numberOfLines={6}
-        >
-          {entry.data}
-        </Text>
-      )}
-    </View>
   );
 }

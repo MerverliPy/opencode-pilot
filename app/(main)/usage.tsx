@@ -16,6 +16,8 @@ type PeriodOption = "1h" | "24h" | "7d" | "30d";
 
 const PERIODS: PeriodOption[] = ["1h", "24h", "7d", "30d"];
 
+import { ScreenHeader } from "@/components/shared/ScreenHeader";
+
 export default function UsageScreen() {
   const nav = useNavigation();
   const n9Client = useN9RouterStore((s) => s.client());
@@ -65,7 +67,10 @@ export default function UsageScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <Header onMenu={() => nav.dispatch(DrawerActions.openDrawer())} />
+      <ScreenHeader
+        title="usage"
+        onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
+      />
       <ScrollView
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
@@ -190,49 +195,6 @@ function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
-}
-
-function Header({ onMenu }: { onMenu: () => void }) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        height: 44,
-        paddingHorizontal: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}
-    >
-      <Pressable
-        onPress={onMenu}
-        hitSlop={12}
-        style={{ width: 32, alignItems: "center" }}
-      >
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: 20,
-          }}
-        >
-          ☰
-        </Text>
-      </Pressable>
-      <Text
-        style={{
-          flex: 1,
-          color: colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.md,
-          textAlign: "center",
-        }}
-      >
-        usage
-      </Text>
-      <View style={{ width: 32 }} />
-    </View>
-  );
 }
 
 function SectionHeader({ title }: { title: string }) {

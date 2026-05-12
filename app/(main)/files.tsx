@@ -20,6 +20,8 @@ type Mode = "browse" | "name" | "text";
 
 type TextHit = { path: string; line_number: number; lines: string };
 
+import { ScreenHeader } from "@/components/shared/ScreenHeader";
+
 export default function FilesScreen() {
   const nav = useNavigation();
   const openModal = useUIStore((s) => s.openModal);
@@ -106,7 +108,7 @@ export default function FilesScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <Header title="file browser" onMenu={openDrawer} />
+      <ScreenHeader title="file browser" onMenu={openDrawer} />
 
       <View
         style={{
@@ -261,50 +263,6 @@ export default function FilesScreen() {
         </>
       )}
     </SafeAreaView>
-  );
-}
-
-function Header({ title, onMenu }: { title: string; onMenu: () => void }) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        height: 44,
-        paddingHorizontal: 10,
-        backgroundColor: colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}
-    >
-      <Pressable
-        onPress={onMenu}
-        hitSlop={12}
-        style={{ width: 32, alignItems: "center" }}
-      >
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: 20,
-          }}
-        >
-          ☰
-        </Text>
-      </Pressable>
-      <Text
-        style={{
-          flex: 1,
-          color: colors.foreground,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.md,
-          textAlign: "center",
-        }}
-      >
-        {title}
-      </Text>
-      <View style={{ width: 32 }} />
-    </View>
   );
 }
 

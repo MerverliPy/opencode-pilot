@@ -16,6 +16,8 @@ import { OpencodeClient } from "@/services/api";
 import { useSessionStore } from "@/store/session";
 import type { FileDiff } from "@/services/types";
 
+import { ScreenHeader } from "@/components/shared/ScreenHeader";
+
 export default function DiffScreen() {
   const nav = useNavigation();
   const server = useServerStore((s) => s.active());
@@ -58,7 +60,7 @@ export default function DiffScreen() {
         style={{ flex: 1, backgroundColor: colors.background }}
         edges={["top", "bottom"]}
       >
-        <Header
+        <ScreenHeader
           title={selected.path.split("/").pop() ?? selected.path}
           subtitle={`+${selected.added} −${selected.removed}`}
           onBack={() => setSelected(null)}
@@ -77,7 +79,7 @@ export default function DiffScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <Header
+      <ScreenHeader
         title="diff viewer"
         onMenu={openDrawer}
         subtitle={session?.title}
@@ -165,92 +167,6 @@ export default function DiffScreen() {
         />
       )}
     </SafeAreaView>
-  );
-}
-
-function Header({
-  title,
-  subtitle,
-  onMenu,
-  onBack,
-}: {
-  title: string;
-  subtitle?: string;
-  onMenu?: () => void;
-  onBack?: () => void;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        height: 44,
-        paddingHorizontal: 10,
-        backgroundColor: colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}
-    >
-      {onMenu ? (
-        <Pressable
-          onPress={onMenu}
-          hitSlop={12}
-          style={{ width: 32, alignItems: "center" }}
-        >
-          <Text
-            style={{
-              color: colors.foreground,
-              fontFamily: fonts.mono,
-              fontSize: 20,
-            }}
-          >
-            ☰
-          </Text>
-        </Pressable>
-      ) : null}
-      {onBack ? (
-        <Pressable
-          onPress={onBack}
-          hitSlop={12}
-          style={{ width: 32, alignItems: "center" }}
-        >
-          <Text
-            style={{
-              color: colors.accent,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.md,
-            }}
-          >
-            ‹
-          </Text>
-        </Pressable>
-      ) : null}
-      <View style={{ flex: 1, alignItems: "center" }}>
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.md,
-          }}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text
-            style={{
-              color: colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-            }}
-            numberOfLines={1}
-          >
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-      <View style={{ width: 32 }} />
-    </View>
   );
 }
 

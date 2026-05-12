@@ -8,7 +8,6 @@ import {
   FlatList,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   View,
@@ -40,6 +39,11 @@ import type {
 } from "@/plugin/memory/db/schema";
 import { getTimeline } from "@/plugin/memory/db/TimelineRepository";
 import { getProfile } from "@/plugin/memory/db/ProfileRepository";
+import { ScreenHeader } from "@/components/shared/ScreenHeader";
+import { SettingsSection } from "@/components/shared/SettingsSection";
+import { ConfigToggle } from "@/components/shared/ConfigToggle";
+import { TimelineView } from "@/components/memory/TimelineView";
+import { ProfileView } from "@/components/memory/ProfileView";
 
 type Tab = "memories" | "timeline" | "profile" | "config";
 
@@ -187,58 +191,27 @@ export default function MemoryScreen() {
       edges={["top", "bottom"]}
     >
       {/* Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          height: 44,
-          paddingHorizontal: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}
-      >
-        <Pressable
-          onPress={openDrawer}
-          hitSlop={12}
-          style={{ width: 32, alignItems: "center" }}
-        >
-          <Text
-            style={{
-              color: colors.foreground,
-              fontFamily: fonts.mono,
-              fontSize: 20,
-            }}
+      <ScreenHeader
+        title="memory"
+        onMenu={openDrawer}
+        rightElement={
+          <Pressable
+            onPress={() => void refreshMemories()}
+            hitSlop={12}
+            style={{ width: 32, alignItems: "center" }}
           >
-            ☰
-          </Text>
-        </Pressable>
-        <Text
-          style={{
-            flex: 1,
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.md,
-            textAlign: "center",
-          }}
-        >
-          memory
-        </Text>
-        <Pressable
-          onPress={() => void refreshMemories()}
-          hitSlop={12}
-          style={{ width: 32, alignItems: "center" }}
-        >
-          <Text
-            style={{
-              color: isExtracting ? colors.accent : colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: 16,
-            }}
-          >
-            {isExtracting ? "⟳" : "↺"}
-          </Text>
-        </Pressable>
-      </View>
+            <Text
+              style={{
+                color: isExtracting ? colors.accent : colors.muted,
+                fontFamily: fonts.mono,
+                fontSize: 16,
+              }}
+            >
+              {isExtracting ? "⟳" : "↺"}
+            </Text>
+          </Pressable>
+        }
+      />
 
       {/* Tab bar */}
       <View
@@ -365,7 +338,7 @@ export default function MemoryScreen() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Master toggle */}
-          <ConfigSection title="general">
+          <SettingsSection title="general">
             <ConfigToggle
               label="memory enabled"
               note="extract and inject memories"
@@ -384,10 +357,10 @@ export default function MemoryScreen() {
               value={config?.injectEnabled ?? false}
               onToggle={handleToggleInject}
             />
-          </ConfigSection>
+          </SettingsSection>
 
           {/* Embedding provider */}
-          <ConfigSection title="embedding provider">
+          <SettingsSection title="embedding provider">
             {(Object.keys(PROVIDER_DISPLAY) as EmbeddingProviderType[]).map(
               (p) => {
                 const isActive = config?.embeddingProvider === p;
@@ -442,11 +415,11 @@ export default function MemoryScreen() {
                 );
               },
             )}
-          </ConfigSection>
+          </SettingsSection>
 
           {/* Embedding model */}
           {config && (
-            <ConfigSection title={`model — ${config.embeddingProvider}`}>
+            <SettingsSection title={`model — ${config.embeddingProvider}`}>
               {(
                 MODELS_BY_PROVIDER[
                   config.embeddingProvider as EmbeddingProviderType
@@ -519,12 +492,12 @@ export default function MemoryScreen() {
                   </Pressable>
                 );
               })}
-            </ConfigSection>
+            </SettingsSection>
           )}
 
           {/* n9router: no API key needed here — uses n9router settings config */}
           {config && config.embeddingProvider === "n9router" && (
-            <ConfigSection title="api key">
+            <SettingsSection title="api key">
               <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
                 <Text
                   style={{
@@ -539,7 +512,7 @@ export default function MemoryScreen() {
                   }
                 </Text>
               </View>
-            </ConfigSection>
+            </SettingsSection>
           )}
 
           {/* API key (for providers that need one) */}
@@ -547,7 +520,7 @@ export default function MemoryScreen() {
             config.embeddingProvider !== "ollama" &&
             config.embeddingProvider !== "lmstudio" &&
             config.embeddingProvider !== "n9router" && (
-              <ConfigSection title="api key">
+              <SettingsSection title="api key">
                 <View
                   style={{
                     paddingHorizontal: 16,
@@ -631,11 +604,11 @@ export default function MemoryScreen() {
                     </Text>
                   </Pressable>
                 </View>
-              </ConfigSection>
+              </SettingsSection>
             )}
 
           {/* Danger zone */}
-          <ConfigSection title="danger zone">
+          <SettingsSection title="danger zone">
             <Pressable
               onPress={() => {
                 if (!server?.id) return;
@@ -673,333 +646,9 @@ export default function MemoryScreen() {
                 clear all memories
               </Text>
             </Pressable>
-          </ConfigSection>
+          </SettingsSection>
         </ScrollView>
       )}
     </SafeAreaView>
-  );
-}
-
-// ── Local sub-components ───────────────────────────────────────────────────────
-
-function ConfigSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={{ marginTop: 18 }}>
-      <Text
-        style={{
-          color: colors.muted,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.xs,
-          paddingHorizontal: 16,
-          paddingVertical: 6,
-          letterSpacing: 1,
-        }}
-      >
-        {title.toUpperCase()}
-      </Text>
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
-          borderColor: colors.border,
-        }}
-      >
-        {children}
-      </View>
-    </View>
-  );
-}
-
-function ConfigToggle({
-  label,
-  note,
-  value,
-  onToggle,
-}: {
-  label: string;
-  note?: string;
-  value: boolean;
-  onToggle: (v: boolean) => void;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSubtle,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-          }}
-        >
-          {label}
-        </Text>
-        {note && (
-          <Text
-            style={{
-              color: colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-              marginTop: 2,
-            }}
-          >
-            {note}
-          </Text>
-        )}
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: colors.surfaceAlt, true: colors.accentDim }}
-        thumbColor={value ? colors.accent : colors.muted}
-      />
-    </View>
-  );
-}
-
-// ── Timeline View ─────────────────────────────────────────────────────────────
-
-function relTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
-function TimelineView({
-  events,
-  loading,
-}: {
-  events: TimelineEvent[];
-  loading: boolean;
-}) {
-  const eventLabels: Record<TimelineEvent["eventType"], string> = {
-    prompt_sent: "↗",
-    response_received: "↩",
-    memory_extracted: "◇",
-    memory_injected: "◈",
-    memory_created: "+",
-    memory_deduplicated: "≡",
-  };
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-          }}
-        >
-          loading…
-        </Text>
-      </View>
-    );
-  }
-
-  if (events.length === 0) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-          }}
-        >
-          no timeline events yet
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={events}
-      keyExtractor={(e) => e.id}
-      contentContainerStyle={{ paddingVertical: 4 }}
-      renderItem={({ item }) => (
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.borderSubtle,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text
-              style={{
-                color: colors.accent,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.md,
-                width: 18,
-                textAlign: "center",
-              }}
-            >
-              {eventLabels[item.eventType] ?? "·"}
-            </Text>
-            <Text
-              style={{
-                color: colors.foreground,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.sm,
-                flex: 1,
-              }}
-              numberOfLines={2}
-            >
-              {item.eventType.replace(/_/g, " ")}
-            </Text>
-            <Text
-              style={{
-                color: colors.muted,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.xs,
-              }}
-            >
-              {relTime(item.createdAt)}
-            </Text>
-          </View>
-          {item.sessionId && (
-            <Text
-              style={{
-                color: colors.mutedAlt,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.xs,
-                marginTop: 2,
-                marginLeft: 26,
-              }}
-            >
-              session: {item.sessionId.slice(0, 8)}…
-            </Text>
-          )}
-        </View>
-      )}
-    />
-  );
-}
-
-// ── Profile View ──────────────────────────────────────────────────────────────
-
-function ProfileView({
-  entries,
-  loading,
-}: {
-  entries: ProfileEntry[];
-  loading: boolean;
-}) {
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-          }}
-        >
-          loading…
-        </Text>
-      </View>
-    );
-  }
-
-  if (entries.length === 0) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-          }}
-        >
-          no profile entries yet
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={entries}
-      keyExtractor={(e) => e.id}
-      contentContainerStyle={{ paddingVertical: 4 }}
-      renderItem={({ item }) => (
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.borderSubtle,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text
-              style={{
-                color: colors.foreground,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.sm,
-                flex: 1,
-              }}
-              numberOfLines={1}
-            >
-              {item.key}
-            </Text>
-            <Text
-              style={{
-                color: colors.muted,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.xs,
-              }}
-            >
-              {Math.round(item.confidence * 100)}%
-            </Text>
-          </View>
-          <Text
-            style={{
-              color: colors.accent,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.sm,
-              marginTop: 4,
-            }}
-            numberOfLines={2}
-          >
-            {item.value}
-          </Text>
-          {item.sourceMemoryId && (
-            <Text
-              style={{
-                color: colors.mutedAlt,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.xs,
-                marginTop: 2,
-              }}
-            >
-              from: {item.sourceMemoryId.slice(0, 8)}…
-            </Text>
-          )}
-        </View>
-      )}
-    />
   );
 }

@@ -98,8 +98,14 @@ export class OpencodeClient {
     return this.req<Session>("GET", `/session/${id}`);
   }
 
-  deleteSession(id: string) {
-    return this.req<boolean>("DELETE", `/session/${id}`);
+  async deleteSession(id: string): Promise<boolean> {
+    try {
+      return await this.req<boolean>("DELETE", `/session/${id}`);
+    } catch (err) {
+      // 404 means the session is already gone — treat as success
+      if (err instanceof ApiError && err.status === 404) return true;
+      throw err;
+    }
   }
 
   updateSession(id: string, body: { title?: string }) {

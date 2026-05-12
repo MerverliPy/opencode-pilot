@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@opencode-ai/plugin": ["./__mocks__/@opencode-ai/plugin.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "__mocks__/**/*.ts"]
+}

@@ -2,12 +2,12 @@
 module.exports = {
   testEnvironment: "node",
   transform: {
-    "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.json" }],
+    "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
-    "^react-native$": "<rootDir>/__mocks__/react-native.ts",
+    "^@opencode-ai/plugin$": "<rootDir>/__mocks__/@opencode-ai/plugin.ts",
     "^expo-secure-store$": "<rootDir>/__mocks__/expo-secure-store.ts",
     "^expo-constants$": "<rootDir>/__mocks__/expo-constants.ts",
     "^expo-device$": "<rootDir>/__mocks__/expo-device.ts",
@@ -22,17 +22,18 @@ module.exports = {
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
-  testPathIgnorePatterns: ["/.opencode/", "/node_modules/"],
-  testPathIgnorePatterns: ["/.opencode/", "/node_modules/"],
+  testPathIgnorePatterns: ["/node_modules/"],
   collectCoverageFrom: [
     "services/**/*.{ts,tsx}",
     "store/**/*.{ts,tsx}",
     "plugin/**/*.{ts,tsx}",
+    ".opencode/plugins/**/*.{ts,tsx}",
     "!**/*.d.ts",
     "!**/node_modules/**",
     "!**/__tests__/**",
     "!**/__mocks__/**",
   ],
+  coverageProvider: "v8",
   coverageThreshold: {
     global: {
       branches: 80,

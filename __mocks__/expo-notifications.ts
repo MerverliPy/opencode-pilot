@@ -13,4 +13,10 @@ export const getPermissionsAsync = jest.fn(() =>
   Promise.resolve({ status: "granted" }),
 );
 export const setNotificationChannelAsync = jest.fn();
-export const AndroidImportance = { MAX: 5 };
+export const setNotificationCategoryAsync = jest.fn();
+export const getLastNotificationResponseAsync = jest.fn(() =>
+  Promise.resolve(null),
+);
+export const AndroidImportance = { DEFAULT: 3, MAX: 5 };
+export const DEFAULT_ACTION_IDENTIFIER =
+  "expo.modules.notifications.actions.DEFAULT";

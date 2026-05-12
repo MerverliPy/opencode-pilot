@@ -48,14 +48,17 @@ export function SessionsModal({ onClose }: Props) {
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  const refresh = async () => {
-    if (!client) return;
+  const refresh = async (): Promise<Session[]> => {
+    if (!client) return [];
     setLoading(true);
     try {
       const list = await client.listSessions();
-      setSessions(list.sort((a, b) => b.time.updated - a.time.updated));
+      const sorted = list.sort((a, b) => b.time.updated - a.time.updated);
+      setSessions(sorted);
+      return sorted;
     } catch (e) {
       Alert.alert("Failed to load sessions", (e as Error).message);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -123,11 +126,18 @@ export function SessionsModal({ onClose }: Props) {
   /**
    * Delete all sessions (excluding the active one) not updated within `days`
    * days. Pass `days = 0` to clear all other sessions regardless of age.
+   *
+   * Refreshes from the server before computing the delete set so the confirm
+   * dialog always shows an accurate count, and uses parallel deletes for speed.
    */
-  const clearOlderThan = (days: number) => {
+  const clearOlderThan = async (days: number) => {
     if (!client) return;
+
+    // Fetch fresh list before computing toDelete so the count in the confirm
+    // dialog reflects what the server actually has right now.
+    const fresh = await refresh();
     const cutoff = days > 0 ? Date.now() - days * 86_400_000 : Infinity;
-    const toDelete = sessions.filter(
+    const toDelete = fresh.filter(
       (s) => s.id !== current?.id && s.time.updated < cutoff,
     );
 
@@ -153,12 +163,12 @@ export function SessionsModal({ onClose }: Props) {
         style: "destructive",
         onPress: async () => {
           try {
-            for (const s of toDelete) {
-              await client.deleteSession(s.id);
-            }
-            await refresh();
+            await Promise.all(toDelete.map((s) => client.deleteSession(s.id)));
           } catch (e) {
             Alert.alert("Delete failed", (e as Error).message);
+          } finally {
+            // Always refresh so the list reflects reality, even on partial failure.
+            await refresh();
           }
         },
       },

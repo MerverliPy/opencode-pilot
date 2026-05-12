@@ -49,6 +49,8 @@ export class OpencodeClient {
     init?: {
       body?: unknown;
       query?: Record<string, string | number | undefined>;
+      /** Status codes that are handled by the caller — skip error logging for these. */
+      expectedStatuses?: number[];
     },
   ): Promise<T> {
     const headers: Record<string, string> = {
@@ -64,11 +66,13 @@ export class OpencodeClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      log.error(
-        "api",
-        `${method} ${path} → ${res.status}`,
-        text || "(no body)",
-      );
+      if (!init?.expectedStatuses?.includes(res.status)) {
+        log.error(
+          "api",
+          `${method} ${path} → ${res.status}`,
+          text || "(no body)",
+        );
+      }
       throw new ApiError(res.status, text);
     }
     if (res.status === 204) return undefined as T;
@@ -100,9 +104,11 @@ export class OpencodeClient {
 
   async deleteSession(id: string): Promise<boolean> {
     try {
-      return await this.req<boolean>("DELETE", `/session/${id}`);
+      return await this.req<boolean>("DELETE", `/session/${id}`, {
+        // 404 means the session is already gone — expected, not an error
+        expectedStatuses: [404],
+      });
     } catch (err) {
-      // 404 means the session is already gone — treat as success
       if (err instanceof ApiError && err.status === 404) return true;
       throw err;
     }

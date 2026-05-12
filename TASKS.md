@@ -31,30 +31,94 @@
 
 ---
 
-## Active Work Area: Phase 2 High-Priority Features
+## Active Work Area: Phase 5 — Technical Debt & Testing
 
-The next tasks come from `ROADMAP.md` Phase 2. These are prioritized by user impact and implementation complexity.
+**Triggered by:** Deep audit on 2026-05-09 revealed zero test coverage (violates 80% mandate), 2 files >800 lines, 3 lint warnings, 18 outdated packages, and 7 suppressed `react-hooks/exhaustive-deps` warnings.
 
-### Task 7: Session deep linking from push notifications
+### Deep Audit Action Plan (in priority order)
 
-- **Status:** `[ ]`
-- **Files:** `app/(main)/index.tsx`, `services/sse.ts` or notification handler, `app/_layout.tsx` (deep link config)
-- **Scope:** `sessionID` is already in the push payload. `useNotificationDeepLink` only opens `/`. Need route param on index to accept `?sessionId=xxx` and auto-switch. Or modify the notification handler to call `router.push('/?sessionId=' + sessionID)` and handle in `index.tsx`.
-- **Validation:** Send a test push with `sessionID`. Tap → correct session loads. `npx tsc --noEmit` passes.
+| #   | Task                                        | Priority    | Files                                                                                                | Validation                    |
+| --- | ------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 1   | Set up Jest test infrastructure             | 🔴 Critical | `jest.config.js`, `package.json`, `__mocks__/`                                                       | `npm test` runs without error |
+| 2   | Unit tests for `services/`                  | 🔴 Critical | `services/__tests__/api.test.ts`, `logger.test.ts`, `auth.test.ts`                                   | `npm test` passes             |
+| 3   | Unit tests for `store/`                     | 🔴 Critical | `store/__tests__/session.test.ts`, `server.test.ts`, `log.test.ts`, `ui.test.ts`, `n9router.test.ts` | `npm test` passes             |
+| 4   | Unit tests for `plugin/memory/`             | 🔴 Critical | `plugin/memory/__tests__/`                                                                           | `npm test` passes             |
+| 5   | Clean ESLint warnings                       | 🟠 High     | `components/modals/ModelModal.tsx`, `TitleEditModal.tsx`                                             | `npm run lint` → 0 warnings   |
+| 6   | Fix BENCH.md `--out` docs                   | 🟡 Medium   | `BENCH.md`                                                                                           | Docs match actual behavior    |
+| 7   | Extract sub-components from oversized files | 🟡 Medium   | `app/(main)/memory.tsx`, `settings.tsx`                                                              | `npx tsc --noEmit` passes     |
+| 8   | Plan Expo SDK 55 upgrade                    | 🟢 Low      | `package.json`                                                                                       | Research only                 |
 
-### Task 8: Memory timeline UI
+---
 
-- **Status:** `[ ]`
-- **Files:** `plugin/memory/ui/` (new screen), `app/(main)/memory.tsx` or `app/(main)/memory-timeline.tsx`
-- **Scope:** `memory_timeline` table + `TimelineRepository.ts` exist but have no UI. Create a screen/modal showing extraction/injection/dedup events with timestamps. Reuse existing memory UI patterns (cards, filter bar).
-- **Validation:** Screen navigable from drawer or memory screen. Shows real timeline data. `npx tsc --noEmit`.
+## Backlog (Phase 2-6)
 
-### Task 9: Memory profile UI
+### Phase 2: High Priority
 
-- **Status:** `[ ]`
-- **Files:** `plugin/memory/ui/`, `app/(main)/memory-profile.tsx`
-- **Scope:** `user_profile` table + `ProfileRepository.ts` exist. Build a read-only (or editable) screen showing key-value profile facts derived from memories.
-- **Validation:** Screen navigable, renders profile entries. `npx tsc --noEmit`.
+- `[ ]` 2.1 Light theme support — Full light palette variant. Currently dark-only.
+- `[ ]` 2.2 Session title editing — `Session.title` exists but no edit UI. Need `PATCH /session/:id`.
+- `[ ]` 2.3 Memory timeline UI — `memory_timeline` table exists, needs screen.
+- `[ ]` 2.4 Memory profile UI — `user_profile` table exists, needs screen.
+- `[ ]` 2.5 Session deep linking from push — `sessionID` in payload but opens `/` only.
+- `[ ]` 2.6 Message retry / resend — Retry failed prompts, cancel in-flight.
+- `[ ]` 2.7 Offline indicator — Show when SSE disconnects or server unreachable.
+- `[ ]` 2.8 Session sharing UI — `share.url` field exists but never rendered.
+- `[ ]` 2.9 Cost tracking display — `cost` field in Message type, never rendered.
+- `[ ]` 2.10 Reasoning token display — `tokens.reasoning` exists, not shown.
+
+### Phase 3: Medium Priority
+
+- `[ ]` 3.1 Memory export / backup — JSON export per server, import/restore.
+- `[ ]` 3.2 Memory bulk operations — Multi-select for batch archive/delete.
+- `[ ]` 3.3 Semantic memory search — Embed query, find memories.
+- `[ ]` 3.4 Memory confidence threshold UI — Slider for extraction confidence (currently 0.65).
+- `[ ]` 3.5 Image rendering in messages — Display images from file parts or URLs.
+- `[ ]` 3.6 Rich markdown rendering — Headers, lists, links, tables beyond code blocks.
+- `[ ]` 3.7 Message editing — Edit sent messages and re-run.
+- `[ ]` 3.8 Message deletion — Remove individual messages.
+- `[ ]` 3.9 Branching conversations — Fork session at a message.
+- `[ ]` 3.10 Font family selection — Toggle between JetBrains Mono, SF Mono, etc.
+- `[ ]` 3.11 Biometric auth — Face ID / Touch ID.
+- `[ ]` 3.12 Server URL QR scanner — Scan QR to add server.
+- `[ ]` 3.13 Session tags / folders — Organize sessions.
+- `[ ]` 3.14 Quick reply suggestions — AI-generated follow-ups.
+- `[ ]` 3.15 Voice input — Speech-to-text.
+
+### Phase 4: Low Priority / Future Ideas
+
+- `[ ]` 4.1 Android support — `app.json` has config, untested.
+- `[ ]` 4.2 iPad / tablet layout — Two-pane layout.
+- `[ ]` 4.3 iOS home screen widget — Quick prompt / status.
+- `[ ]` 4.4 Apple Watch companion — View status, send quick prompts.
+- `[ ]` 4.5 Siri Shortcuts — "Ask OpenCode about..."
+- `[ ]` 4.6 Custom themes — User-defined accent/background.
+- `[ ]` 4.7 Session analytics — Token/cost charts.
+- `[ ]` 4.8 Memory visualization — Graph view.
+- `[ ]` 4.9 Collaborative sessions — Pair programming.
+- `[ ]` 4.10 Local model fallback — On-device LLM.
+- `[ ]` 4.11 File upload — Upload images/documents.
+- `[ ]` 4.12 Rich haptic patterns — Different haptics per event.
+- `[ ]` 4.13 Accessibility audit — VoiceOver, dynamic type.
+- `[ ]` 4.14 Internationalization (i18n) — Multi-language.
+
+### Phase 5: Technical Debt & Testing
+
+- `[ ]` 5.1 React Native unit tests — Zero tests.
+- `[ ]` 5.2 E2E tests for mobile app — No Playwright tests for RN.
+- `[~]` 5.3 Type cleanup: remove unused `cost`, `share.url`, `tokens.reasoning` if not implemented.
+- `[ ]` 5.4 Remove empty `types/` directory — Already removed (directory does not exist).
+- `[ ]` 5.5 Document `audit.sh` dev-server utility — No README mention.
+- `[~]` 5.6 Plugin test coverage expansion — Only 2 test files.
+- `[~]` 5.7 Consolidate embedding provider registry — `embedding_providers` table exists but providers loaded from `ModelRegistry.ts`.
+
+### Phase 6: Documentation Overhaul
+
+- `[~]` 6.1 README: add `plugin/` to project structure — Already present (Phase 1 audit fixed).
+- `[~]` 6.2 README: update tech stack table — Already fixed (Phase 1).
+- `[~]` 6.3 AGENTS.md: add memory plugin section — Already present (Phase 1).
+- `[~]` 6.4 AGENTS.md: refresh date — Already updated to 2026-05-08.
+- `[ ]` 6.5 relay/README.md: remove "Phase 9" parenthetical — Need to verify.
+- `[x]` 6.6 DESIGN.md: file structure overhaul — Fixed in Phase 1.
+- `[ ]` 6.7 BENCH.md: correct `audit-report.mjs` usage docs — `--out` behavior misdocumented.
 
 ---
 

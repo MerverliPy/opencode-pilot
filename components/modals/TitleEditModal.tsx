@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Text, TextInput, View } from "react-native";
 import { ModalShell } from "./ModalShell";
 import { colors, fonts, fontSizes } from "@/theme";
 import { useServerStore } from "@/store/server";
 import { useSessionStore } from "@/store/session";
-import { useUIStore } from "@/store/ui";
 
 type Props = { onClose: () => void };
 
@@ -12,7 +11,6 @@ export function TitleEditModal({ onClose }: Props) {
   const client = useServerStore((s) => s.client());
   const session = useSessionStore((s) => s.session);
   const updateTitle = useSessionStore((s) => s.updateTitle);
-  const closeModal = useUIStore((s) => s.closeModal);
 
   const [value, setValue] = useState(session?.title ?? "");
   const [saving, setSaving] = useState(false);

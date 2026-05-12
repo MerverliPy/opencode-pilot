@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  SectionList,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, SectionList, Text, TextInput, View } from "react-native";
 import { ModalShell } from "./ModalShell";
 import { colors, fonts, fontSizes } from "@/theme";
 import { useServerStore } from "@/store/server";

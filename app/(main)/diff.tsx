@@ -171,7 +171,7 @@ export default function DiffScreen() {
 }
 
 function DiffBody({ diff }: { diff: string }) {
-  const lines = diff.split("\n");
+  const lines = (diff ?? "").split("\n");
   return (
     <View style={{ padding: 8, minWidth: "100%" }}>
       {lines.map((line, i) => {

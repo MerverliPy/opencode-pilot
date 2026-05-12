@@ -1,0 +1,79 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Benchmark suite to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - memory
+          - correctness
+          - load
+          - sse
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    # Require OPENCODE_URL secret — skip silently if not configured
+    if: vars.OPENCODE_URL != '' || secrets.OPENCODE_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Memory benchmarks (Suites 2-5 are offline-safe) ─────────────────────
+      - name: Memory benchmark (offline suites)
+        if: inputs.suite == 'all' || inputs.suite == 'memory'
+        run: node pilot-memory-bench.mjs
+        # Suite 1 requires a live server; Suites 2-5 are offline.
+        # No --suite flag exists; all suites run but Suite 1 will fail
+        # gracefully if OPENCODE_URL is unreachable.
+        continue-on-error: true
+        env:
+          OPENCODE_URL: ${{ secrets.OPENCODE_URL }}
+
+      # ── Server-dependent benchmarks (require OPENCODE_URL) ──────────────────
+      - name: Correctness benchmark
+        if: inputs.suite == 'all' || inputs.suite == 'correctness'
+        run: node pilot-bench.mjs
+        env:
+          OPENCODE_URL: ${{ secrets.OPENCODE_URL }}
+
+      - name: Load benchmark
+        if: inputs.suite == 'all' || inputs.suite == 'load'
+        run: node pilot-load.mjs
+        env:
+          OPENCODE_URL: ${{ secrets.OPENCODE_URL }}
+
+      - name: SSE benchmark
+        if: inputs.suite == 'all' || inputs.suite == 'sse'
+        run: node pilot-sse-bench.mjs
+        env:
+          OPENCODE_URL: ${{ secrets.OPENCODE_URL }}
+
+      # ── Upload results ───────────────────────────────────────────────────────
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: |
+            *.json
+            audit-report.html
+          if-no-files-found: ignore
+          retention-days: 30

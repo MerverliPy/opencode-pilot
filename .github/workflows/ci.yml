@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Commit message lint ────────────────────────────────────────────────────
+  commitlint:
+    name: Commit lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lint commit messages (push)
+        if: github.event_name == 'push'
+        run: npx --yes commitlint@19 --last --verbose
+
+      - name: Lint commit messages (PR — all commits in branch)
+        if: github.event_name == 'pull_request'
+        run: |
+          npx --yes commitlint@19 \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to   ${{ github.event.pull_request.head.sha }} \
+            --verbose
+
+  # ─── Shared dependency cache ────────────────────────────────────────────────
+  # Individual jobs restore this cache independently so they can run in parallel.
+
+  # ─── TypeScript ─────────────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+  # ─── Lint ───────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  # ─── Tests + coverage ───────────────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --coverageReporters=json-summary --coverageReporters=text
+
+      - name: Read coverage summary
+        if: always() && github.event_name == 'pull_request'
+        id: coverage
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'coverage/coverage-summary.json';
+            if (!fs.existsSync(path)) {
+              core.setOutput('body', '> Coverage summary not available.');
+              return;
+            }
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8')).total;
+            const pct = (k) => summary[k].pct.toFixed(2) + '%';
+            const icon = (k) => summary[k].pct >= 80 ? '✅' : '❌';
+            const body = [
+              '## Test Coverage Report',
+              '',
+              '| Metric | Coverage | Threshold | Status |',
+              '|--------|----------|-----------|--------|',
+              `| Statements | ${pct('statements')} | 80% | ${icon('statements')} |`,
+              `| Branches   | ${pct('branches')}   | 80% | ${icon('branches')}   |`,
+              `| Functions  | ${pct('functions')}  | 80% | ${icon('functions')}  |`,
+              `| Lines      | ${pct('lines')}      | 80% | ${icon('lines')}      |`,
+            ].join('\n');
+            core.setOutput('body', body);
+
+      - name: Post or update coverage comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '## Test Coverage Report';
+            const body = `${{ steps.coverage.outputs.body }}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(
+              (c) => c.user.type === 'Bot' && c.body.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # ─── Aggregate gate (required for branch protection) ────────────────────────
+  ci-pass:
+    name: CI pass
+    runs-on: ubuntu-latest
+    needs: [commitlint, typecheck, lint, test]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.commitlint.result }}" != "success" ||
+                "${{ needs.typecheck.result }}"  != "success" ||
+                "${{ needs.lint.result }}"       != "success" ||
+                "${{ needs.test.result }}"       != "success" ]]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All CI jobs passed."

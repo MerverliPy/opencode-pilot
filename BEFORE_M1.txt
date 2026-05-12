@@ -1,0 +1,76 @@
+BEFORE M1 CAN START — MANUAL CHECKLIST
+=======================================
+Repo: MerverliPy/opencode-pilot
+Date: 2026-05-12
+
+
+1. BRANCH PROTECTION (GitHub Settings)
+---------------------------------------
+Go to: https://github.com/MerverliPy/opencode-pilot/settings/branches
+Click "Add branch protection rule" (or edit if one exists for "main").
+
+Required settings:
+  [x] Branch name pattern: main
+  [x] Require a pull request before merging
+        [x] Require approvals: 1 (or 0 if solo — your choice)
+        [x] Dismiss stale pull request approvals when new commits are pushed
+  [x] Require status checks to pass before merging
+        [x] Require branches to be up to date before merging
+        Status check to add: "CI pass"
+          (Search for "CI pass" — it appears after the first CI run)
+  [x] Require conversation resolution before merging
+  [x] Do not allow bypassing the above settings
+
+Save changes.
+
+NOTE: "CI pass" is the aggregate gate job in .github/workflows/ci.yml.
+All four jobs (commitlint, typecheck, lint, test) must pass for it to
+succeed. This is the only check you need to require.
+
+
+2. OPENCODE_URL SECRET (Optional — needed for benchmark workflow only)
+-----------------------------------------------------------------------
+Go to: https://github.com/MerverliPy/opencode-pilot/settings/secrets/actions
+Click "New repository secret".
+
+  Name:  OPENCODE_URL
+  Value: http://your-opencode-server:port
+         (e.g. http://localhost:3000 or your Cloudflare tunnel URL)
+
+This is only needed to run the Benchmark workflow
+(.github/workflows/benchmark.yml). The CI workflow does not use it.
+Skip this if you do not want to run benchmarks from CI yet.
+
+
+3. VERIFY GITHUB_TOKEN PERMISSIONS
+------------------------------------
+Go to: https://github.com/MerverliPy/opencode-pilot/settings/actions
+Under "Workflow permissions":
+  [x] Read and write permissions  ← must be selected
+  [x] Allow GitHub Actions to create and approve pull requests
+
+This allows:
+  - release.yml to push the back-commit (chore(release): vX.Y.Z [skip ci])
+  - release.yml to create GitHub releases and publish to GitHub Packages
+  - ci.yml to post/update the coverage comment on pull requests
+
+
+4. CONFIRM PACKAGE VISIBILITY (GitHub Packages)
+-------------------------------------------------
+After the first release runs and publishes @MerverliPy/pilot to GitHub
+Packages, the package may default to "private". To make it public:
+
+Go to: https://github.com/orgs/MerverliPy/packages (or your user packages)
+Find the "pilot" package → Settings → Change visibility → Public
+
+This only needs to be done once, after the first successful release.
+
+
+SUMMARY
+-------
+  Step 1 — Branch protection      MANUAL (GitHub Settings)        REQUIRED
+  Step 2 — OPENCODE_URL secret    MANUAL (GitHub Settings)        OPTIONAL
+  Step 3 — GITHUB_TOKEN perms     MANUAL (GitHub Settings)        REQUIRED
+  Step 4 — Package visibility     MANUAL (after first release)    DEFERRED
+
+Once Steps 1 and 3 are done, M1 (repo restructure) can begin.

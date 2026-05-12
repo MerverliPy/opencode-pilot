@@ -58,16 +58,18 @@ Full rationale and design spec in `DESIGN.md`.
 
 ### M1 Detail — Repo Restructure
 
-| Step | Action                                                                                   |
-| ---- | ---------------------------------------------------------------------------------------- |
-| 1    | Add root `package.json` with `workspaces: ["server", "ui", "shared"]`                    |
-| 2    | Create `shared/types.ts` (move shared TypeScript types)                                  |
-| 3    | Scaffold `server/` — Hono app, `package.json`, `tsconfig.json`                           |
-| 4    | Scaffold `ui/` — Vite + React app, `package.json`, `tsconfig.json`                       |
-| 5    | Remove Expo/RN files: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js` |
-| 6    | Remove Expo/RN deps from root `package.json`                                             |
-| 7    | Add `pilot start` CLI entry point in `server/src/cli.ts`                                 |
-| 8    | Verify `npm run build` succeeds (both workspaces)                                        |
+| Step | Action                                                                                                           |
+| ---- | ---------------------------------------------------------------------------------------------------------------- |
+| 1    | Add root `package.json` with `workspaces: ["server", "ui", "shared"]`                                            |
+| 2    | Create `shared/types.ts` (move shared TypeScript types)                                                          |
+| 3    | Scaffold `server/` — Hono app, `package.json`, `tsconfig.json`                                                   |
+| 4    | Scaffold `ui/` — Vite + React app, `package.json`, `tsconfig.json`                                               |
+| 5    | Remove Expo/RN files: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js`                         |
+| 6    | Remove Expo/RN deps from root `package.json`                                                                     |
+| 7    | Add `pilot start` CLI entry point in `server/src/cli.ts`                                                         |
+| 8    | Verify `npm run build` succeeds (both workspaces)                                                                |
+| 9    | Update `.github/workflows/ci.yml` for monorepo — run typecheck/lint/test per workspace, update cache keys        |
+| 10   | Enable Docker release job in `.github/workflows/release.yml` — change `if: false` to `if: true` after Dockerfile |
 
 ---
 

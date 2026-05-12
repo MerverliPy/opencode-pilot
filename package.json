@@ -1,6 +1,10 @@
 {
-  "name": "pilot",
+  "name": "@MerverliPy/pilot",
   "version": "0.1.0",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -60,6 +64,5 @@
   },
   "overrides": {
     "postcss": "^8.5.10"
-  },
-  "private": true
+  }
 }

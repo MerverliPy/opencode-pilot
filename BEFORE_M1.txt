@@ -6,6 +6,9 @@ Date: 2026-05-12
 Do these steps in order. Step 3 must be done before any PR is opened.
 
 
+
+
+
 ================================================================
 STEP 1 — SET GITHUB_TOKEN PERMISSIONS (do this first)
 ================================================================

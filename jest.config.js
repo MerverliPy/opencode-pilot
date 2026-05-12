@@ -33,6 +33,7 @@ module.exports = {
     "!**/__tests__/**",
     "!**/__mocks__/**",
   ],
+  reporters: ["jest-spec-reporter"],
   coverageProvider: "v8",
   coverageThreshold: {
     global: {

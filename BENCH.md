@@ -130,7 +130,7 @@ Default `--vus 25` means peak = 25, spike = 50.
 
 ### Phase 3 — SSE & App Flow (`pilot-sse-bench.mjs`)
 
-Tests the real-time event stream and simulates the full lifecycle a mobile client follows on startup.
+Tests the real-time event stream and simulates the full lifecycle a web client follows on startup.
 
 **Section A — Concurrent SSE connections**
 
@@ -149,7 +149,7 @@ Holds a single SSE connection open for 10 seconds and counts events received and
 
 **Section D — Full app session flow**
 
-10 sequential steps matching what the Expo client does on boot:
+10 sequential steps matching what the web client does on boot:
 
 1. Health check (verify server version)
 2. Fetch providers

@@ -1,306 +1,612 @@
 # Pilot — Design Document
 
-A React Native iOS client that reskins the OpenCode TUI for iPhone, connecting to a remote `opencode serve` instance over HTTP + SSE.
+A self-hosted web PWA that connects to a remote `opencode serve` instance over HTTP + SSE.
+Built with React + Vite and served by a Hono Node.js server.
+
+> **Migration note:** Pilot is pivoting from a React Native / Expo iOS app to a web-first PWA.
+> This document supersedes the previous mobile-focused design doc.
+> Reason: xterm.js, CodeMirror, diff2html, and Cloudflare tunnel integration are impractical in React Native.
+> The web stack enables all planned power features without native compilation or App Store gating.
 
 ---
 
 ## 1. Goals
 
-- Make using OpenCode on iPhone faster and more pleasant than SSH-ing into a server.
-- Preserve the OpenCode TUI aesthetic (monospace, theme colors, status line) while using native iOS components for input, scrolling, and gestures.
-- Solve the four pain points: session management, file browsing, push notifications, syntax highlighting.
+- Replace the React Native app with a progressive web app that installs on iOS (16.4+) and Android from the browser — no App Store required.
+- Preserve the OpenCode TUI aesthetic: monospace, dark-by-default, status lines, minimal chrome.
+- Enable power features that were blocked by React Native: embedded terminal (xterm.js), file editor (CodeMirror), Git diff viewer (diff2html), Cloudflare tunnel + QR access.
+- Keep the memory plugin as Pilot's key competitive differentiator — port it server-side.
+- Maintain parity with existing React Native features: SSE streaming, session management, file browser, permission prompts, push notifications.
 
 ## 2. Non-Goals
 
 - Running OpenCode locally on the device.
-- Replicating the TUI pixel-for-pixel inside a terminal emulator.
-- Editing files directly via a write API (the OpenCode server has no write endpoint; edits happen through chat).
-- Android support (single-platform for now).
+- iOS/Android native shell (no Expo, no Capacitor, no React Native wrapper).
+- iOS-specific features: home screen widget, Apple Watch companion, Siri Shortcuts, Face ID/Touch ID. Permanently deferred.
+- Electron or Tauri desktop shell (web-only for now; can add later without code changes).
+
+---
 
 ## 3. Architecture
 
 ```
-┌──────────────────┐        HTTPS + SSE        ┌────────────────────────┐
-│   Pilot (iOS)    │ ─────────────────────────▶│  opencode serve        │
-│  React Native    │                           │  --hostname 0.0.0.0    │
-│  Expo (managed)  │ ◀──────────────────────── │  --port 4096           │
-└──────────────────┘     events / responses    └─────────┬──────────────┘
-        ▲                                                │
-        │ Expo Push                                      │ SSE
-        │                                                ▼
-┌──────────────────┐                           ┌────────────────────────┐
-│  Expo Push API   │ ◀──────────────────────── │  relay.js (Node)       │
-└──────────────────┘   POST /v2/push/send      │  on the same server    │
-                                               └────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                    Browser / PWA                        │
+│   React + Vite  ·  shadcn/ui  ·  Tailwind              │
+│   xterm.js  ·  CodeMirror 6  ·  diff2html              │
+└──────────────────────┬─────────────────────────────────┘
+                       │  HTTP + SSE + WebSocket
+                       ▼
+┌────────────────────────────────────────────────────────┐
+│                  Pilot Server (Hono)                    │
+│  ┌────────────┐  ┌──────────┐  ┌─────────────────────┐ │
+│  │  OpenCode  │  │  Auth    │  │  Memory Plugin      │ │
+│  │  Proxy     │  │  Session │  │  (better-sqlite3)   │ │
+│  └────────────┘  └──────────┘  └─────────────────────┘ │
+│  ┌────────────┐  ┌──────────┐  ┌─────────────────────┐ │
+│  │  Terminal  │  │  Web     │  │  Cloudflare Tunnel  │ │
+│  │  (node-pty)│  │  Push    │  │  (cloudflared)      │ │
+│  └────────────┘  └──────────┘  └─────────────────────┘ │
+└──────────────────────┬─────────────────────────────────┘
+                       │  HTTP + SSE
+                       ▼
+┌────────────────────────────────────────────────────────┐
+│              opencode serve                            │
+│              --hostname 0.0.0.0 --port 4096            │
+└────────────────────────────────────────────────────────┘
 ```
 
-- The app talks **directly** to OpenCode's HTTP API. No middleware.
-- A small Node relay on the server watches the SSE event stream and forwards `session.idle` transitions to Expo Push for background notifications (iOS does not keep SSE connections alive in the background).
+The Pilot server is the single backend process. It:
+
+- Proxies all OpenCode API calls (avoids CORS, centralizes auth)
+- Serves the compiled Vite frontend as static files
+- Manages httpOnly session cookies (replaces Expo SecureStore / Keychain)
+- Bridges xterm.js ↔ node-pty over WebSocket for terminal access
+- Relays SSE `session.idle` events to Web Push (background notifications)
+- Runs the memory plugin: extraction, injection, semantic search, SQLite storage
+- Optionally starts a Cloudflare tunnel and broadcasts the QR access URL
+
+---
 
 ## 4. Tech Stack
 
-| Concern              | Choice                                  |
-| -------------------- | --------------------------------------- |
-| Framework            | Expo SDK (React Native), TypeScript     |
-| Navigation           | Expo Router (file-based)                |
-| State                | Zustand                                 |
-| API client           | Custom `fetch()` wrapper (`OpencodeClient`) |
-| SSE                  | `react-native-sse`                      |
-| Syntax highlighting  | Custom lightweight tokenizer            |
-| Fonts                | JetBrains Mono via `expo-font`          |
-| Animations           | `react-native-reanimated` v4            |
-| Drawer               | `@react-navigation/drawer`              |
-| Secure storage       | `expo-secure-store`                     |
-| Notifications        | `expo-notifications` + custom relay     |
-| Haptics              | `expo-haptics`                          |
+### Frontend
 
-## 5. Navigation
+| Concern       | Choice                                      | Notes                                         |
+| ------------- | ------------------------------------------- | --------------------------------------------- |
+| Framework     | React 18 + TypeScript                       | Preserves Zustand stores + services layer     |
+| Bundler       | Vite 5                                      | Fast HMR, native ESM, PWA plugin              |
+| Components    | shadcn/ui + Radix UI                        | Accessible unstyled primitives, full Tailwind |
+| Styling       | Tailwind CSS v4                             | CSS variables for theme tokens                |
+| State         | Zustand (existing stores transfer ~95%)     |                                               |
+| Routing       | React Router v7                             | Replaces Expo Router                          |
+| Virtual lists | @tanstack/react-virtual                     | Replaces FlatList                             |
+| Terminal      | xterm.js + @xterm/addon-fit                 | WebSocket → node-pty                          |
+| Editor        | CodeMirror 6                                | Better mobile touch than Monaco               |
+| Diff viewer   | diff2html                                   | Syntax-highlighted unified/side-by-side       |
+| Markdown      | react-markdown + rehype-highlight           |                                               |
+| Animations    | CSS transitions + Framer Motion (selective) |                                               |
+| PWA           | vite-plugin-pwa + Workbox                   | Cache-first app shell, network-first API      |
 
-```
-[Server Setup]  (first run only, persisted in SecureStore)
-       │
-       ▼
-[Drawer Navigator]
-       │
-       ├─ TUI Main (default route, auto-resumes last session)
-       ├─ File Browser
-       ├─ Diff Viewer
-       └─ Settings
+### Server
 
-Modals (presented over any screen):
-  - Session Picker
-  - Slash Command Picker
-  - File Mention Picker (@)
-  - Model Picker
-  - Agent Picker
-  - File Viewer
-```
+| Concern         | Choice                       | Notes                                      |
+| --------------- | ---------------------------- | ------------------------------------------ |
+| Runtime         | Node.js 20+                  |                                            |
+| Framework       | Hono                         | TypeScript-first, fast, built-in SSE/proxy |
+| Database        | better-sqlite3               | Replaces expo-sqlite for memory plugin     |
+| Terminal bridge | node-pty                     | Requires native compilation                |
+| Push relay      | web-push (VAPID)             | Replaces Expo Push relay                   |
+| Tunnel          | cloudflared (programmatic)   |                                            |
+| Git             | simple-git + GitHub REST API |                                            |
 
-The drawer is a slide-over (~80% width), dims content, swipe-to-dismiss.
-
-## 6. TUI Main Screen
-
-### Anatomy
-
-```
-┌─────────────────────────────────────┐
-│ ☰   session title          ● busy  │  TopBar
-├─────────────────────────────────────┤
-│  user> add auth to /settings        │
-│                                     │
-│  ● Reading packages/auth/index.ts   │  ToolCall (collapsed)
-│  ● Editing packages/settings/...    │
-│                                     │  MessageStream
-│  Done. Added JWT middleware to...   │
-│                                     │
-│  ┌── ts ───────────────────────┐    │  CodeBlock (long-press → copy)
-│  │ export const middleware =   │    │
-│  │ ...                         │    │
-│  └─────────────────────────────┘    │
-├─────────────────────────────────────┤
-│ > _                                 │  PromptInput
-├─────────────────────────────────────┤
-│  /  @  ⏎      sonnet-4.5  build     │  Toolbar
-└─────────────────────────────────────┘
-```
-
-### Behavior
-
-- **Top bar:** ☰ opens drawer; session title taps open Session Picker modal; status dot is tappable when busy → calls `POST /session/:id/abort`.
-- **Message stream:** virtualized list rendered bottom-up. Each `Message` renders its `Part[]` — text, tool, code, file, reasoning. Tool calls collapsed by default, expand on tap.
-- **Permission prompts:** when `session.permission.requested` event fires, render an inline card with Allow / Deny buttons → `POST /session/:id/permissions/:permissionID`.
-- **Prompt input:** auto-growing TextInput, monospace, `>` prefix in muted color.
-- **Toolbar:**
-  - `/` → Slash Command Picker (uses `GET /command`)
-  - `@` → File Mention Picker (uses `GET /find/file?query=`)
-  - `⏎` → submit via `POST /session/:id/prompt_async`
-  - Model chip → Model Picker modal (uses `GET /config/providers`)
-  - Agent chip → Agent Picker modal (uses `GET /agent`); toggles build/plan
-- **Real-time:** subscribe to `GET /event` SSE, dispatch updates into the Zustand session store.
-
-## 7. Drawer Items
-
-### 7.1 File Browser
-
-- Tree from `GET /file?path=<dir>`, lazy expand.
-- Search bar at top:
-  - Default: file name search via `GET /find/file?query=`
-  - Toggle to "text search" → `GET /find?pattern=`, results group by file with line previews.
-- Tap file → File Viewer modal: `GET /file/content?path=`, syntax-highlighted, monospace.
-
-### 7.2 Diff Viewer
-
-- Lists files changed in **current session** via `GET /session/:id/diff`.
-- Per-file unified diff with TUI green/red palette.
-- Filter dropdown by message ID to scope diffs to a single turn.
-- Long-press file → copy path; tap → expanded diff view.
-
-### 7.3 Settings
-
-- Servers: list configured servers (URL + optional basic auth), add/edit/delete, switch active.
-- Notifications: enable toggle + push token display + relay setup help.
-- Appearance: font size (theme switching planned).
-- Session: auto-resume last (default on), default agent.
-- About: version, links.
-
-## 8. Theme
-
-The app reads OpenCode's default TUI palette and uses it across all screens.
-
-```ts
-// theme/colors.ts
-export const opencode = {
-  background: '#0F0F0F',
-  foreground: '#E5E5E5',
-  muted: '#7A7A7A',
-  border: '#2A2A2A',
-  accent: '#FFB454',     // OpenCode orange
-  success: '#7FBA8A',
-  error: '#E06C75',
-  warning: '#E5C07B',
-  // syntax (matches TUI highlight)
-  syntax: { keyword, string, number, comment, function, type, ... }
-}
-```
-
-## 9. State (Zustand)
-
-Three stores, deliberately small:
-
-```
-useServerStore      activeServer, servers[], setActive(), add(), remove()
-useSessionStore     sessionID, messages, status, model, agent,
-                    appendPart(), setStatus(), reset()
-useUIStore          drawerOpen, modal, fontSize, theme
-```
-
-The SSE hook (`useEventStream`) writes directly into `useSessionStore` based on event type:
-`message.part.updated` → upsert part; `session.updated` → update status; `permission.requested` → push prompt; etc.
-
-## 10. API Layer
-
-Custom REST client built on plain `fetch()` with:
-
-- Base URL + basic auth header injection from active server config
-- Typed errors
-- Retry with backoff for idempotent GETs
-- Single shared SSE connection per active session (auto-reconnect on disconnect)
-
-```
-services/api.ts        REST wrapper
-services/sse.ts        useEventStream(serverConfig) hook
-services/auth.ts       SecureStore get/set for server credentials
-```
-
-## 11. Push Notification Relay
-
-A standalone Node script that lives on the OpenCode server. Run alongside `opencode serve`.
-
-```
-relay/
-├── relay.js           subscribes to /event, posts to Expo Push API
-├── README.md          setup instructions
-└── relay.service      example systemd unit
-```
-
-Logic:
-1. Connect to `http://localhost:4096/event` SSE.
-2. Track per-session status. On transition `busy → idle` (and not user-initiated abort), post a notification to Expo Push API for every registered device token.
-3. Device tokens are POSTed to a tiny endpoint the relay also serves, called by the app on first launch.
-
-Notification payload includes `sessionID` so taps deep-link straight into that session via Expo Linking.
-
-## 12. Project Structure
+### Monorepo Layout
 
 ```
 pilot/
-├── app/
-│   ├── _layout.tsx                # Root: server gate + theme provider
-│   ├── setup.tsx                  # Server setup
-│   ├── (main)/
-│   │   ├── _layout.tsx            # Drawer navigator
-│   │   ├── index.tsx              # TUI main
-│   │   ├── files.tsx
-│   │   ├── diff.tsx
-│   │   └── settings.tsx
-├── components/
-│   ├── modals/
-│   │   ├── SessionsModal.tsx
-│   │   ├── SlashModal.tsx
-│   │   ├── MentionModal.tsx
-│   │   ├── ModelModal.tsx
-│   │   ├── AgentModal.tsx
-│   │   ├── FileViewModal.tsx
-│   │   ├── WorkdirSheet.tsx
-│   │   └── ModalShell.tsx
-│   ├── tui/
-│   │   ├── TopBar.tsx
-│   │   ├── MessageStream.tsx
-│   │   ├── MessagePart.tsx
-│   │   ├── ToolCall.tsx
-│   │   ├── CodeBlock.tsx
-│   │   ├── PermissionCard.tsx
-│   │   ├── PromptInput.tsx
-│   │   └── StatusBar.tsx
-│   ├── drawer/
-│   │   └── DrawerContent.tsx
-│   └── shared/
-│       ├── ErrorBadge.tsx
-│       ├── ErrorBoundary.tsx
-│       ├── Pill.tsx
-│       └── Spinner.tsx
-├── services/
-│   ├── api.ts
-│   ├── sse.ts
-│   └── auth.ts
-├── store/
-│   ├── server.ts
-│   ├── session.ts
-│   └── ui.ts
-├── theme/
-│   ├── colors.ts
-│   ├── fonts.ts
-│   └── index.ts
-├── assets/
-│   └── fonts/JetBrainsMono-*.ttf
-├── relay/
-│   ├── relay.js
-│   ├── README.md
-│   └── relay.service
-├── app.json
-├── package.json
-└── tsconfig.json
+├── server/                  # Hono server
+│   ├── src/
+│   │   ├── index.ts         # Entry point, route wiring
+│   │   ├── proxy.ts         # OpenCode API proxy
+│   │   ├── auth.ts          # Session cookie auth
+│   │   ├── terminal.ts      # node-pty WebSocket bridge
+│   │   ├── push.ts          # Web Push relay
+│   │   ├── tunnel.ts        # Cloudflare tunnel manager
+│   │   └── memory/          # Memory plugin (ported from plugin/memory/)
+│   │       ├── db.ts
+│   │       ├── extraction.ts
+│   │       ├── injection.ts
+│   │       ├── embeddings/
+│   │       └── ...
+│   └── package.json
+│
+├── ui/                      # React + Vite frontend
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── pages/           # Route-level components
+│   │   │   ├── Chat.tsx
+│   │   │   ├── Sessions.tsx
+│   │   │   ├── Files.tsx
+│   │   │   ├── Terminal.tsx
+│   │   │   ├── Diff.tsx
+│   │   │   ├── Memory.tsx
+│   │   │   └── Settings.tsx
+│   │   ├── components/      # Shared UI components
+│   │   ├── store/           # Zustand stores (ported from store/)
+│   │   ├── services/        # API + SSE clients (ported from services/)
+│   │   ├── hooks/
+│   │   └── theme/
+│   ├── index.html
+│   ├── vite.config.ts
+│   └── package.json
+│
+├── shared/
+│   └── types.ts             # Shared TypeScript types
+│
+├── package.json             # npm workspaces root
+├── DESIGN.md
+├── TASKS.md
+└── README.md
 ```
 
-## 13. Build Phases
+---
 
-1. Scaffold Expo app, fonts, theme, secure storage, Server Setup screen.
-2. API + SSE layer with typed client and reconnect.
-3. TUI screen shell — TopBar, MessageStream (read-only), StatusBar.
-4. Send + stream — PromptInput, prompt_async, live SSE rendering.
-5. Drawer + File Browser (tree, search, viewer).
-6. Diff Viewer.
-7. Slash commands, @ mentions, model/agent pickers, inline permission prompts.
-8. Settings + multi-server support.
-9. Push notification relay + Expo Notifications wiring.
-10. Polish — haptics, animations, copy actions, swipe gestures, error boundaries.
+## 5. Visual Design
 
-## 14. Open Risks
+### 5.1 Color Tokens
 
-- **iOS background SSE:** confirmed unreliable; mitigated by relay + push.
-- **SDK decision:** Verified in phase 2 — the app uses a custom `fetch()` wrapper with hand-written types instead of the Node-targeted `opencode-ai` SDK.
-- **Token auth:** server only supports HTTP Basic Auth. We rely on TLS (recommend the user front the server with Caddy or run via Tailscale).
-- **No file write API:** file editing remains via chat only. Documented as a deliberate non-goal.
+All tokens are CSS custom properties defined on `:root` and overridden in `[data-theme="light"]`.
 
-## 15. Decisions Log
+```css
+/* Dark (default) */
+:root {
+  --bg-base: zinc-950 /* #09090b  — page background          */
+    --bg-surface: zinc-900 /* #18181b  — cards, panels, sidebars   */
+    --bg-elevated: zinc-800 /* #27272a  — modals, dropdowns          */
+    --bg-hover: zinc-800 /* #27272a  — interactive hover          */
+    --border: zinc-800 /* #27272a  — default border             */
+    --border-subtle: zinc-900 /* #18181b  — dividers                   */
+    --text-primary: zinc-50 /* #fafafa  — headings, active labels     */
+    --text-secondary: zinc-400 /* #a1a1aa  — body text, descriptions    */
+    --text-muted: zinc-600 /* #52525b  — placeholders, metadata     */
+    --text-code: zinc-300 /* #d4d4d8  — inline code                */
+    --accent: indigo-500 /* #6366f1  — primary actions, links     */
+    --accent-hover: indigo-400 /* #818cf8  — accent hover               */
+    --accent-muted: indigo-950 /* #1e1b4b  — accent tinted surfaces     */
+    --success: emerald-500 --warning: amber-500 --error: red-500 --info: sky-500;
+}
 
-| Decision                          | Choice                            |
-| --------------------------------- | --------------------------------- |
-| Framework                         | Expo (managed)                    |
-| TUI implementation                | Native re-creation, not emulator  |
-| Theme                             | Match OpenCode default            |
-| Drawer style                      | Slide-over                        |
-| Default session                   | Auto-resume last                  |
-| Permissions                       | Inline approval card              |
-| Notifications transport           | Expo Push via Node SSE relay      |
-| Build scope                       | All 10 phases end-to-end          |
+/* Light */
+[data-theme="light"] {
+  --bg-base: zinc-50 --bg-surface: white --bg-elevated: zinc-100
+    --bg-hover: zinc-100 --border: zinc-200 --border-subtle: zinc-100
+    --text-primary: zinc-900 --text-secondary: zinc-600 --text-muted: zinc-400
+    --text-code: zinc-700 --accent: indigo-600 --accent-hover: indigo-500
+    --accent-muted: indigo-50;
+}
+```
+
+Theme is applied via `data-theme` attribute on `<html>`, initialized from `localStorage` with `prefers-color-scheme` fallback. No flash-of-unstyled-content: inline script in `<head>` sets the attribute before paint.
+
+### 5.2 Typography
+
+| Role            | Font           | Weight   | Notes                             |
+| --------------- | -------------- | -------- | --------------------------------- |
+| UI text         | Geist Sans     | 400, 500 | Labels, nav, descriptions         |
+| Headings        | Geist Sans     | 600      | Page titles, section headers      |
+| Code / terminal | JetBrains Mono | 400, 500 | All code blocks, terminal, editor |
+| Inline code     | JetBrains Mono | 400      | `backtick` spans in messages      |
+
+Base size: 14px. Line height: 1.5. Loaded via `@fontsource/geist` and `@fontsource/jetbrains-mono` (subset: latin).
+
+### 5.3 Spacing & Radius
+
+- Base unit: 4px (Tailwind default)
+- Sidebar width: 240px (collapsed: 56px icon-only)
+- Panel min-width: 320px
+- Border radius: `rounded-md` (6px) for inputs/buttons, `rounded-lg` (8px) for cards/panels, `rounded-xl` (12px) for modals
+- Scrollbars: thin, `--bg-elevated` track, `--border` thumb
+
+---
+
+## 6. Navigation Architecture
+
+### 6.1 Desktop Layout (≥ 768px)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  Titlebar: [≡] Pilot · [server name] · [session title]  [⚙ ●] │
+├──────────┬─────────────────────────────────────────────────────┤
+│          │                                                       │
+│  Sidebar │  Main Content Area                                    │
+│  240px   │                                                       │
+│          │                                                       │
+│  [💬]    │                                                       │
+│  Chat    │                                                       │
+│          │                                                       │
+│  [☰]     │                                                       │
+│  Sessions│                                                       │
+│          │                                                       │
+│  [📁]    │                                                       │
+│  Files   │                                                       │
+│          │                                                       │
+│  [>_]    │                                                       │
+│  Terminal│                                                       │
+│          │                                                       │
+│  [⑂]     │                                                       │
+│  Diff    │                                                       │
+│          │                                                       │
+│  [🧠]    │                                                       │
+│  Memory  │                                                       │
+│          │                                                       │
+│  ────    │                                                       │
+│  [⚙]    │                                                       │
+│  Settings│                                                       │
+│          │                                                       │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+- Sidebar is persistent, not overlapping.
+- Active item: `--accent` left border + `--accent-muted` background.
+- Collapse toggle (≡) shrinks to 56px icon-only strip.
+- Server selector lives in the titlebar (replaces the bottom server picker from mobile).
+
+### 6.2 Mobile Layout (< 768px)
+
+```
+┌──────────────────────────────┐
+│  [≡] Pilot  [session title] [⚙]│
+├──────────────────────────────┤
+│                              │
+│  Main Content Area           │
+│  (full width)                │
+│                              │
+│                              │
+│                              │
+│                              │
+│                              │
+├──────────────────────────────┤
+│  [💬]  [☰]  [📁]  [>_]  [🧠]  │
+└──────────────────────────────┘
+```
+
+- Bottom tab bar replaces sidebar on mobile.
+- Hamburger (≡) opens full sidebar as slide-in drawer (overlapping, with backdrop).
+- All tap targets ≥ 44px.
+
+---
+
+## 7. Screen Wireframes
+
+### 7.1 Chat
+
+````
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  ┌───────────────────────────────────────────────┐  │
+│          │  │ Session: "Refactor auth module"  [↗ share]    │  │
+│          │  └───────────────────────────────────────────────┘  │
+│          │                                                       │
+│          │  ┌─ user ──────────────────────────────────────────┐ │
+│          │  │ Can you extract the JWT logic into its own file? │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ assistant ─────────────────────────────────────┐ │
+│          │  │ Sure. I'll create `src/lib/jwt.ts`.              │ │
+│          │  │                                                   │ │
+│          │  │  ┌─ tool: write_file ────────────────────────┐   │ │
+│          │  │  │ src/lib/jwt.ts                  [allow ✓] │   │ │
+│          │  │  └───────────────────────────────────────────┘   │ │
+│          │  │                                                   │ │
+│          │  │  ```typescript                                    │ │
+│          │  │  export function signJWT(payload) { ... }        │ │
+│          │  │  ```                                             │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ thinking ── ● ● ● ─────────────────────────────┐ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ input ─────────────────────────────────────────┐ │
+│          │  │ /                                               │ │
+│          │  │                               [@] [⊕] [▶ Send] │ │
+│          │  └─────────────────────────────────────────────────┘ │
+└──────────┴─────────────────────────────────────────────────────┘
+````
+
+**Behavior:**
+
+- Message list is virtualized (`@tanstack/react-virtual`).
+- Tool-use cards inline within the assistant turn: icon + path + allow/deny toggle.
+- Streaming: characters append in real time via SSE `message.updated` events.
+- Thinking indicator: three animated dots while `status === "running"`.
+- Input: `<textarea>` auto-grows to 5 lines then scrolls. `/` triggers slash-command autocomplete popup. `@` triggers file mention popup.
+- Cost + token count shown in collapsed footer (expandable).
+
+### 7.2 Sessions
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Sessions                          [+ New Session]  │
+│          │  ┌─────────────────────────────────────────────────┐ │
+│          │  │ 🔵 Refactor auth module                          │ │
+│          │  │    2 mins ago · claude-sonnet-4 · $0.012        │ │
+│          │  ├─────────────────────────────────────────────────┤ │
+│          │  │ ○  Fix SSE reconnection bug                     │ │
+│          │  │    Yesterday · claude-sonnet-4 · $0.034         │ │
+│          │  ├─────────────────────────────────────────────────┤ │
+│          │  │ ○  Add memory plugin tests                      │ │
+│          │  │    2 days ago · claude-haiku · $0.003           │ │
+│          │  └─────────────────────────────────────────────────┘ │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+
+- Active session has a filled circle indicator.
+- Tap/click a session to navigate to Chat with that session loaded.
+- Long-press (mobile) or right-click (desktop) → context menu: Rename, Share, Delete.
+- "New Session" button calls `POST /session` and navigates to Chat.
+- Session list subscribes to SSE for live status updates.
+
+### 7.3 Files
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Files  /home/calvin/pilot              [⌕ Search]  │
+│          │  ┌─────────────────────────────────────────────────┐ │
+│          │  │ 📁 src/                                          │ │
+│          │  │   📁 components/                                 │ │
+│          │  │     📄 Chat.tsx                      4.2 KB      │ │
+│          │  │     📄 SessionList.tsx               2.1 KB      │ │
+│          │  │   📁 store/                                      │ │
+│          │  │     📄 session.ts                    1.8 KB      │ │
+│          │  │ 📄 package.json                      0.9 KB      │ │
+│          │  │ 📄 vite.config.ts                    0.4 KB      │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ Preview pane ──────────────────────────────────┐ │
+│          │  │  Chat.tsx                                        │ │
+│          │  │  ─────────────────────────────────────────────  │ │
+│          │  │  1  import { useSessionStore } from '../store'  │ │
+│          │  │  2  ...                                          │ │
+│          │  └─────────────────────────────────────────────────┘ │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+
+- Tree is lazy-loaded; `GET /files?path=` returns directory listings.
+- Clicking a file opens it in the CodeMirror preview pane (read-only by default).
+- Language detection from extension → CodeMirror language pack loaded on demand.
+- Search: full-text search via `GET /files/search?q=` against the server working directory.
+- Files are read-only in the UI (edits happen through chat per the OpenCode model).
+
+### 7.4 Terminal
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Terminal  bash                  [+ New] [× Close]  │
+│          │  ╔═════════════════════════════════════════════════╗ │
+│          │  ║ ~/pilot $ npm test                              ║ │
+│          │  ║ > pilot@0.1.0 test                              ║ │
+│          │  ║ > jest --coverage                               ║ │
+│          │  ║                                                 ║ │
+│          │  ║ PASS  src/services/__tests__/api.test.ts        ║ │
+│          │  ║ PASS  src/store/__tests__/session.test.ts       ║ │
+│          │  ║                                                 ║ │
+│          │  ║ Test Suites: 12 passed, 12 total               ║ │
+│          │  ║ Tests:       498 passed, 498 total             ║ │
+│          │  ║                                                 ║ │
+│          │  ║ ~/pilot $ █                                     ║ │
+│          │  ╚═════════════════════════════════════════════════╝ │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+
+- xterm.js renders inside a `<div>` with `@xterm/addon-fit` for responsive sizing.
+- WebSocket connection to `ws://localhost:PORT/terminal` — server spawns a shell via `node-pty`.
+- Multiple terminal tabs supported (each is an independent pty).
+- Terminal font: JetBrains Mono 13px. Color scheme matches `--bg-base` and token colors.
+- Clipboard: Ctrl+C / Ctrl+V work natively inside the terminal canvas.
+
+### 7.5 Diff / Git
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Diff                                               │
+│          │  ┌─ Changed files ──────────────────────────────┐   │
+│          │  │ M  src/lib/jwt.ts          [view diff ▼]     │   │
+│          │  │ A  src/lib/__tests__/jwt.test.ts              │   │
+│          │  │ M  src/middleware/auth.ts                     │   │
+│          │  └──────────────────────────────────────────────┘   │
+│          │                                                       │
+│          │  ┌─ src/lib/jwt.ts ────────────────────────────────┐ │
+│          │  │ @@ -1,8 +1,24 @@                               │ │
+│          │  │  import { SignJWT } from 'jose'                │ │
+│          │  │ +                                              │ │
+│          │  │ +export interface JWTPayload { ... }           │ │
+│          │  │ +                                              │ │
+│          │  │ +export async function signJWT(               │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │  [Stage All]  [Commit message ________________] [✓]  │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+
+- `simple-git` on the server powers `GET /git/status`, `GET /git/diff`, `POST /git/commit`, `POST /git/push`.
+- diff2html renders unified diffs with syntax highlighting.
+- Stage/unstage individual files or all changes.
+- Commit message input + commit button calls `POST /git/commit`.
+- Push button calls `POST /git/push` (opens auth modal for token if needed).
+- "Create PR" button opens the GitHub PR creation flow (requires GitHub token in settings).
+
+### 7.6 Memory
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Memory                          [+ Add] [⬇ Export] │
+│          │  ┌─ Filter ────────────────────────────────────────┐ │
+│          │  │ [All ▾]  [Preferences] [Facts] [Skills] [Arch.] │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │  ┌─ Search ───────────────────────────────────────┐  │
+│          │  │ 🔍 Search memories...                          │  │
+│          │  └────────────────────────────────────────────────┘  │
+│          │                                                       │
+│          │  ┌─────────────────────────────────────────────────┐ │
+│          │  │ [Preference]  Prefers TypeScript over JavaScript │ │
+│          │  │ confidence: 0.91 · 3 days ago          [⋯] [×]  │ │
+│          │  ├─────────────────────────────────────────────────┤ │
+│          │  │ [Fact]  Works in ~/pilot on a Linux server      │ │
+│          │  │ confidence: 0.87 · 1 week ago          [⋯] [×]  │ │
+│          │  ├─────────────────────────────────────────────────┤ │
+│          │  │ [Skill]  Uses Zustand for state management      │ │
+│          │  │ confidence: 0.79 · 5 days ago          [⋯] [×]  │ │
+│          │  └─────────────────────────────────────────────────┘ │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+
+- Category filter pills: All / Preferences / Facts / Skills / Architecture / Decisions.
+- Search bar does semantic search (embed query, cosine similarity against stored embeddings).
+- Each card: category badge, content text, confidence score, timestamp, edit (⋯) and delete (×) actions.
+- Edit opens inline textarea.
+- Archive (soft delete) available from the ⋯ menu.
+- Export downloads a JSON file of all memories for the current server.
+- Confidence threshold slider in Settings controls extraction cutoff (default 0.65).
+
+### 7.7 Settings
+
+```
+┌──────────┬─────────────────────────────────────────────────────┐
+│ Sidebar  │  Settings                                           │
+│          │  ┌─ Servers ───────────────────────────────────────┐ │
+│          │  │ ● localhost:4096        [Edit] [Remove]         │ │
+│          │  │ ○ 192.168.1.42:4096     [Edit] [Remove]         │ │
+│          │  │                                  [+ Add Server] │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ Appearance ────────────────────────────────────┐ │
+│          │  │ Theme:    [System ▾]  Dark  Light               │ │
+│          │  │ Font size: [14px ▾]                             │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ Memory Plugin ─────────────────────────────────┐ │
+│          │  │ Extraction confidence threshold:  [0.65 ────●─] │ │
+│          │  │ Embedding provider:  [OpenAI ▾]                 │ │
+│          │  │ OpenAI API key:      [•••••••••••]  [Show]      │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ Access ────────────────────────────────────────┐ │
+│          │  │ Cloudflare Tunnel:  [● Active]  [Stop]          │ │
+│          │  │ Tunnel URL:         https://xyz.trycloudflare.com│ │
+│          │  │                     [Copy] [Show QR]            │ │
+│          │  └─────────────────────────────────────────────────┘ │
+│          │                                                       │
+│          │  ┌─ Notifications ─────────────────────────────────┐ │
+│          │  │ Web Push:  [Enable Push Notifications]          │ │
+│          │  └─────────────────────────────────────────────────┘ │
+└──────────┴─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. PWA Specification
+
+### Manifest (`/manifest.webmanifest`)
+
+```json
+{
+  "name": "Pilot",
+  "short_name": "Pilot",
+  "description": "OpenCode client — web PWA",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
+```
+
+### Service Worker (Workbox via `vite-plugin-pwa`)
+
+- **App shell**: cache-first for all static assets (`/assets/*`, fonts).
+- **API routes**: network-first with 3s timeout fallback to cache for `GET` requests.
+- **SSE / WebSocket**: bypass service worker entirely.
+- **Offline page**: custom `/offline.html` shown when API is unreachable.
+
+### iOS Install
+
+- `<meta name="apple-mobile-web-app-capable" content="yes">` for standalone mode.
+- `<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">`.
+- First-visit banner (custom, not the browser default) with "Add to Home Screen" instructions — shown once, dismissible, stored in `localStorage`.
+- Push notifications require iOS 16.4+ with PWA installed to home screen.
+
+### Web Push
+
+- VAPID keys stored server-side in `server/.env`.
+- `POST /push/subscribe` saves `PushSubscription` to SQLite.
+- Server watches OpenCode SSE for `session.idle` events; calls `web-push.sendNotification()`.
+- Notification payload: `{ title: "Pilot", body: "Session ready", data: { sessionId } }`.
+- Click opens `/chat?session=<id>` (or focuses existing tab via `clients.matchAll`).
+
+---
+
+## 9. Key Architectural Decisions
+
+| Decision               | Choice                                                          | Rationale                                                                                     |
+| ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Web framework          | React + Vite (not SolidJS)                                      | Zustand stores and services transfer ~95%; familiar component model reduces rewrite risk      |
+| Backend framework      | Hono (not Express)                                              | TypeScript-first, built-in SSE/proxy/WebSocket support, faster cold start                     |
+| Credentials            | httpOnly session cookies (not localStorage)                     | Browser cannot access httpOnly cookies via JS — XSS-safe. Replaces Expo SecureStore           |
+| Memory plugin location | Server-side (`better-sqlite3`)                                  | Off-device storage: more secure, no device storage limits, works across browsers/devices      |
+| Terminal               | xterm.js + node-pty (not CodeSandbox's sandpack)                | Full shell access is the use case; sandpack is for preview environments only                  |
+| File editor            | CodeMirror 6 (not Monaco)                                       | Better mobile touch events, smaller bundle (~500KB vs 5MB), good enough for read-only preview |
+| iOS native features    | Permanently deferred                                            | Widget, Watch, Siri, Face ID require native compilation — incompatible with web-only approach |
+| Repo structure         | In-place monorepo pivot (not parallel repo)                     | Preserves git history, issues, and existing tests that transfer                               |
+| Test strategy          | Port service/store tests; rebuild component tests incrementally | RN component tests are tied to React Native testing library — not transferable                |
+
+---
+
+## 10. Migration Phases
+
+### Phase 1 — Repo Restructure
+
+Convert to npm workspaces. Remove Expo/RN files. Scaffold Hono server + Vite React app. Add `pilot start` CLI. **No feature code yet.**
+
+Files removed: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js`, all `expo-*` deps.
+Files added: `server/`, `ui/`, `shared/types.ts`, root `package.json` with workspaces.
+
+### Phase 2 — Core Chat Parity
+
+SSE via native `EventSource`. Session management. Message stream rendering. Prompt input. Permission cards. Mobile-first layout.
+
+All existing Zustand stores + `services/api.ts` + `services/sse.ts` port in this phase.
+
+### Phase 3 — PWA + Remote Access
+
+Web app manifest. Service worker (Workbox). Cloudflare tunnel manager + QR code. Web Push relay. iOS install banner.
+
+### Phase 4 — Power Features
+
+xterm.js terminal + node-pty WebSocket bridge. CodeMirror file viewer. diff2html Git UI. Multi-session tabs.
+
+### Phase 5 — Memory Plugin Port
+
+Port `plugin/memory/` to `server/src/memory/`. Replace `expo-sqlite` with `better-sqlite3`. Port semantic search. Rebuild Memory UI screen in React.
+
+---
+
+_Last updated: 2026-05-12_

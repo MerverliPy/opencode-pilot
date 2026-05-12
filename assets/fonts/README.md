@@ -8,4 +8,4 @@ Place the following JetBrains Mono TTFs here before running the app:
 
 Download from https://www.jetbrains.com/lp/mono/ (OFL license).
 
-`app/_layout.tsx` references these files via `expo-font` `useFonts`.
+`ui/src/main.tsx` imports JetBrains Mono via `@fontsource/jetbrains-mono`.

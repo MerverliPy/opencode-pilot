@@ -38,184 +38,93 @@
 
 ---
 
-## Active Work Area: Phase 5 — Technical Debt & Testing
+## Active Work Area: PWA Migration
 
-**Triggered by:** Deep audit on 2026-05-09 revealed zero test coverage (violates 80% mandate), 2 files >800 lines, 3 lint warnings, 18 outdated packages, and 7 suppressed `react-hooks/exhaustive-deps` warnings.
+**Triggered by:** Decision on 2026-05-12 to pivot from React Native / Expo to a web-first PWA.
+Power features (xterm.js terminal, CodeMirror editor, diff2html, Cloudflare tunnel) are impractical in React Native.
+Full rationale and design spec in `DESIGN.md`.
 
-### Deep Audit Action Plan (in priority order)
+### Migration Phases
 
-| #   | Task                                            | Priority | Files                                                                                                                      | Validation                        |
-| --- | ----------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| 1   | ~~Set up Jest test infrastructure~~             | ✅ Done  | `jest.config.js`, `package.json`, `__mocks__/`                                                                             | `npm test` runs without error     |
-| 2   | ~~Unit tests for `services/`~~                  | ✅ Done  | `services/__tests__/api.test.ts`, `logger.test.ts`, `auth.test.ts`                                                         | `npm test` passes                 |
-| 3   | ~~Unit tests for `store/`~~                     | ✅ Done  | `store/__tests__/session.test.ts`, `server.test.ts`, `log.test.ts`, `ui.test.ts`, `n9router.test.ts`                       | `npm test` passes                 |
-| 4   | ~~Unit tests for `plugin/memory/`~~             | ✅ Done  | `plugin/memory/__tests__/` — see `TEST_COVERAGE_PLAN.md`                                                                   | `npm test` passes                 |
-| 4a  | ~~Fix Jest config (Phase 0)~~                   | ✅ Done  | `jest.config.js`                                                                                                           | `npm test` passes, coverage works |
-| 4b  | ~~Unit tests for `services/` (remaining)~~      | ✅ Done  | `services/__tests__/n9router.test.ts`, `sse.test.ts`, `notifications.test.ts`                                              | `npm test` passes                 |
-| 4c  | ~~Unit tests for `plugin/memory/` pure logic~~  | ✅ Done  | `embeddings/__tests__/`, `dedup/__tests__/`                                                                                | `npm test` passes                 |
-| 4d  | ~~Unit tests for `plugin/memory/` DB layer~~    | ✅ Done  | `db/__tests__/` (needs enhanced `expo-sqlite` mock)                                                                        | `npm test` passes                 |
-| 4e  | ~~Unit tests for `plugin/memory/` providers~~   | ✅ Done  | `embeddings/__tests__/` (OpenAI, Ollama, Cohere, Factory)                                                                  | `npm test` passes                 |
-| 4f  | ~~Unit tests for `plugin/memory/` store~~       | ✅ Done  | `store/__tests__/memoryStore.test.ts`                                                                                      | `npm test` passes                 |
-| 4g  | ~~Unit tests for `plugin/memory/` extraction~~  | ✅ Done  | `extraction/__tests__/`, `injection/__tests__/`                                                                            | `npm test` passes                 |
-| 4h  | ~~Unit tests for `plugin/memory/` hooks/UI~~    | ✅ Done  | `hooks/__tests__/`, `ui/components/__tests__/`                                                                             | `npm test` passes                 |
-| 4i  | ~~Unit tests for `.opencode/plugins/`~~         | ✅ Done  | `.opencode/plugins/__tests__/` (currently ignored by Jest)                                                                 | `npm test` passes                 |
-| 5   | ~~Clean ESLint warnings~~                       | ✅ Done  | `components/modals/ModelModal.tsx`, `TitleEditModal.tsx`                                                                   | `npm run lint` → 0 warnings       |
-| 6   | ~~Fix BENCH.md `--out` docs~~                   | ✅ Done  | `BENCH.md`                                                                                                                 | Docs match actual behavior        |
-| 7   | ~~Extract sub-components from oversized files~~ | ✅ Done  | `app/(main)/memory.tsx`, `settings.tsx`, `diff.tsx`, `files.tsx`, `usage.tsx` + `components/memory/`, `components/shared/` | `npx tsc --noEmit` passes         |
-| 8   | ~~Plan Expo SDK 55 upgrade~~                    | ✅ Done  | `EXPO_SDK_55_UPGRADE_PLAN.md`                                                                                              | Research only                     |
+| #      | Task                                    | Priority  | Deliverable                                                            | Validation                                  | Status   |
+| ------ | --------------------------------------- | --------- | ---------------------------------------------------------------------- | ------------------------------------------- | -------- |
+| M0     | ~~Write new DESIGN.md (web PWA spec)~~  | ✅ Done   | `DESIGN.md` replaced with approved web spec                            | File written                                | Done     |
+| M0     | ~~Update TASKS.md with migration plan~~ | ✅ Done   | `TASKS.md` active area updated                                         | File written                                | Done     |
+| **M1** | **Repo restructure**                    | 🔴 High   | npm workspaces; remove Expo/RN files; scaffold Hono server + Vite app  | `npm run build` succeeds in both workspaces | **Next** |
+| M2     | Core chat parity                        | 🔴 High   | SSE, sessions, messages, prompt input, permission cards, mobile layout | 498 ported tests pass + manual smoke test   | Pending  |
+| M3     | PWA + remote access                     | 🟡 Medium | Manifest, service worker, Cloudflare tunnel+QR, Web Push, iOS banner   | Lighthouse PWA score ≥ 90                   | Pending  |
+| M4     | Power features                          | 🟡 Medium | xterm.js terminal, CodeMirror file viewer, diff2html Git UI, multi-tab | Terminal sends/receives input; diff renders | Pending  |
+| M5     | Memory plugin port                      | 🟢 Low    | `plugin/memory/` → `server/src/memory/`; React Memory UI screen        | All ported memory tests pass                | Pending  |
 
----
+### M1 Detail — Repo Restructure
 
-## Backlog (Phase 2-6)
-
-### Phase 2: High Priority
-
-- `[ ]` 2.1 Light theme support — Full light palette variant. Currently dark-only.
-- `[ ]` 2.2 Session title editing — `Session.title` exists but no edit UI. Need `PATCH /session/:id`.
-- `[ ]` 2.3 Memory timeline UI — `memory_timeline` table exists, needs screen.
-- `[ ]` 2.4 Memory profile UI — `user_profile` table exists, needs screen.
-- `[ ]` 2.5 Session deep linking from push — `sessionID` in payload but opens `/` only.
-- `[ ]` 2.6 Message retry / resend — Retry failed prompts, cancel in-flight.
-- `[ ]` 2.7 Offline indicator — Show when SSE disconnects or server unreachable.
-- `[ ]` 2.8 Session sharing UI — `share.url` field exists but never rendered.
-- `[ ]` 2.9 Cost tracking display — `cost` field in Message type, never rendered.
-- `[ ]` 2.10 Reasoning token display — `tokens.reasoning` exists, not shown.
-
-### Phase 3: Medium Priority
-
-- `[ ]` 3.1 Memory export / backup — JSON export per server, import/restore.
-- `[ ]` 3.2 Memory bulk operations — Multi-select for batch archive/delete.
-- `[ ]` 3.3 Semantic memory search — Embed query, find memories.
-- `[ ]` 3.4 Memory confidence threshold UI — Slider for extraction confidence (currently 0.65).
-- `[ ]` 3.5 Image rendering in messages — Display images from file parts or URLs.
-- `[ ]` 3.6 Rich markdown rendering — Headers, lists, links, tables beyond code blocks.
-- `[ ]` 3.7 Message editing — Edit sent messages and re-run.
-- `[ ]` 3.8 Message deletion — Remove individual messages.
-- `[ ]` 3.9 Branching conversations — Fork session at a message.
-- `[ ]` 3.10 Font family selection — Toggle between JetBrains Mono, SF Mono, etc.
-- `[ ]` 3.11 Biometric auth — Face ID / Touch ID.
-- `[ ]` 3.12 Server URL QR scanner — Scan QR to add server.
-- `[ ]` 3.13 Session tags / folders — Organize sessions.
-- `[ ]` 3.14 Quick reply suggestions — AI-generated follow-ups.
-- `[ ]` 3.15 Voice input — Speech-to-text.
-
-### Phase 4: Low Priority / Future Ideas
-
-- `[ ]` 4.1 Android support — `app.json` has config, untested.
-- `[ ]` 4.2 iPad / tablet layout — Two-pane layout.
-- `[ ]` 4.3 iOS home screen widget — Quick prompt / status.
-- `[ ]` 4.4 Apple Watch companion — View status, send quick prompts.
-- `[ ]` 4.5 Siri Shortcuts — "Ask OpenCode about..."
-- `[ ]` 4.6 Custom themes — User-defined accent/background.
-- `[ ]` 4.7 Session analytics — Token/cost charts.
-- `[ ]` 4.8 Memory visualization — Graph view.
-- `[ ]` 4.9 Collaborative sessions — Pair programming.
-- `[ ]` 4.10 Local model fallback — On-device LLM.
-- `[ ]` 4.11 File upload — Upload images/documents.
-- `[ ]` 4.12 Rich haptic patterns — Different haptics per event.
-- `[ ]` 4.13 Accessibility audit — VoiceOver, dynamic type.
-- `[ ]` 4.14 Internationalization (i18n) — Multi-language.
-
-### Phase 5: Technical Debt & Testing
-
-- `[x]` 5.1 React Native unit tests — 118 tests across services/ and store/. Jest + ts-jest configured.
-- `[ ]` 5.2 E2E tests for mobile app — No Playwright tests for RN.
-- `[~]` 5.3 Type cleanup: remove unused `cost`, `share.url`, `tokens.reasoning` if not implemented.
-- `[ ]` 5.4 Remove empty `types/` directory — Already removed (directory does not exist).
-- `[ ]` 5.5 Document `audit.sh` dev-server utility — No README mention.
-- `[~]` 5.6 Plugin test coverage expansion — See `TEST_COVERAGE_PLAN.md`. 8 phases covering services/, plugin/memory/, .opencode/plugins/. Target ~230 tests, 100% coverage.
-- `[~]` 5.7 Consolidate embedding provider registry — `embedding_providers` table exists but providers loaded from `ModelRegistry.ts`.
-
-### Phase 6: Documentation Overhaul
-
-- `[~]` 6.1 README: add `plugin/` to project structure — Already present (Phase 1 audit fixed).
-- `[~]` 6.2 README: update tech stack table — Already fixed (Phase 1).
-- `[~]` 6.3 AGENTS.md: add memory plugin section — Already present (Phase 1).
-- `[~]` 6.4 AGENTS.md: refresh date — Already updated to 2026-05-08.
-- `[ ]` 6.5 relay/README.md: remove "Phase 9" parenthetical — Need to verify.
-- `[x]` 6.6 DESIGN.md: file structure overhaul — Fixed in Phase 1.
-- `[ ]` 6.7 BENCH.md: correct `audit-report.mjs` usage docs — `--out` behavior misdocumented.
+| Step | Action                                                                                   |
+| ---- | ---------------------------------------------------------------------------------------- |
+| 1    | Add root `package.json` with `workspaces: ["server", "ui", "shared"]`                    |
+| 2    | Create `shared/types.ts` (move shared TypeScript types)                                  |
+| 3    | Scaffold `server/` — Hono app, `package.json`, `tsconfig.json`                           |
+| 4    | Scaffold `ui/` — Vite + React app, `package.json`, `tsconfig.json`                       |
+| 5    | Remove Expo/RN files: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js` |
+| 6    | Remove Expo/RN deps from root `package.json`                                             |
+| 7    | Add `pilot start` CLI entry point in `server/src/cli.ts`                                 |
+| 8    | Verify `npm run build` succeeds (both workspaces)                                        |
 
 ---
 
-## Backlog (Phase 2-6)
+## Completed (Pre-Migration)
 
-### Phase 2: High Priority
+### Phase 5 — Technical Debt & Testing (all done)
 
-- `[ ]` 2.1 Light theme support — Full light palette variant. Currently dark-only.
-- `[ ]` 2.2 Session title editing — `Session.title` exists but no edit UI. Need `PATCH /session/:id`.
-- `[ ]` 2.3 Memory timeline UI — `memory_timeline` table exists, needs screen.
-- `[ ]` 2.4 Memory profile UI — `user_profile` table exists, needs screen.
-- `[ ]` 2.5 Session deep linking from push — `sessionID` in payload but opens `/` only.
-- `[ ]` 2.6 Message retry / resend — Retry failed prompts, cancel in-flight.
-- `[ ]` 2.7 Offline indicator — Show when SSE disconnects or server unreachable.
-- `[ ]` 2.8 Session sharing UI — `share.url` field exists but never rendered.
-- `[ ]` 2.9 Cost tracking display — `cost` field in Message type, never rendered.
-- `[ ]` 2.10 Reasoning token display — `tokens.reasoning` exists, not shown.
+| #   | Task                                            | Files                                                                                                |
+| --- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | Set up Jest test infrastructure                 | `jest.config.js`, `package.json`, `__mocks__/`                                                       |
+| 2   | Unit tests for `services/`                      | `services/__tests__/api.test.ts`, `logger.test.ts`, `auth.test.ts`                                   |
+| 3   | Unit tests for `store/`                         | `store/__tests__/session.test.ts`, `server.test.ts`, `log.test.ts`, `ui.test.ts`, `n9router.test.ts` |
+| 4   | Unit tests for `plugin/memory/` (all sub-tasks) | `plugin/memory/__tests__/`, `hooks/__tests__/`, `ui/components/__tests__/`                           |
+| 5   | Clean ESLint warnings                           | `components/modals/ModelModal.tsx`, `TitleEditModal.tsx`                                             |
+| 6   | Fix BENCH.md `--out` docs                       | `BENCH.md`                                                                                           |
+| 7   | Extract sub-components from oversized files     | `app/(main)/memory.tsx`, `settings.tsx`, `diff.tsx`, `files.tsx`, `usage.tsx`                        |
+| 8   | Plan Expo SDK 55 upgrade                        | `EXPO_SDK_55_UPGRADE_PLAN.md`                                                                        |
 
-### Phase 3: Medium Priority
+Final state before migration: **498 tests passing, 0 failing. tsc --noEmit passes. npm run lint → 0 warnings.**
 
-- `[ ]` 3.1 Memory export / backup — JSON export per server, import/restore.
-- `[ ]` 3.2 Memory bulk operations — Multi-select for batch archive/delete.
-- `[ ]` 3.3 Semantic memory search — Embed query, find memories.
-- `[ ]` 3.4 Memory confidence threshold UI — Slider for extraction confidence (currently 0.65).
-- `[ ]` 3.5 Image rendering in messages — Display images from file parts or URLs.
-- `[ ]` 3.6 Rich markdown rendering — Headers, lists, links, tables beyond code blocks.
-- `[ ]` 3.7 Message editing — Edit sent messages and re-run.
-- `[ ]` 3.8 Message deletion — Remove individual messages.
-- `[ ]` 3.9 Branching conversations — Fork session at a message.
-- `[ ]` 3.10 Font family selection — Toggle between JetBrains Mono, SF Mono, etc.
-- `[ ]` 3.11 Biometric auth — Face ID / Touch ID.
-- `[ ]` 3.12 Server URL QR scanner — Scan QR to add server.
-- `[ ]` 3.13 Session tags / folders — Organize sessions.
-- `[ ]` 3.14 Quick reply suggestions — AI-generated follow-ups.
-- `[ ]` 3.15 Voice input — Speech-to-text.
+---
 
-### Phase 4: Low Priority / Future Ideas
+## Post-Migration Backlog
 
-- `[ ]` 4.1 Android support — `app.json` has config, untested.
-- `[ ]` 4.2 iPad / tablet layout — Two-pane layout.
-- `[ ]` 4.3 iOS home screen widget — Quick prompt / status.
-- `[ ]` 4.4 Apple Watch companion — View status, send quick prompts.
-- `[ ]` 4.5 Siri Shortcuts — "Ask OpenCode about..."
-- `[ ]` 4.6 Custom themes — User-defined accent/background.
-- `[ ]` 4.7 Session analytics — Token/cost charts.
-- `[ ]` 4.8 Memory visualization — Graph view.
-- `[ ]` 4.9 Collaborative sessions — Pair programming.
-- `[ ]` 4.10 Local model fallback — On-device LLM.
-- `[ ]` 4.11 File upload — Upload images/documents.
-- `[ ]` 4.12 Rich haptic patterns — Different haptics per event.
-- `[ ]` 4.13 Accessibility audit — VoiceOver, dynamic type.
-- `[ ]` 4.14 Internationalization (i18n) — Multi-language.
+These items carry over from the RN backlog and will be implemented in the web PWA:
 
-### Phase 5: Technical Debt & Testing
+- Light theme (system-aware via `prefers-color-scheme`) — M2
+- Session title editing — M2
+- Memory timeline UI — M5
+- Memory profile UI — M5
+- Session deep linking from push notification — M3
+- Message retry / resend — M2
+- Offline indicator — M3
+- Cost + token display in chat — M2
+- Semantic memory search — M5
+- Memory export / backup — M5
+- Image rendering in messages — post-M4
+- Rich markdown rendering — M2
+- Session tags / folders — post-M4
+- Server URL QR (replaced by Cloudflare tunnel QR) — M3
 
-- `[x]` 5.1 React Native unit tests — 118 tests across services/ and store/. Jest + ts-jest configured.
-- `[ ]` 5.2 E2E tests for mobile app — No Playwright tests for RN.
-- `[~]` 5.3 Type cleanup: remove unused `cost`, `share.url`, `tokens.reasoning` if not implemented.
-- `[ ]` 5.4 Remove empty `types/` directory — Already removed (directory does not exist).
-- `[ ]` 5.5 Document `audit.sh` dev-server utility — No README mention.
-- `[~]` 5.6 Plugin test coverage expansion — See `TEST_COVERAGE_PLAN.md`. 8 phases covering services/, plugin/memory/, .opencode/plugins/. Target ~230 tests, 100% coverage.
-- `[~]` 5.7 Consolidate embedding provider registry — `embedding_providers` table exists but providers loaded from `ModelRegistry.ts`.
+Items permanently dropped (iOS-native only, no web equivalent):
 
-### Phase 6: Documentation Overhaul
-
-- `[~]` 6.1 README: add `plugin/` to project structure — Already present (Phase 1 audit fixed).
-- `[~]` 6.2 README: update tech stack table — Already fixed (Phase 1).
-- `[~]` 6.3 AGENTS.md: add memory plugin section — Already present (Phase 1).
-- `[~]` 6.4 AGENTS.md: refresh date — Already updated to 2026-05-08.
-- `[ ]` 6.5 relay/README.md: remove "Phase 9" parenthetical — Need to verify.
-- `[x]` 6.6 DESIGN.md: file structure overhaul — Fixed in Phase 1.
-- `[ ]` 6.7 BENCH.md: correct `audit-report.mjs` usage docs — `--out` behavior misdocumented.
+- iOS home screen widget
+- Apple Watch companion
+- Siri Shortcuts
+- Face ID / Touch ID (may revisit with WebAuthn)
 
 ---
 
 ## Milestones
 
-| Milestone  | Target     | Deliverables                                  | Status |
-| ---------- | ---------- | --------------------------------------------- | ------ |
-| **v0.1.1** | 2026-05-15 | Phase 1 complete (all cleanup + doc fixes)    | `[x]`  |
-| **v0.2.0** | 2026-06-01 | Phase 2 complete (high-priority features)     | `[ ]`  |
-| **v0.3.0** | 2026-07-01 | Phase 3 complete (medium-priority features)   | `[ ]`  |
-| **v0.4.0** | 2026-08-01 | Phase 5 complete (testing + tech debt)        | `[ ]`  |
-| **v1.0.0** | 2026-Q4    | Phase 4 features + polish + App Store release | `[ ]`  |
+| Milestone  | Target     | Deliverables                                     | Status |
+| ---------- | ---------- | ------------------------------------------------ | ------ |
+| **v0.1.1** | 2026-05-12 | All RN tech debt cleared. 498 tests passing.     | `[x]`  |
+| **v0.2.0** | 2026-05-19 | M1 complete — monorepo scaffolded, Expo removed  | `[ ]`  |
+| **v0.3.0** | 2026-06-02 | M2 complete — core chat parity in web app        | `[ ]`  |
+| **v0.4.0** | 2026-06-16 | M3 complete — PWA installable, tunnel+QR working | `[ ]`  |
+| **v0.5.0** | 2026-07-07 | M4 complete — terminal, editor, diff viewer live | `[ ]`  |
+| **v1.0.0** | 2026-08-01 | M5 complete — memory plugin ported, full parity  | `[ ]`  |

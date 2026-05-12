@@ -6,7 +6,7 @@ This file contains project-specific instructions and guidelines for OpenCode.
 
 This is a comprehensive collection of OpenCode configurations including agents, skills, commands, and rules. It provides production-ready tools for AI-assisted software development.
 
-This repository also contains **Pilot**, a native iOS client for OpenCode built with React Native / Expo.
+This repository also contains **Pilot**, a web PWA for OpenCode built with React + Vite + Hono.
 
 ## Agent Workflow
 
@@ -138,9 +138,9 @@ Configure MCP servers in `opencode.json`. Key servers available:
 
 **Warning**: Enable only 5-10 MCPs at a time to preserve context window.
 
-## Pilot (iOS Client)
+## Pilot (Web PWA)
 
-This repo also contains **Pilot**, a React Native iOS app that connects to `opencode serve` over HTTP + SSE.
+This repo also contains **Pilot**, a React + Vite web PWA that connects to `opencode serve` via a Hono proxy server.
 
 Key features:
 
@@ -149,7 +149,7 @@ Key features:
 - File browser with search
 - Diff viewer
 - Inline permission prompts
-- Push notifications via Node relay
+- Push notifications via Web Push (Hono server)
 - Slash commands & @ mentions
 - Memory plugin with semantic extraction/injection
 
@@ -179,4 +179,4 @@ Add project-specific rules by:
 
 ---
 
-_Last Updated: 2026-05-08_
+_Last Updated: 2026-05-12_

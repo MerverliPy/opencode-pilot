@@ -7,6 +7,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Chat } from "./pages/Chat";
 import { Sessions } from "./pages/Sessions";
 import { Files } from "./pages/Files";
@@ -19,18 +20,83 @@ export function App() {
   return (
     <Layout>
       <InstallBanner />
-      <Routes>
-        <Route path="/" element={<Chat />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/chat/:sessionId" element={<Chat />} />
-        <Route path="/sessions" element={<Sessions />} />
-        <Route path="/files" element={<Files />} />
-        <Route path="/terminal" element={<Terminal />} />
-        <Route path="/diff" element={<Diff />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/memory" element={<Memory />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ErrorBoundary>
+                <Chat />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ErrorBoundary>
+                <Chat />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/chat/:sessionId"
+            element={
+              <ErrorBoundary>
+                <Chat />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/sessions"
+            element={
+              <ErrorBoundary>
+                <Sessions />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/files"
+            element={
+              <ErrorBoundary>
+                <Files />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/terminal"
+            element={
+              <ErrorBoundary>
+                <Terminal />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/diff"
+            element={
+              <ErrorBoundary>
+                <Diff />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ErrorBoundary>
+                <Settings />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/memory"
+            element={
+              <ErrorBoundary>
+                <Memory />
+              </ErrorBoundary>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
     </Layout>
   );
 }

@@ -6,7 +6,10 @@
  * Cloudflare tunnel manager, and memory plugin.
  */
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { cors } from "hono/cors";
 import { createProxy } from "./proxy.js";
 import { createPushRouter, type PushConfig } from "./push.js";
 import { createTunnelRouter } from "./tunnel.js";
@@ -15,6 +18,48 @@ import { createGitRouter } from "./git.js";
 import { createMemoryRouter } from "./memory/memoryRouter.js";
 
 const app = new Hono();
+
+// ─── Body size limit (P9) ──────────────────────────────────────────────────────
+const bodyLimitMb = parseInt(process.env.BODY_LIMIT_SIZE ?? "10", 10);
+app.use(
+  bodyLimit({
+    maxSize: bodyLimitMb * 1024 * 1024,
+    onError: (c) => {
+      return c.json({ error: "Payload too large" }, 413);
+    },
+  }),
+);
+
+// ─── Rate limiting (P2) ─────────────────────────────────────────────────────────
+const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX ?? "100", 10);
+const rateLimitWindow = 60_000; // 1 minute
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+app.use(async (c, next) => {
+  const ip = c.req.header("x-forwarded-for") ?? "local";
+  const now = Date.now();
+  let entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + rateLimitWindow };
+    rateLimitMap.set(ip, entry);
+  }
+  entry.count++;
+  if (entry.count > rateLimitMax) {
+    return c.json({ error: "Rate limit exceeded" }, 429);
+  }
+  await next();
+});
+
+// ─── CORS (P3) ─────────────────────────────────────────────────────────────────
+const corsOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim());
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+  }),
+);
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (c) => c.json({ healthy: true, version: "0.2.0" }));
@@ -74,13 +119,16 @@ export function setupMemory() {
   app.route("/memory", memoryRouter);
 }
 
-// ─── Static frontend (M2: serve Vite build when available) ─────────────────────
-// In production, serve the built UI from ../ui/dist. In dev, the Vite dev server
-// handles the UI directly.
-app.get("/", (c) => {
-  // Simple landing page until static file serving is fully wired
-  return c.text("Pilot server running. Frontend not yet built.");
-});
+// ─── Static frontend (P4: serve Vite build) ────────────────────────────────────
+// Called from startServer() after proxy routes to ensure correct precedence.
+export function setupStatic() {
+  app.use("/assets/*", serveStatic({ root: "ui/dist" }));
+  app.use(
+    "/(offline.html|manifest.webmanifest|icon.svg|icon.png|favicon.ico)",
+    serveStatic({ root: "ui/dist" }),
+  );
+  app.get("/*", serveStatic({ path: "ui/dist/index.html" }));
+}
 
 export { app };
 
@@ -97,6 +145,7 @@ export function startServer(
   password?: string,
 ): void {
   setupProxy(openCodeUrl, username, password);
+  setupStatic();
   setupPush({
     vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
     vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,

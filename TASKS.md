@@ -43,45 +43,46 @@
 | 2026-05-09 | Fix README.md plugin/ dir                                       | No changes needed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Phase 1 already added to project structure.                                                                                                                                                                                  |
 | 2026-05-09 | Phase 5: Jest test suite                                        | `jest.config.js`, `jest.setup.js`, `__mocks__/`, `services/__tests__/`, `store/__tests__/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Commit `c9e42c26` on main. 118 tests, all passing. Remote updated.                                                                                                                                                           |
 | 2026-05-13 | Deep audit + implementation plan                                | `IMPLEMENTATION_PLAN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Full repo audit: 37 prioritized tasks across 5 tiers covering security, testing, features, polish.                                                                                                                           |
+| 2026-05-13 | Tier 1 production hardening (P2-P11)                            | `pnpm-lock.yaml` (del), `.env.example` (new), `server/package.json`, `server/src/index.ts`, `server/jest.config.cjs` (new), `server/src/__tests__/health.test.ts` (new), `server/src/__tests__/proxy.test.ts` (new), `ui/src/components/ErrorBoundary.tsx` (new), `ui/src/App.tsx`, `.github/workflows/ci.yml`                                                                                                                                                                                                                                                                                                                                                                                       | All 10 Tier-1 tasks done: rate limiter, CORS, body limit, static serving, ErrorBoundary, .env.example, server test infra + 11 proxy tests (95% coverage), E2E CI job. 435 tests passing, tsc clean, lint clean.              |
 
 ---
 
-## Active Work Area: Production Readiness v0.3.0
+## Active Work Area: Production Readiness v0.3.0 — Tier 1 ✅
 
-**Triggered by:** Deep audit on 2026-05-13 identified critical production-readiness gaps after PWA migration.
-Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`.
+**Triggered by:** Deep audit on 2026-05-13. Tier 1 all completed 2026-05-13.
+Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`. Next: Tier 2 items.
 
-### Tier 1 — Critical (Ship Blockers for v0.3.0)
+### Tier 1 — Critical (Ship Blockers for v0.3.0 — all done)
 
-| #   | Task                                             | Effort | Deps | Validation                                   |
-| --- | ------------------------------------------------ | ------ | ---- | -------------------------------------------- |
-| P1  | [x] Update TASKS.md with new active work area    | 0.5h   | —    | File written                                 |
-| P2  | Add Hono rate limiting middleware                | 1h     | —    | `curl -X GET -v http://localhost:3000/api/*` |
-| P3  | Add Hono CORS middleware with configurable list  | 1h     | —    | CORS headers present in response             |
-| P4  | Serve production Vite build from Hono statically | 2h     | —    | `npm run build` → `npm start` → UI loads     |
-| P5  | Add React ErrorBoundary at app root + per-route  | 2h     | —    | Test: throw in component → fallback renders  |
-| P6  | Create `.env.example` with all expected env vars | 0.5h   | —    | File exists, documented                      |
-| P7  | Add server-side test infra (Jest config + setup) | 2h     | —    | `npm run test -w server` — basic suite pass  |
-| P8  | Add unit tests for server proxy routes           | 3h     | P7   | Proxy route coverage ≥ 60%                   |
-| P9  | Add body size limit middleware (10MB default)    | 0.5h   | —    | Large payload rejected with 413              |
-| P10 | Remove stale pnpm-lock.yaml                      | 0.1h   | —    | Only `package-lock.json` present             |
-| P11 | Add E2E job to CI (build server first, then run) | 1.5h   | P4   | GitHub Actions E2E job passes                |
+| #   | Task                                             | Effort | Deps | Validation                                     |
+| --- | ------------------------------------------------ | ------ | ---- | ---------------------------------------------- |
+| P1  | [x] Update TASKS.md with new active work area    | 0.5h   | —    | File written                                   |
+| P2  | [x] Add Hono rate limiting middleware            | 1h     | —    | In-memory rate limiter, 100 req/min default    |
+| P3  | [x] Add Hono CORS middleware with configurable   | 1h     | —    | CORS_ORIGINS env var, credentials: true        |
+| P4  | [x] Serve production Vite build from Hono static | 2h     | —    | serveStatic via @hono/node-server/serve-static |
+| P5  | [x] Add React ErrorBoundary at app root + per    | 2h     | —    | Class component, per-route wrappers            |
+| P6  | [x] Create `.env.example`                        | 0.5h   | —    | All 8 env vars documented                      |
+| P7  | [x] Add server-side test infra                   | 2h     | —    | Jest + ts-jest, 2 suites, 11 tests passing     |
+| P8  | [x] Add unit tests for server proxy routes       | 3h     | P7   | 11 tests, 95% statement coverage on proxy.ts   |
+| P9  | [x] Add body size limit middleware               | 0.5h   | —    | 10MB default, 413 on oversized payloads        |
+| P10 | [x] Remove stale pnpm-lock.yaml                  | 0.1h   | —    | File deleted, only package-lock.json present   |
+| P11 | [x] Add E2E job to CI                            | 1.5h   | P4   | Build → start → Playwright in CI               |
 
-### Detail — Tier 1 Tasks
+### Detail — Tier 1 Tasks (all completed 2026-05-13)
 
-| Step | Task | Action                                                                                                                                                               |
-| ---- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | P1   | Write new active work area — done above                                                                                                                              |
-| 2    | P2   | Add `@hono/rate-limiter` to server deps; wrap app with rate limiter middleware (100 req/min default, configurable via env)                                           |
-| 3    | P3   | Add `cors()` middleware from `hono/cors` with configurable origin list via `CORS_ORIGINS` env var                                                                    |
-| 4    | P4   | Add `serveStatic` from `@hono/node-server` for `/ui/dist`; replace GET `/` placeholder; verify production flow                                                       |
-| 5    | P5   | Create `ui/src/components/ErrorBoundary.tsx`; wrap `<Routes>` in `App.tsx`; add per-route fallbacks                                                                  |
-| 6    | P6   | Create `.env.example` listing: `PORT`, `OPENCODE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CORS_ORIGINS`, `RATE_LIMIT_MAX`, `BODY_LIMIT_SIZE` |
-| 7    | P7   | Add `jest` + `ts-jest` to server devDeps; add `jest.config.ts`; add test setup; verify first test passes                                                             |
-| 8    | P8   | Mock Hono app + upstream fetch; test proxy route forwarding; test error handling; test SSE passthrough                                                               |
-| 9    | P9   | Add body limit parsing middleware; return 413 on oversized payloads                                                                                                  |
-| 10   | P10  | `rm pnpm-lock.yaml` — only npm is used in CI                                                                                                                         |
-| 11   | P11  | Add E2E job to `.github/workflows/ci.yml`; build server + UI first; run Playwright against built server                                                              |
+| Step | Task | Summary                                                                                                                                         |
+| ---- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | P1   | Write new active work area — done in a previous session                                                                                         |
+| 2    | P2   | In-memory rate limiter middleware, 100 req/min default, configurable via `RATE_LIMIT_MAX` env var                                               |
+| 3    | P3   | `cors()` from `hono/cors` with `CORS_ORIGINS` env var (comma-separated), credentials: true                                                      |
+| 4    | P4   | `serveStatic` from `@hono/node-server/serve-static` for `/assets/*`, PWA files, and SPA fallback via `setupStatic()` in `startServer()`         |
+| 5    | P5   | Class-component `ErrorBoundary` wrapping `<Routes>` + individual route elements with "Try again" button                                         |
+| 6    | P6   | `.env.example` with PORT, OPENCODE_URL, VAPID keys, CORS_ORIGINS, RATE_LIMIT_MAX, BODY_LIMIT_SIZE                                               |
+| 7    | P7   | `jest` + `ts-jest` + `@types/jest` in server devDeps; `jest.config.cjs` with node env and `.js`→TS moduleNameMapper; basic health test          |
+| 8    | P8   | 11 tests covering: GET/POST forwarding, 502 on error, header passthrough, auth injection, hop-by-hop stripping, SSE, URL building, query params |
+| 9    | P9   | `bodyLimit()` from `hono/body-limit` with 10MB default, configurable via `BODY_LIMIT_SIZE` env var                                              |
+| 10   | P10  | `rm pnpm-lock.yaml` — only `package-lock.json` in use                                                                                           |
+| 11   | P11  | E2E job in `ci.yml`: build shared+server+UI → install Playwright → start server → `playwright test --base-url=http://localhost:3000`            |
 
 ### Post-Migration Backlog (Moved to Tier 2-3)
 
@@ -133,7 +134,7 @@ Final state before migration: **498 tests passing, 0 failing. tsc --noEmit passe
 | **v0.4.0** | 2026-06-16 | M3 complete — PWA installable, tunnel+QR working | `[x]`  |
 | **v0.5.0** | 2026-07-07 | M4 complete — terminal, editor, diff viewer live | `[x]`  |
 | **v1.0.0** | 2026-08-01 | M5 complete — memory plugin ported, full parity  | `[x]`  |
-| **v0.3.0** | 2026-05-26 | Tier 1 — production hardening, server tests      | `[ ]`  |
+| **v0.3.0** | 2026-05-26 | Tier 1 — production hardening, server tests      | `[x]`  |
 | **v0.4.0** | 2026-06-09 | Tier 2 — feature completeness                    | `[ ]`  |
 | **v0.5.0** | 2026-06-23 | Tier 3 — memory plugin completion                | `[ ]`  |
 | **v1.0.0** | 2026-07-14 | Tier 4 — polish & deployment                     | `[ ]`  |

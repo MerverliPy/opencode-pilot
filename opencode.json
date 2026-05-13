@@ -1,205 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "n9router/ds/deepseek-chat",
+  "default_agent": "orchestrator",
   "instructions": [
-    ".opencode/rules/security.md",
-    ".opencode/rules/coding-style.md",
-    ".opencode/rules/testing.md",
-    ".opencode/rules/git-workflow.md",
-    ".opencode/rules/agents.md",
-    ".opencode/rules/performance.md",
-    ".opencode/rules/hooks.md",
-    ".opencode/rules/patterns.md"
+    "AGENTS.md",
+    ".opencode/rules/pilot-core.md"
   ],
   "plugin": [
-    "./.opencode/plugins/session-manager.ts",
+    "./.opencode/plugins/n9router-director.ts",
     "./.opencode/plugins/tool-guardrails.ts",
-    "./.opencode/plugins/code-quality.ts",
-    "./.opencode/plugins/strategic-compact.ts",
     "./.opencode/plugins/rtk-compressor.ts"
   ],
-  "agent": {
-    "code-reviewer": {
-      "description": "Expert code review specialist for quality, security, and maintainability",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/code-reviewer.md",
-      "tools": {
-        "read": true,
-        "grep": true,
-        "glob": true,
-        "bash": true,
-        "edit": false,
-        "write": false
-      }
-    },
-    "planner": {
-      "description": "Expert planning specialist for complex features and refactoring",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/planner.md",
-      "tools": {
-        "read": true,
-        "grep": true,
-        "glob": true,
-        "bash": false,
-        "edit": false,
-        "write": false
-      }
-    },
-    "architect": {
-      "description": "Software architecture specialist for system design and scalability",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/architect.md",
-      "tools": {
-        "read": true,
-        "grep": true,
-        "glob": true,
-        "bash": false,
-        "edit": false,
-        "write": false
-      }
-    },
-    "security-reviewer": {
-      "description": "Security vulnerability detection and remediation specialist",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/security-reviewer.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "tdd-guide": {
-      "description": "Test-Driven Development specialist enforcing write-tests-first methodology",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/tdd-guide.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": false
-      }
-    },
-    "python-reviewer": {
-      "description": "Expert Python code reviewer specializing in PEP 8 and Pythonic idioms",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/python-reviewer.md",
-      "tools": {
-        "read": true,
-        "grep": true,
-        "glob": true,
-        "bash": true,
-        "edit": false,
-        "write": false
-      }
-    },
-    "refactor-cleaner": {
-      "description": "Dead code cleanup and consolidation specialist",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/refactor-cleaner.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "go-reviewer": {
-      "description": "Expert Go code reviewer specializing in idiomatic Go and concurrency",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/go-reviewer.md",
-      "tools": {
-        "read": true,
-        "grep": true,
-        "glob": true,
-        "bash": true,
-        "edit": false,
-        "write": false
-      }
-    },
-    "go-build-resolver": {
-      "description": "Go build, vet, and compilation error resolution specialist",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/go-build-resolver.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "e2e-runner": {
-      "description": "End-to-end testing specialist using Playwright",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/e2e-runner.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "database-reviewer": {
-      "description": "PostgreSQL database specialist for query optimization and schema design",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/database-reviewer.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "doc-updater": {
-      "description": "Documentation and codemap specialist",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/doc-updater.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    },
-    "build-error-resolver": {
-      "description": "Build and TypeScript error resolution specialist",
-      "model": "n9router/gh/claude-sonnet-4.6",
-      "prompt": "file:.opencode/agents/build-error-resolver.md",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "grep": true,
-        "glob": true
-      }
-    }
-  },
   "mcp": {
-    "github": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
-      "enabled": true
-    },
-    "memory": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
-      "enabled": true
-    },
     "sequential-thinking": {
       "type": "local",
       "command": [
@@ -209,20 +21,78 @@
       ],
       "enabled": true
     },
+    "github": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "enabled": false
+    },
+    "memory": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "enabled": false
+    },
     "filesystem": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."],
-      "enabled": true
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "enabled": false
     },
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--headless"],
-      "enabled": true
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--headless"
+      ],
+      "enabled": false
     }
   },
   "permission": {
-    "bash": "ask",
+    "*": "ask",
+    "read": "allow",
+    "list": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "lsp": "allow",
+    "skill": "allow",
+    "webfetch": "ask",
+    "websearch": "ask",
     "edit": "ask",
-    "write": "ask"
-  }
+    "write": "ask",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git ls-files*": "allow",
+      "npm run build*": "allow",
+      "npm run typecheck*": "allow",
+      "npm run lint*": "allow",
+      "npm run test*": "allow",
+      "npm run test:e2e*": "allow"
+    }
+  },
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
+      ".git/**"
+    ]
+  },
+  "share": "manual"
 }

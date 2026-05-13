@@ -1,5 +1,3 @@
-export * from "./session-manager";
+export * from "./n9router-director";
 export * from "./tool-guardrails";
-export * from "./code-quality";
-export * from "./strategic-compact";
 export * from "./rtk-compressor";

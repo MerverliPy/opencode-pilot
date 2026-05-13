@@ -196,10 +196,11 @@ jobs:
           curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:3000/health
 
       - name: Run E2E tests
-        run: npx playwright test --base-url http://localhost:3000
+        run: npx playwright test
         working-directory: e2e
         env:
           CI: true
+          E2E_BASE_URL: http://localhost:3000
 
       - name: Upload Playwright artifacts
         if: failure()

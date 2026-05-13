@@ -10,7 +10,13 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const uiDist = resolve(__dirname, "../../ui/dist");
 import { createPushRouter, type PushConfig } from "./push.js";
 import { createTunnelRouter } from "./tunnel.js";
 import { attachTerminalWS, listSessions } from "./terminal.js";
@@ -122,17 +128,31 @@ export function setupMemory() {
 // ─── Static frontend (P4: serve Vite build) ────────────────────────────────────
 // Called from startServer() after proxy routes to ensure correct precedence.
 export function setupStatic() {
-  app.use("/assets/*", serveStatic({ root: "ui/dist" }));
+  app.use("/assets/*", serveStatic({ root: uiDist }));
 
-  // Try serving any existing file (registerSW.js, sw.js, workbox-*.js, etc.),
-  // then fall back to index.html for SPA routes.
-  app.get("/*", async (c, next) => {
-    const handler = serveStatic({ root: "ui/dist" });
-    const res = await handler(c, next);
-    if (res) return res;
-
-    const { readFile } = await import("node:fs/promises");
-    const html = await readFile("ui/dist/index.html", "utf-8");
+  app.get("/*", async (c) => {
+    const { readFileSync, existsSync, statSync } = await import("node:fs");
+    const relativePath = c.req.path.slice(1);
+    const filePath = relativePath ? resolve(uiDist, relativePath) : "";
+    if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
+      const ext = filePath.split(".").pop() ?? "";
+      const mimes: Record<string, string> = {
+        js: "text/javascript",
+        css: "text/css",
+        html: "text/html",
+        svg: "image/svg+xml",
+        ico: "image/x-icon",
+        png: "image/png",
+        json: "application/json",
+        map: "application/json",
+        webmanifest: "application/manifest+json",
+      };
+      const content = readFileSync(filePath);
+      return c.body(content, 200, {
+        "Content-Type": mimes[ext] ?? "application/octet-stream",
+      });
+    }
+    const html = readFileSync(resolve(uiDist, "index.html"), "utf-8");
     return c.html(html);
   });
 }

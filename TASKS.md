@@ -132,7 +132,7 @@ Items permanently dropped (iOS-native only, no web equivalent):
 | ---------- | ---------- | ------------------------------------------------ | ------ |
 | **v0.1.1** | 2026-05-12 | All RN tech debt cleared. 498 tests passing.     | `[x]`  |
 | **v0.2.0** | 2026-05-19 | M1 complete — monorepo scaffolded, Expo removed  | `[x]`  |
-| **v0.3.0** | 2026-06-02 | M2 complete — core chat parity in web app        | `[ ]`  |
-| **v0.4.0** | 2026-06-16 | M3 complete — PWA installable, tunnel+QR working | `[ ]`  |
+| **v0.3.0** | 2026-06-02 | M2 complete — core chat parity in web app        | `[x]`  |
+| **v0.4.0** | 2026-06-16 | M3 complete — PWA installable, tunnel+QR working | `[x]`  |
 | **v0.5.0** | 2026-07-07 | M4 complete — terminal, editor, diff viewer live | `[x]`  |
 | **v1.0.0** | 2026-08-01 | M5 complete — memory plugin ported, full parity  | `[x]`  |

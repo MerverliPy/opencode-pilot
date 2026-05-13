@@ -3,10 +3,9 @@
 A self-hosted web PWA that connects to a remote `opencode serve` instance over HTTP + SSE.
 Built with React + Vite and served by a Hono Node.js server.
 
-> **Migration note:** Pilot is pivoting from a React Native / Expo iOS app to a web-first PWA.
-> This document supersedes the previous mobile-focused design doc.
-> Reason: xterm.js, CodeMirror, diff2html, and Cloudflare tunnel integration are impractical in React Native.
-> The web stack enables all planned power features without native compilation or App Store gating.
+> **Migration complete (2026-05-13):** Pilot migrated from React Native / Expo to a web-first PWA.
+> xterm.js, CodeMirror, diff2html, and Cloudflare tunnel are now all live.
+> All five migration phases (M1–M5) are fully implemented.
 
 ---
 
@@ -74,8 +73,8 @@ The Pilot server is the single backend process. It:
 
 | Concern       | Choice                                      | Notes                                         |
 | ------------- | ------------------------------------------- | --------------------------------------------- |
-| Framework     | React 18 + TypeScript                       | Preserves Zustand stores + services layer     |
-| Bundler       | Vite 5                                      | Fast HMR, native ESM, PWA plugin              |
+| Framework     | React 19 + TypeScript                       | Preserves Zustand stores + services layer     |
+| Bundler       | Vite 6                                      | Fast HMR, native ESM, PWA plugin              |
 | Components    | shadcn/ui + Radix UI                        | Accessible unstyled primitives, full Tailwind |
 | Styling       | Tailwind CSS v4                             | CSS variables for theme tokens                |
 | State         | Zustand (existing stores transfer ~95%)     |                                               |
@@ -191,14 +190,14 @@ Theme is applied via `data-theme` attribute on `<html>`, initialized from `local
 
 ### 5.2 Typography
 
-| Role            | Font           | Weight   | Notes                             |
-| --------------- | -------------- | -------- | --------------------------------- |
-| UI text         | Geist Sans     | 400, 500 | Labels, nav, descriptions         |
-| Headings        | Geist Sans     | 600      | Page titles, section headers      |
-| Code / terminal | JetBrains Mono | 400, 500 | All code blocks, terminal, editor |
-| Inline code     | JetBrains Mono | 400      | `backtick` spans in messages      |
+| Role            | Font stack                                              | Weight   | Notes                             |
+| --------------- | ------------------------------------------------------- | -------- | --------------------------------- |
+| UI text         | `system-ui, -apple-system, sans-serif`                  | 400, 500 | Labels, nav, descriptions         |
+| Headings        | `system-ui, -apple-system, sans-serif`                  | 600      | Page titles, section headers      |
+| Code / terminal | `ui-monospace, 'Cascadia Code', 'Source Code Pro', ...` | 400, 500 | All code blocks, terminal, editor |
+| Inline code     | `ui-monospace, 'Cascadia Code', 'Source Code Pro', ...` | 400      | `backtick` spans in messages      |
 
-Base size: 14px. Line height: 1.5. Loaded via `@fontsource/geist` and `@fontsource/jetbrains-mono` (subset: latin).
+Base size: 14px. Line height: 1.5. Fonts are defined in `ui/src/theme.ts` as CSS font-family stacks.
 
 ### 5.3 Spacing & Radius
 
@@ -580,11 +579,13 @@ Base size: 14px. Line height: 1.5. Loaded via `@fontsource/geist` and `@fontsour
 
 ---
 
-## 10. Migration Phases
+## 10. Migration History — Phases Completed (2026-05-13)
+
+All five migration phases were implemented between 2026-05-12 and 2026-05-13.
 
 ### Phase 1 — Repo Restructure
 
-Convert to npm workspaces. Remove Expo/RN files. Scaffold Hono server + Vite React app. Add `pilot start` CLI. **No feature code yet.**
+Converted to npm workspaces. Removed Expo/RN files. Scaffolded Hono server + Vite React app. Added `pilot start` CLI.
 
 Files removed: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js`, all `expo-*` deps.
 Files added: `server/`, `ui/`, `shared/types.ts`, root `package.json` with workspaces.
@@ -593,7 +594,7 @@ Files added: `server/`, `ui/`, `shared/types.ts`, root `package.json` with works
 
 SSE via native `EventSource`. Session management. Message stream rendering. Prompt input. Permission cards. Mobile-first layout.
 
-All existing Zustand stores + `services/api.ts` + `services/sse.ts` port in this phase.
+All existing Zustand stores + `services/api.ts` + `services/sse.ts` ported to web.
 
 ### Phase 3 — PWA + Remote Access
 
@@ -605,8 +606,8 @@ xterm.js terminal + node-pty WebSocket bridge. CodeMirror file viewer. diff2html
 
 ### Phase 5 — Memory Plugin Port
 
-Port `plugin/memory/` to `server/src/memory/`. Replace `expo-sqlite` with `better-sqlite3`. Port semantic search. Rebuild Memory UI screen in React.
+Ported `plugin/memory/` to `server/src/memory/`. Replaced `expo-sqlite` with `better-sqlite3`. Ported semantic search. Rebuilt Memory UI screen in React.
 
 ---
 
-_Last updated: 2026-05-12_
+_Last updated: 2026-05-13_

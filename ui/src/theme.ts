@@ -1,8 +1,9 @@
 /**
- * Theme stub for M1 — provides colour / font tokens so that the
- * legacy React Native memory-plugin UI components type-check correctly.
+ * Theme tokens — colour palette, font stacks, and font sizes.
  *
- * Real web theming will be implemented in M2 using CSS variables / Tailwind.
+ * Colours and fonts are passed as inline styles to components that were
+ * ported from the legacy React Native memory plugin UI. Newer components
+ * use Tailwind CSS variables defined in the global stylesheet.
  */
 
 export const colors = {

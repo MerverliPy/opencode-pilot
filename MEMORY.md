@@ -49,7 +49,7 @@ and **auto-inject**) are on by default.
 
 **4. Have a coding conversation**
 
-When the session goes idle, extraction runs automatically. The drawer badge updates and new
+When the session goes idle, extraction runs automatically. The sidebar badge updates and new
 memories appear in the **memories** tab within a few seconds.
 
 **5. Send the next message**
@@ -219,9 +219,9 @@ The Ollama base URL is derived automatically from the OpenCode server URL (same 
 
 ## UI walkthrough
 
-### Drawer badge
+### Sidebar badge
 
-The memory count badge on the drawer nav item updates live after each extraction run. A `⟳`
+The memory count badge on the sidebar nav item updates live after each extraction run. A `⟳`
 spinner is shown next to the nav item while extraction is in progress.
 
 ### Memories tab
@@ -238,13 +238,13 @@ spinner is shown next to the nav item while extraction is in progress.
 
 ### Config tab
 
-| Section                | Controls                                                                                      |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| **general**            | `memory enabled` master toggle; `auto-extract` toggle; `auto-inject` toggle                   |
-| **embedding provider** | Radio-style list of all 8 providers                                                           |
-| **model**              | Radio-style list of all models for the selected provider                                      |
-| **api key**            | Secure text entry; hidden by default (show/hide toggle); `save key` stores to device keychain |
-| **danger zone**        | `clear all memories` — permanently deletes all memories for the active server                 |
+| Section                | Controls                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **general**            | `memory enabled` master toggle; `auto-extract` toggle; `auto-inject` toggle                                           |
+| **embedding provider** | Radio-style list of all 8 providers                                                                                   |
+| **model**              | Radio-style list of all models for the selected provider                                                              |
+| **api key**            | Secure text entry; hidden by default (show/hide toggle); `save key` stored server-side in the Hono server environment |
+| **danger zone**        | `clear all memories` — permanently deletes all memories for the active server                                         |
 
 Config is persisted in SQLite (`memory_config` table, keyed by `server_id`) so each connected
 OpenCode server has its own independent configuration.

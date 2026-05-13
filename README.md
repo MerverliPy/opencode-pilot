@@ -39,39 +39,116 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 
 ## Tech Stack
 
-| Concern            | Choice                                          |
-| ------------------ | ----------------------------------------------- |
-| Frontend framework | React 19 + Vite 6                               |
-| Language           | TypeScript                                      |
-| Components         | shadcn/ui + Radix UI primitives                 |
-| Styling            | Tailwind CSS v4                                 |
-| State              | Zustand                                         |
-| SSE                | Native `EventSource`                            |
-| Terminal           | xterm.js + node-pty (server-side PTY)           |
-| Code editor        | CodeMirror 6                                    |
-| Diff rendering     | diff2html                                       |
-| Fonts              | Geist Sans (UI), JetBrains Mono (code/terminal) |
-| Server             | Hono (proxy, auth, push, tunnel, memory)        |
-| Memory storage     | better-sqlite3 (server-side)                    |
-| Remote access      | Cloudflare tunnel                               |
+| Concern            | Choice                                               |
+| ------------------ | ---------------------------------------------------- |
+| Frontend framework | React 19 + Vite 6                                    |
+| Language           | TypeScript                                           |
+| Components         | shadcn/ui + Radix UI primitives                      |
+| Styling            | Tailwind CSS v4                                      |
+| State              | Zustand                                              |
+| SSE                | Native `EventSource`                                 |
+| Terminal           | xterm.js + node-pty (server-side PTY)                |
+| Code editor        | CodeMirror 6                                         |
+| Diff rendering     | diff2html                                            |
+| Fonts              | System font stacks via `theme.ts` (sans + monospace) |
+| Server             | Hono (proxy, auth, push, tunnel, memory)             |
+| Memory storage     | better-sqlite3 (server-side)                         |
+| Remote access      | Cloudflare tunnel                                    |
 
-## Prerequisites
+## Quick Start Guide
 
-- Node.js >= 20
-- A running `opencode serve` instance
+### Prerequisites
 
-## Getting Started
+- **Node.js >= 20**
+- A running **`opencode serve`** instance (e.g. `opencode serve --hostname 0.0.0.0 --port 4096`)
+
+### 1. Install
 
 ```bash
-# Install all workspace dependencies
+# Clone and install all workspace dependencies
 npm install
+```
 
-# Start the Hono server (proxies OpenCode + serves the UI)
+### 2. Start the server
+
+```bash
 npm start
 ```
 
-Open `http://localhost:3000` in any browser. On first launch, enter your OpenCode server URL
-(e.g. `http://192.168.1.x:4096`). For remote access, run `pilot tunnel` to generate a QR code.
+The Hono server starts on `http://localhost:3000`, serving the UI and proxying all API calls to OpenCode.
+
+### 3. Open the app
+
+Navigate to `http://localhost:3000` in any browser. On first launch, enter your OpenCode server URL (e.g. `http://192.168.1.x:4096`).
+
+### 4. Start chatting
+
+Create a new session and send a message. SSE streams responses in real time. Use `/` for slash commands and `@` to mention files.
+
+### 5. Remote access (optional)
+
+```bash
+npx pilot tunnel
+```
+
+This starts a Cloudflare Quick Tunnel and prints a QR code. Scan it from any device to access Pilot remotely — no port forwarding or cloud account needed.
+
+---
+
+## Configuration Guide
+
+### Environment variables
+
+| Variable        | Default     | Description                                     |
+| --------------- | ----------- | ----------------------------------------------- |
+| `PORT`          | `3000`      | HTTP port for the Pilot Hono server             |
+| `HOSTNAME`      | `0.0.0.0`   | Bind address                                    |
+| `OPENCODE_URL`  | (none)      | Default OpenCode server URL (overridable in UI) |
+| `VAPID_SUBJECT` | (auto)      | Web Push contact (mailto: or URL)               |
+| `VAPID_PUBLIC`  | (generated) | VAPID public key for Web Push                   |
+| `VAPID_PRIVATE` | (generated) | VAPID private key for Web Push                  |
+
+All variables are optional. Set them in a `.env` file at the project root or pass them inline.
+
+### Development mode
+
+```bash
+# Terminal 1 — Hono server with hot reload
+npm run dev:server
+
+# Terminal 2 — Vite dev server with HMR on :5173
+npm run dev:ui
+
+# Or both at once
+npm run dev
+```
+
+In dev mode, the Vite dev server proxies API calls to the Hono server on `:3000`.
+
+### Available npm scripts
+
+| Script               | Workspace | Description                            |
+| -------------------- | --------- | -------------------------------------- |
+| `npm start`          | server    | Start production server                |
+| `npm run dev`        | —         | Start dev servers (server + UI)        |
+| `npm run build`      | —         | Build all workspaces                   |
+| `npm run typecheck`  | —         | Run tsc --noEmit across all workspaces |
+| `npm run lint`       | ui        | ESLint check                           |
+| `npm test`           | ui        | Run Jest test suite                    |
+| `npm run test:e2e`   | e2e       | Run Playwright E2E tests               |
+| `npm run dev:server` | server    | Start Hono server with tsx watch       |
+| `npm run dev:ui`     | ui        | Start Vite dev server                  |
+
+### n9router integration
+
+Pilot works with [n9router](https://9router.com) as an AI routing gateway. Configure the n9router URL and API key in the Settings page to:
+
+- Browse available models and combos
+- Switch between providers (Anthropic, OpenAI, Gemini, etc.)
+- View per-model usage stats and cost estimates
+- Enable/disable the Cloudflare tunnel from the UI
+
+For full documentation see [`MEMORY.md`](MEMORY.md) and the n9router skill at `.opencode/skills/9router/SKILL.md`.
 
 ## Project Structure
 
@@ -99,8 +176,11 @@ pilot/
 
 ## Documentation
 
+- **Quick Start Guide** (above) — Install, configure, and launch Pilot
+- **Configuration Guide** (above) — Environment variables, scripts, n9router setup
 - [`DESIGN.md`](DESIGN.md) — Full architecture, screen wireframes, navigation, API layer, state design, and decisions log
-- [`TASKS.md`](TASKS.md) — Active migration agenda (M1–M5)
+- [`TASKS.md`](TASKS.md) — Task agenda
+- [`MEMORY.md`](MEMORY.md) — Memory plugin usage guide
 - [`BENCH.md`](BENCH.md) — Benchmark and audit suite documentation
 
 ## Non-Goals

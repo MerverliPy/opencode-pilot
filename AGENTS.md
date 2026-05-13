@@ -153,7 +153,7 @@ Key features:
 - Slash commands & @ mentions
 - Memory plugin with semantic extraction/injection
 
-See `TASKS.md` for the active work agenda, and `README.md`, `DESIGN.md`, and `ROADMAP.md` for full Pilot documentation.
+See `TASKS.md` for the active work agenda, and `README.md`, `DESIGN.md`, and `MEMORY.md` for full Pilot documentation.
 
 ## Core Principles
 

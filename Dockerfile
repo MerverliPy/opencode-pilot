@@ -29,6 +29,7 @@ WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 COPY shared/package.json shared/
 COPY server/package.json server/
+COPY ui/package.json ui/
 
 # Install production dependencies only
 RUN npm ci --omit=dev

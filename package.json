@@ -6,7 +6,8 @@
   "workspaces": [
     "server",
     "ui",
-    "shared"
+    "shared",
+    "e2e"
   ],
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w ui",
@@ -18,6 +19,7 @@
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w ui",
     "lint": "npm run lint -w ui",
     "test": "npm run test -w ui",
+    "test:e2e": "npm run test -w e2e",
     "test:coverage": "npm run test:coverage -w ui",
     "test:watch": "npm run test:watch -w ui",
     "start": "npm run start -w server"

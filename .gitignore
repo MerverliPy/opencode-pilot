@@ -12,6 +12,10 @@ pilot-audit-*.json
 # Jest HTML reporter output
 test-report.html
 
+# Playwright E2E artifacts
+test-results/
+e2e/screenshots/
+
 # Server build output
 server/dist/
 

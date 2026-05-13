@@ -213,6 +213,11 @@
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."],
       "enabled": true
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--headless"],
+      "enabled": true
     }
   },
   "permission": {

@@ -109,7 +109,6 @@ function DiffBlock({ fileDiff }: { fileDiff: GitFileDiff }) {
       </div>
       <div
         className="diff2html-wrapper"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: rendered }}
         style={{ overflowX: "auto" }}
       />

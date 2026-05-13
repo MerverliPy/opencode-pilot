@@ -319,23 +319,21 @@ export function Terminal() {
 
       {/* Terminal containers — all rendered, only active is visible */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {tabs.map((tab) => {
-          const ref = containerRefs.current.get(tab.id);
-          return (
-            <div
-              key={tab.id}
-              ref={(el) => {
-                if (ref) ref.current = el;
-              }}
-              style={{
-                position: "absolute",
-                inset: 0,
-                padding: 8,
-                display: tab.id === activeTabId ? "block" : "none",
-              }}
-            />
-          );
-        })}
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            ref={(el) => {
+              const r = containerRefs.current.get(tab.id);
+              if (r) r.current = el;
+            }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: 8,
+              display: tab.id === activeTabId ? "block" : "none",
+            }}
+          />
+        ))}
 
         {tabs.length === 0 && (
           <div

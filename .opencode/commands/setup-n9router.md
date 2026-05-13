@@ -5,7 +5,7 @@ agent: orchestrator
 
 # /setup-n9router
 
-Use the `n9router-workflow` skill and `N9ROUTER.md`.
+Use the `n9router-workflow` skill.
 
 Tasks may include:
 

@@ -19,7 +19,7 @@ compatibility: opencode
 Before changing routing, inspect:
 
 - `opencode.json`
-- `N9ROUTER.md`
+- `/setup-n9router` command output
 - dashboard/API setup notes in the repo
 
 Useful local checks when n9router is running:

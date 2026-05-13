@@ -1,16 +1,18 @@
 /**
  * Deduplicator: checks whether a piece of text is semantically similar to any
  * memory already stored for this server, using cosine similarity on embeddings.
+ *
+ * Uses the server MemoryApi for all data access (replaces old expo-sqlite DB).
  */
-import { getMemoriesByServer } from '../db/MemoryRepository';
-import { getEmbeddingsByModel } from '../db/EmbeddingRepository';
-import { cosineSimilarity } from '../embeddings/similarity';
-import { createProviderFromConfig } from '../embeddings/EmbeddingProviderFactory';
-import type { MemoryConfig } from '../db/schema';
+import { cosineSimilarity } from "../embeddings/similarity";
+import { createProviderFromConfig } from "../embeddings/EmbeddingProviderFactory";
+import type { MemoryConfig } from "../db/schema";
+import type { MemoryApi } from "../../../services/memoryApi";
 
 export class Deduplicator {
   constructor(
     private serverId: string,
+    private api: MemoryApi,
     private serverUrl?: string,
   ) {}
 
@@ -21,13 +23,19 @@ export class Deduplicator {
    */
   async isDuplicate(content: string, config: MemoryConfig): Promise<boolean> {
     try {
-      // Load existing memory IDs for this server.
-      const memories = await getMemoriesByServer(this.serverId);
+      // Load existing memories for this server via API.
+      const { memories } = await this.api.listMemories(this.serverId, {
+        includeArchived: false,
+      });
       if (memories.length === 0) return false;
 
-      // Get embeddings for those memories under the current model.
+      // Get embeddings for those memories under the current model via API.
       const memoryIds = memories.map((m) => m.id);
-      const embeddings = await getEmbeddingsByModel(config.embeddingModel, memoryIds);
+      const embeddings = await this.api.getEmbeddings(
+        this.serverId,
+        config.embeddingModel,
+        memoryIds,
+      );
       if (embeddings.length === 0) return false;
 
       // Embed the candidate.
@@ -36,7 +44,7 @@ export class Deduplicator {
         provider: config.embeddingProvider,
         serverUrl: this.serverUrl,
       });
-      const vectors = await provider.embed([content], 'document');
+      const vectors = await provider.embed([content], "document");
       const queryVec = vectors[0];
       if (!queryVec) return false;
 

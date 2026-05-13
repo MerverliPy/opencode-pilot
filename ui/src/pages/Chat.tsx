@@ -58,6 +58,7 @@ export function Chat() {
 
   const { buildPrefix } = useMemoryInjection({
     serverId: server?.id ?? null,
+    server: server ?? null,
     serverUrl: server?.url,
   });
 

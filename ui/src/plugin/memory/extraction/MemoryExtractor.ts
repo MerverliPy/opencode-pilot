@@ -6,16 +6,16 @@
  *   2. Ask the shadow OpenCode session to extract memories (JSON).
  *   3. Parse the JSON response.
  *   4. Deduplicate each candidate against existing memories.
- *   5. Insert survivors into the DB and embed them.
+ *   5. Insert survivors via the server API and embed them.
  *   6. Return the newly inserted Memory records.
+ *
+ * Uses the server MemoryApi for all persistence (replaces old expo-sqlite DB).
  */
 import type { OpencodeClient } from "../../../services/api";
 import type { Part } from "../../../services/types";
 import type { Turn } from "../../../store/session";
 import type { Memory, MemoryCategory, MemoryConfig } from "../db/schema";
 import type { MemoryApi } from "../../../services/memoryApi";
-import { insertMemory } from "../db/MemoryRepository";
-import { insertEmbedding } from "../db/EmbeddingRepository";
 import { createProviderFromConfig } from "../embeddings/EmbeddingProviderFactory";
 import { ExtractionSession } from "./ExtractionSession";
 import { Deduplicator } from "../dedup/Deduplicator";
@@ -96,7 +96,7 @@ export class MemoryExtractor {
     private api?: MemoryApi,
   ) {
     this.extractionSession = new ExtractionSession(client);
-    this.deduplicator = new Deduplicator(serverId, serverUrl);
+    this.deduplicator = new Deduplicator(serverId, api!, serverUrl);
   }
 
   /**
@@ -160,33 +160,23 @@ export class MemoryExtractor {
       );
       if (isDup) continue;
 
-      const memory = this.api
-        ? await this.api.insertMemory(this.serverId, {
-            serverId: this.serverId,
-            content: candidate.content,
-            category: candidate.category,
-            confidence: candidate.confidence,
-            tags: candidate.tags,
-            isPinned: false,
-            isArchived: false,
-          })
-        : await insertMemory({
-            serverId: this.serverId,
-            content: candidate.content,
-            category: candidate.category,
-            confidence: candidate.confidence,
-            tags: candidate.tags,
-            isPinned: false,
-            isArchived: false,
-          });
+      const memory = await this.api!.insertMemory(this.serverId, {
+        serverId: this.serverId,
+        content: candidate.content,
+        category: candidate.category,
+        confidence: candidate.confidence,
+        tags: candidate.tags,
+        isPinned: false,
+        isArchived: false,
+      });
 
-      // Embed and store the vector.
-      if (provider) {
+      // Embed and store the vector via API.
+      if (provider && this.api) {
         try {
           const vectors = await provider.embed([memory.content], "document");
           const vec = vectors[0];
           if (vec) {
-            await insertEmbedding({
+            await this.api.insertEmbedding(this.serverId, {
               memoryId: memory.id,
               modelId: config.embeddingModel,
               vector: vec,

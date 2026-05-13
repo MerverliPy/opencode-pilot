@@ -26,6 +26,7 @@ import { useMemoryInjection } from "../useMemoryInjection";
 import { useMemoryStore } from "../../store/memoryStore";
 import { MemoryInjector } from "../../injection/MemoryInjector";
 import type { MemoryConfig } from "../../db/schema";
+import type { ServerConfig } from "../../../../services/auth";
 
 const MockMemoryInjector = MemoryInjector as jest.MockedClass<
   typeof MemoryInjector
@@ -43,6 +44,14 @@ const defaultConfig: MemoryConfig = {
   dedupThreshold: 0.92,
   topK: 5,
   maxMemories: 2000,
+};
+
+const mockServer: ServerConfig = {
+  id: "srv-1",
+  name: "Test Server",
+  url: "http://localhost:4096",
+  username: "test",
+  password: "test",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -65,7 +74,10 @@ describe("useMemoryInjection", () => {
   describe("return value", () => {
     it("returns an object with a buildPrefix function", () => {
       setConfig(defaultConfig);
-      const result = useMemoryInjection({ serverId: "srv-1" });
+      const result = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       expect(typeof result.buildPrefix).toBe("function");
     });
   });
@@ -73,7 +85,10 @@ describe("useMemoryInjection", () => {
   describe("buildPrefix guard clauses", () => {
     it("returns empty string when serverId is null", async () => {
       setConfig(defaultConfig);
-      const { buildPrefix } = useMemoryInjection({ serverId: null });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: null,
+        server: null,
+      });
       const result = await buildPrefix("query");
       expect(result).toBe("");
       expect(MockMemoryInjector).not.toHaveBeenCalled();
@@ -81,7 +96,10 @@ describe("useMemoryInjection", () => {
 
     it("returns empty string when config is null", async () => {
       setConfig(null);
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       const result = await buildPrefix("query");
       expect(result).toBe("");
       expect(MockMemoryInjector).not.toHaveBeenCalled();
@@ -89,7 +107,10 @@ describe("useMemoryInjection", () => {
 
     it("returns empty string when config.enabled is false", async () => {
       setConfig({ ...defaultConfig, enabled: false });
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       const result = await buildPrefix("query");
       expect(result).toBe("");
       expect(MockMemoryInjector).not.toHaveBeenCalled();
@@ -97,7 +118,10 @@ describe("useMemoryInjection", () => {
 
     it("returns empty string when config.injectEnabled is false", async () => {
       setConfig({ ...defaultConfig, injectEnabled: false });
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       const result = await buildPrefix("query");
       expect(result).toBe("");
       expect(MockMemoryInjector).not.toHaveBeenCalled();
@@ -105,7 +129,10 @@ describe("useMemoryInjection", () => {
 
     it("returns empty string when both enabled flags are false", async () => {
       setConfig({ ...defaultConfig, enabled: false, injectEnabled: false });
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       const result = await buildPrefix("query");
       expect(result).toBe("");
       expect(MockMemoryInjector).not.toHaveBeenCalled();
@@ -124,6 +151,7 @@ describe("useMemoryInjection", () => {
 
       const { buildPrefix } = useMemoryInjection({
         serverId: "srv-1",
+        server: mockServer,
         serverUrl: "http://localhost:4096",
       });
       const result = await buildPrefix("test query");
@@ -131,6 +159,7 @@ describe("useMemoryInjection", () => {
       expect(result).toBe("[Memory Context]\n- fact\n");
       expect(MockMemoryInjector).toHaveBeenCalledWith(
         "srv-1",
+        expect.any(Object),
         "http://localhost:4096",
       );
       expect(mockBuildContext).toHaveBeenCalledWith(
@@ -146,10 +175,17 @@ describe("useMemoryInjection", () => {
       );
       setConfig(defaultConfig);
 
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       await buildPrefix("query");
 
-      expect(MockMemoryInjector).toHaveBeenCalledWith("srv-1", undefined);
+      expect(MockMemoryInjector).toHaveBeenCalledWith(
+        "srv-1",
+        expect.any(Object),
+        undefined,
+      );
     });
 
     it("returns full memory context block from MemoryInjector", async () => {
@@ -163,7 +199,10 @@ describe("useMemoryInjection", () => {
       );
       setConfig(defaultConfig);
 
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       const result = await buildPrefix("any query");
 
       expect(result).toBe(expected);
@@ -176,7 +215,10 @@ describe("useMemoryInjection", () => {
       );
       setConfig(defaultConfig);
 
-      const { buildPrefix } = useMemoryInjection({ serverId: "srv-1" });
+      const { buildPrefix } = useMemoryInjection({
+        serverId: "srv-1",
+        server: mockServer,
+      });
       await buildPrefix("q1");
       await buildPrefix("q2");
 

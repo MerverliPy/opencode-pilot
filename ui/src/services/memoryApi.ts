@@ -9,6 +9,7 @@ import type { ServerConfig } from "./auth";
 import type {
   Memory,
   MemoryConfig,
+  MemoryEmbedding,
   ProfileEntry,
   TimelineEvent,
 } from "../plugin/memory/db/schema";
@@ -132,6 +133,40 @@ export function createMemoryApi(server: ServerConfig) {
       if (opts.offset) qs.set("offset", String(opts.offset));
       const q = qs.toString() ? `?${qs.toString()}` : "";
       return r("GET", `/memory/${encodeURIComponent(serverId)}/timeline${q}`);
+    },
+
+    // ── Embeddings ──────────────────────────────────────────────────────────
+
+    getEmbeddings(
+      serverId: string,
+      modelId: string,
+      memoryIds?: string[],
+    ): Promise<MemoryEmbedding[]> {
+      const qs = new URLSearchParams({ modelId });
+      if (memoryIds && memoryIds.length > 0) {
+        qs.set("memoryIds", memoryIds.join(","));
+      }
+      return r(
+        "GET",
+        `/memory/${encodeURIComponent(serverId)}/embeddings?${qs.toString()}`,
+      );
+    },
+
+    insertEmbedding(
+      serverId: string,
+      e: Omit<MemoryEmbedding, "id" | "createdAt">,
+    ): Promise<MemoryEmbedding> {
+      return r("POST", `/memory/${encodeURIComponent(serverId)}/embeddings`, e);
+    },
+
+    deleteEmbeddingsByMemory(
+      serverId: string,
+      memoryId: string,
+    ): Promise<void> {
+      return r(
+        "DELETE",
+        `/memory/${encodeURIComponent(serverId)}/embeddings/${encodeURIComponent(memoryId)}`,
+      );
     },
   };
 }

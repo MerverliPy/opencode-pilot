@@ -16,14 +16,6 @@ const mockDeduplicator = {
   isDuplicate: jest.fn(),
 };
 
-jest.mock("../../db/MemoryRepository", () => ({
-  insertMemory: jest.fn(),
-}));
-
-jest.mock("../../db/EmbeddingRepository", () => ({
-  insertEmbedding: jest.fn(),
-}));
-
 jest.mock("../../embeddings/EmbeddingProviderFactory", () => ({
   createProviderFromConfig: jest.fn(),
 }));
@@ -39,11 +31,28 @@ jest.mock("../ExtractionSession", () => ({
 // ── Imports ──────────────────────────────────────────────────────────────────
 
 import { MemoryExtractor } from "../MemoryExtractor";
-import { insertMemory } from "../../db/MemoryRepository";
-import { insertEmbedding } from "../../db/EmbeddingRepository";
 import { createProviderFromConfig } from "../../embeddings/EmbeddingProviderFactory";
 import type { Turn } from "../../../../store/session";
-import type { MemoryConfig } from "../../db/schema";
+import type { Memory, MemoryConfig, MemoryEmbedding } from "../../db/schema";
+import type { MemoryApi } from "../../../../services/memoryApi";
+
+// ── Mock MemoryApi ───────────────────────────────────────────────────────────
+
+const mockApi: jest.Mocked<MemoryApi> = {
+  insertMemory: jest.fn(),
+  insertEmbedding: jest.fn(),
+  listMemories: jest.fn(),
+  getEmbeddings: jest.fn(),
+  searchMemories: jest.fn(),
+  updateMemory: jest.fn(),
+  deleteMemory: jest.fn(),
+  deleteAllMemories: jest.fn(),
+  getConfig: jest.fn(),
+  saveConfig: jest.fn(),
+  getProfile: jest.fn(),
+  getTimeline: jest.fn(),
+  deleteEmbeddingsByMemory: jest.fn(),
+};
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -148,22 +157,39 @@ beforeEach(() => {
   (createProviderFromConfig as jest.Mock).mockResolvedValue({
     embed: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
   });
-  (insertMemory as jest.Mock).mockResolvedValue(insertedMemory);
-  (insertEmbedding as jest.Mock).mockResolvedValue({ id: "emb-1" });
+  mockApi.insertMemory.mockResolvedValue(insertedMemory);
+  mockApi.insertEmbedding.mockResolvedValue({
+    id: "emb-1",
+    memoryId: "mem-1",
+    modelId: "text-embedding-3-small",
+    vector: [0.1, 0.2, 0.3],
+    createdAt: Date.now(),
+  });
+  mockApi.listMemories.mockResolvedValue({ memories: [], count: 0 });
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("config guards", () => {
   it("returns [] when config.enabled is false", async () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, disabledConfig);
     expect(result).toEqual([]);
     expect(mockExtractionSession.sendAndWait).not.toHaveBeenCalled();
   });
 
   it("returns [] when config.extractEnabled is false", async () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, extractDisabledConfig);
     expect(result).toEqual([]);
     expect(mockExtractionSession.sendAndWait).not.toHaveBeenCalled();
@@ -172,13 +198,23 @@ describe("config guards", () => {
 
 describe("empty or no-text turns", () => {
   it("returns [] when turns array is empty", async () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract([], defaultConfig);
     expect(result).toEqual([]);
   });
 
   it("returns [] when all turns have no text parts", async () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(
       [makeEmptyTurn("user"), makeEmptyTurn("assistant")],
       defaultConfig,
@@ -189,7 +225,12 @@ describe("empty or no-text turns", () => {
 
 describe("happy path", () => {
   it("parses JSON, deduplicates, and inserts memory + embedding", async () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toHaveLength(1);
@@ -207,8 +248,9 @@ describe("happy path", () => {
       defaultConfig,
     );
 
-    // Memory inserted
-    expect(insertMemory).toHaveBeenCalledWith(
+    // Memory inserted (two args: serverId, data)
+    expect(mockApi.insertMemory).toHaveBeenCalledWith(
+      serverId,
       expect.objectContaining({
         serverId,
         content: "User prefers functional programming over OOP",
@@ -218,8 +260,9 @@ describe("happy path", () => {
       }),
     );
 
-    // Embedding inserted
-    expect(insertEmbedding).toHaveBeenCalledWith(
+    // Embedding inserted (two args: serverId, data)
+    expect(mockApi.insertEmbedding).toHaveBeenCalledWith(
+      serverId,
       expect.objectContaining({
         memoryId: "mem-1",
         modelId: "text-embedding-3-small",
@@ -233,11 +276,16 @@ describe("deduplication", () => {
   it("skips memory when deduplicator returns true", async () => {
     mockDeduplicator.isDuplicate.mockResolvedValue(true);
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
     expect(mockExtractionSession.sendAndWait).toHaveBeenCalled();
   });
 });
@@ -248,21 +296,31 @@ describe("JSON parsing edge cases", () => {
       "The conversation was good but no memories to extract.",
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
   });
 
   it("returns [] when AI returns an empty array", async () => {
     mockExtractionSession.sendAndWait.mockResolvedValue("[]");
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
   });
 
   it("handles JSON wrapped in markdown fences", async () => {
@@ -270,11 +328,16 @@ describe("JSON parsing edge cases", () => {
       "```json\n" + validJsonResponse + "\n```",
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toHaveLength(1);
-    expect(insertMemory).toHaveBeenCalled();
+    expect(mockApi.insertMemory).toHaveBeenCalled();
   });
 
   it("skips items with content shorter than 10 chars", async () => {
@@ -284,11 +347,16 @@ describe("JSON parsing edge cases", () => {
       ]),
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
   });
 
   it("skips items with confidence below 0.65", async () => {
@@ -303,11 +371,16 @@ describe("JSON parsing edge cases", () => {
       ]),
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
   });
 });
 
@@ -317,14 +390,19 @@ describe("embedding provider failure", () => {
       new Error("provider unavailable"),
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     // Memory still inserted
     expect(result).toHaveLength(1);
-    expect(insertMemory).toHaveBeenCalled();
+    expect(mockApi.insertMemory).toHaveBeenCalled();
     // Embedding not inserted
-    expect(insertEmbedding).not.toHaveBeenCalled();
+    expect(mockApi.insertEmbedding).not.toHaveBeenCalled();
   });
 
   it("still inserts memory when embed returns empty vector", async () => {
@@ -332,13 +410,18 @@ describe("embedding provider failure", () => {
       embed: jest.fn().mockResolvedValue([]),
     });
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toHaveLength(1);
-    expect(insertMemory).toHaveBeenCalled();
+    expect(mockApi.insertMemory).toHaveBeenCalled();
     // No embedding since the vector was empty
-    expect(insertEmbedding).not.toHaveBeenCalled();
+    expect(mockApi.insertEmbedding).not.toHaveBeenCalled();
   });
 });
 
@@ -348,17 +431,27 @@ describe("sendAndWait error", () => {
       new Error("network error"),
     );
 
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     const result = await extractor.extract(sampleTurns, defaultConfig);
 
     expect(result).toEqual([]);
-    expect(insertMemory).not.toHaveBeenCalled();
+    expect(mockApi.insertMemory).not.toHaveBeenCalled();
   });
 });
 
 describe("resetSession", () => {
   it("calls reset on the extraction session", () => {
-    const extractor = new MemoryExtractor({} as any, serverId, serverUrl);
+    const extractor = new MemoryExtractor(
+      {} as any,
+      serverId,
+      serverUrl,
+      mockApi,
+    );
     extractor.resetSession();
     expect(mockExtractionSession.reset).toHaveBeenCalled();
   });

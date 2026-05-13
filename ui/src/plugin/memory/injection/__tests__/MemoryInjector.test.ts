@@ -8,14 +8,6 @@
 
 // ── Mocks (must be above imports) ────────────────────────────────────────────
 
-jest.mock("../../db/MemoryRepository", () => ({
-  getMemoriesByServer: jest.fn(),
-}));
-
-jest.mock("../../db/EmbeddingRepository", () => ({
-  getEmbeddingsByModel: jest.fn(),
-}));
-
 jest.mock("../../embeddings/EmbeddingProviderFactory", () => ({
   createProviderFromConfig: jest.fn(),
 }));
@@ -27,11 +19,10 @@ jest.mock("../../embeddings/similarity", () => ({
 // ── Imports ──────────────────────────────────────────────────────────────────
 
 import { MemoryInjector } from "../MemoryInjector";
-import { getMemoriesByServer } from "../../db/MemoryRepository";
-import { getEmbeddingsByModel } from "../../db/EmbeddingRepository";
 import { createProviderFromConfig } from "../../embeddings/EmbeddingProviderFactory";
 import { topK } from "../../embeddings/similarity";
-import type { MemoryConfig } from "../../db/schema";
+import type { MemoryConfig, Memory, MemoryEmbedding } from "../../db/schema";
+import type { MemoryApi } from "../../../../services/memoryApi";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -102,6 +93,22 @@ const mockEmbedProvider = {
   embed: jest.fn().mockResolvedValue([[0.5, 0.5, 0.5]]),
 };
 
+const mockApi = {
+  listMemories: jest.fn(),
+  getEmbeddings: jest.fn(),
+  searchMemories: jest.fn(),
+  insertMemory: jest.fn(),
+  updateMemory: jest.fn(),
+  deleteMemory: jest.fn(),
+  deleteAllMemories: jest.fn(),
+  getConfig: jest.fn(),
+  saveConfig: jest.fn(),
+  getProfile: jest.fn(),
+  getTimeline: jest.fn(),
+  insertEmbedding: jest.fn(),
+  deleteEmbeddingsByMemory: jest.fn(),
+} as unknown as jest.Mocked<MemoryApi>;
+
 // ── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -110,8 +117,11 @@ beforeEach(() => {
   // Re-create embed mock after clearAllMocks to ensure fresh implementation
   mockEmbedProvider.embed = jest.fn().mockResolvedValue([[0.5, 0.5, 0.5]]);
 
-  (getMemoriesByServer as jest.Mock).mockResolvedValue(sampleMemories);
-  (getEmbeddingsByModel as jest.Mock).mockResolvedValue(sampleEmbeddings);
+  mockApi.listMemories.mockResolvedValue({
+    memories: sampleMemories,
+    count: sampleMemories.length,
+  });
+  mockApi.getEmbeddings.mockResolvedValue(sampleEmbeddings);
   (createProviderFromConfig as jest.Mock).mockResolvedValue(mockEmbedProvider);
 
   // Default: topK returns both memories with decent scores
@@ -125,37 +135,44 @@ beforeEach(() => {
 
 describe("config guards", () => {
   it("returns '' when config.enabled is false", async () => {
-    const injector = new MemoryInjector(serverId, "http://localhost:4096");
+    const injector = new MemoryInjector(
+      serverId,
+      mockApi,
+      "http://localhost:4096",
+    );
     const result = await injector.buildContext("test query", disabledConfig);
     expect(result).toBe("");
-    expect(getMemoriesByServer).not.toHaveBeenCalled();
+    expect(mockApi.listMemories).not.toHaveBeenCalled();
   });
 
   it("returns '' when config.injectEnabled is false", async () => {
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext(
       "test query",
       injectDisabledConfig,
     );
     expect(result).toBe("");
-    expect(getMemoriesByServer).not.toHaveBeenCalled();
+    expect(mockApi.listMemories).not.toHaveBeenCalled();
   });
 });
 
 describe("empty data guards", () => {
   it("returns '' when no memories exist for the server", async () => {
-    (getMemoriesByServer as jest.Mock).mockResolvedValue([]);
+    (mockApi.listMemories as jest.Mock).mockResolvedValue({
+      memories: [],
+      count: 0,
+    });
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
-    expect(getEmbeddingsByModel).not.toHaveBeenCalled();
+    expect(mockApi.getEmbeddings).not.toHaveBeenCalled();
   });
 
   it("returns '' when no embeddings exist for the model", async () => {
-    (getEmbeddingsByModel as jest.Mock).mockResolvedValue([]);
+    (mockApi.getEmbeddings as jest.Mock).mockResolvedValue([]);
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
     expect(createProviderFromConfig).not.toHaveBeenCalled();
@@ -166,7 +183,7 @@ describe("query embedding edge cases", () => {
   it("returns '' when embed returns empty vector", async () => {
     mockEmbedProvider.embed.mockResolvedValue([]);
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
     expect(topK).not.toHaveBeenCalled();
@@ -175,7 +192,7 @@ describe("query embedding edge cases", () => {
   it("returns '' when embed returns undefined vector", async () => {
     mockEmbedProvider.embed.mockResolvedValue([null]);
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
     expect(topK).not.toHaveBeenCalled();
@@ -184,7 +201,7 @@ describe("query embedding edge cases", () => {
 
 describe("topK results", () => {
   it("returns formatted context block with topK results", async () => {
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext(
       "TypeScript preferences",
       defaultConfig,
@@ -205,8 +222,11 @@ describe("topK results", () => {
     );
 
     // Verify dependencies were called as expected
-    expect(getMemoriesByServer).toHaveBeenCalledWith(serverId);
-    expect(getEmbeddingsByModel).toHaveBeenCalledWith(
+    expect(mockApi.listMemories).toHaveBeenCalledWith(serverId, {
+      includeArchived: false,
+    });
+    expect(mockApi.getEmbeddings).toHaveBeenCalledWith(
+      serverId,
       "text-embedding-3-small",
       ["m1", "m2"],
     );
@@ -231,7 +251,7 @@ describe("topK results", () => {
   it("returns '' when all results have scores below the minimum", async () => {
     (topK as jest.Mock).mockReturnValue([]);
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
   });
@@ -242,7 +262,7 @@ describe("topK results", () => {
       { item: { memoryId: "nonexistent", vector: [1, 0, 0] }, score: 0.9 },
     ]);
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
   });
@@ -250,9 +270,11 @@ describe("topK results", () => {
 
 describe("error handling", () => {
   it("catches errors and returns empty string", async () => {
-    (getMemoriesByServer as jest.Mock).mockRejectedValue(new Error("DB error"));
+    (mockApi.listMemories as jest.Mock).mockRejectedValue(
+      new Error("DB error"),
+    );
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
   });
@@ -262,7 +284,7 @@ describe("error handling", () => {
       new Error("provider error"),
     );
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
   });
@@ -270,7 +292,7 @@ describe("error handling", () => {
   it("handles embed failure gracefully", async () => {
     mockEmbedProvider.embed.mockRejectedValue(new Error("embedding error"));
 
-    const injector = new MemoryInjector(serverId);
+    const injector = new MemoryInjector(serverId, mockApi);
     const result = await injector.buildContext("query", defaultConfig);
     expect(result).toBe("");
   });

@@ -11,7 +11,15 @@
  *   PUT    /memory/:serverId/config    - save config
  *   GET    /memory/:serverId/profile   - get user profile
  *   GET    /memory/:serverId/timeline  - get timeline events
+ *   GET    /memory/:serverId/timeline  - get timeline events
+ *   GET    /memory/:serverId/timeline  - get timeline events
  *   DELETE /memory/:serverId/all       - delete all memories for a server
+ *   GET    /memory/:serverId/embeddings?modelId= - get embeddings by model
+ *   POST   /memory/:serverId/embeddings          - insert an embedding
+ *   DELETE /memory/:serverId/embeddings/:memoryId - delete embeddings for a memory
+ *   GET    /memory/:serverId/embeddings?modelId= - get embeddings by model
+ *   POST   /memory/:serverId/embeddings          - insert an embedding
+ *   DELETE /memory/:serverId/embeddings/:memoryId - delete embeddings for a memory
  */
 import { Hono } from "hono";
 import {
@@ -26,9 +34,14 @@ import {
   searchMemories,
   updateMemory,
 } from "./MemoryRepository.js";
+import {
+  deleteEmbeddingsByMemory,
+  getEmbeddingsByModel,
+  insertEmbedding,
+} from "./EmbeddingRepository.js";
 import { getProfile } from "./ProfileRepository.js";
 import { getTimeline } from "./TimelineRepository.js";
-import type { MemoryConfig } from "./schema.js";
+import type { MemoryConfig, MemoryEmbedding } from "./schema.js";
 
 const router = new Hono();
 
@@ -87,6 +100,38 @@ router.get("/:serverId/timeline", (c) => {
   const limit = limitQ ? parseInt(limitQ, 10) : 100;
   const offset = offsetQ ? parseInt(offsetQ, 10) : 0;
   return c.json(getTimeline(serverId, limit, offset));
+});
+
+// ── Embeddings ────────────────────────────────────────────────────────────────
+
+router.get("/:serverId/embeddings", (c) => {
+  const { serverId } = c.req.param();
+  const modelId = c.req.query("modelId");
+  if (!modelId) return c.json({ error: "modelId query param required" }, 400);
+  const memoryIds = c.req.query("memoryIds");
+  const ids = memoryIds
+    ? memoryIds
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined;
+  return c.json(getEmbeddingsByModel(modelId, ids));
+});
+
+router.post("/:serverId/embeddings", async (c) => {
+  const { serverId } = c.req.param();
+  const body = (await c.req.json()) as Omit<
+    MemoryEmbedding,
+    "id" | "createdAt"
+  >;
+  const embedding = insertEmbedding(body);
+  return c.json(embedding, 201);
+});
+
+router.delete("/:serverId/embeddings/:memoryId", (c) => {
+  const { serverId, memoryId } = c.req.param();
+  deleteEmbeddingsByMemory(memoryId);
+  return c.body(null, 204);
 });
 
 // ── Insert ────────────────────────────────────────────────────────────────────

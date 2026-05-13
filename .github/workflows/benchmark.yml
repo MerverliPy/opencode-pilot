@@ -24,7 +24,7 @@ jobs:
     name: Run benchmarks
     runs-on: ubuntu-latest
     # Require OPENCODE_URL secret — skip silently if not configured
-    if: vars.OPENCODE_URL != '' || secrets.OPENCODE_URL != ''
+    if: vars.OPENCODE_URL != ''
     steps:
       - uses: actions/checkout@v4
 

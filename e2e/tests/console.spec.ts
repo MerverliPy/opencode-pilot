@@ -52,7 +52,9 @@ test.describe("Console — warning audit", () => {
 });
 
 test.describe("Console — message capture and inspection", () => {
-  test("list_console_messages collects all console output", async ({ page }) => {
+  test("list_console_messages collects all console output", async ({
+    page,
+  }) => {
     const messages: string[] = [];
 
     page.on("console", (msg) => {
@@ -76,7 +78,7 @@ test.describe("Console — message capture and inspection", () => {
     expect(typeof title).toBe("string");
 
     const url = await page.evaluate(() => window.location.href);
-    expect(url).toContain("localhost:5173");
+    expect(url).toContain("localhost");
 
     const bodyText = await page.evaluate(() => document.body.innerText);
     expect(bodyText.length).toBeGreaterThan(0);

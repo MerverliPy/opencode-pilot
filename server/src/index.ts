@@ -123,11 +123,18 @@ export function setupMemory() {
 // Called from startServer() after proxy routes to ensure correct precedence.
 export function setupStatic() {
   app.use("/assets/*", serveStatic({ root: "ui/dist" }));
-  app.use(
-    "/(offline.html|manifest.webmanifest|icon.svg|icon.png|favicon.ico)",
-    serveStatic({ root: "ui/dist" }),
-  );
-  app.get("/*", serveStatic({ path: "ui/dist/index.html" }));
+
+  // Try serving any existing file (registerSW.js, sw.js, workbox-*.js, etc.),
+  // then fall back to index.html for SPA routes.
+  app.get("/*", async (c, next) => {
+    const handler = serveStatic({ root: "ui/dist" });
+    const res = await handler(c, next);
+    if (res) return res;
+
+    const { readFile } = await import("node:fs/promises");
+    const html = await readFile("ui/dist/index.html", "utf-8");
+    return c.html(html);
+  });
 }
 
 export { app };

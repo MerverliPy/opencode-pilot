@@ -13,6 +13,7 @@ import { cors } from "hono/cors";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
+import { shouldRateLimitRequest } from "./rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +43,10 @@ const rateLimitWindow = 60_000; // 1 minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 app.use(async (c, next) => {
+  if (!shouldRateLimitRequest(c.req.path)) {
+    await next();
+    return;
+  }
   const ip = c.req.header("x-forwarded-for") ?? "local";
   const now = Date.now();
   let entry = rateLimitMap.get(ip);

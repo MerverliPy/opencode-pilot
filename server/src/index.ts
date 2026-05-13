@@ -10,6 +10,8 @@ import { Hono } from "hono";
 import { createProxy } from "./proxy.js";
 import { createPushRouter, type PushConfig } from "./push.js";
 import { createTunnelRouter } from "./tunnel.js";
+import { attachTerminalWS, listSessions } from "./terminal.js";
+import { createGitRouter } from "./git.js";
 
 const app = new Hono();
 
@@ -55,6 +57,16 @@ export function setupTunnel(localPort: number) {
   app.route("/tunnel", tunnelRouter);
 }
 
+// ─── Terminal WebSocket bridge (M4) ────────────────────────────────────────────
+// Terminal sessions API — WebSocket connections handled by attachTerminalWS()
+app.get("/terminal/sessions", (c) => c.json(listSessions()));
+
+// ─── Git routes (M4) ──────────────────────────────────────────────────────────
+export function setupGit(cwd?: string) {
+  const gitRouter = createGitRouter(cwd);
+  app.route("/git", gitRouter);
+}
+
 // ─── Static frontend (M2: serve Vite build when available) ─────────────────────
 // In production, serve the built UI from ../ui/dist. In dev, the Vite dev server
 // handles the UI directly.
@@ -84,10 +96,13 @@ export function startServer(
     vapidSubject: process.env.VAPID_SUBJECT,
   });
   setupTunnel(port);
-  serve({ fetch: app.fetch, port }, (info) => {
+  setupGit();
+  const httpServer = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`✈  Pilot server listening on http://localhost:${info.port}`);
     if (openCodeUrl) {
       console.log(`↔  Proxying to OpenCode at ${openCodeUrl}`);
     }
   });
+  // Attach terminal WebSocket bridge to the same HTTP server
+  attachTerminalWS(httpServer as import("node:http").Server);
 }

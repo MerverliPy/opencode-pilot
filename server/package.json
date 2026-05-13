@@ -19,12 +19,16 @@
     "@MerverliPy/pilot-shared": "*",
     "better-sqlite3": "^12.10.0",
     "hono": "^4.7.0",
-    "web-push": "^3.6.7"
+    "node-pty": "^1.1.0",
+    "simple-git": "^3.36.0",
+    "web-push": "^3.6.7",
+    "ws": "^8.20.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.7.0",
     "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.0",
     "typescript": "~5.8.3"
   }

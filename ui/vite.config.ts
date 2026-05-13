@@ -39,6 +39,11 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:3000",
       "/event": "http://localhost:3000",
+      "/git": "http://localhost:3000",
+      "/terminal": {
+        target: "http://localhost:3000",
+        ws: true,
+      },
     },
   },
   build: {

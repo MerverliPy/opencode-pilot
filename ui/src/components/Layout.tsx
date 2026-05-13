@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { path: "/", label: "Chat", icon: "💬" },
   { path: "/sessions", label: "Sessions", icon: "☰" },
   { path: "/files", label: "Files", icon: "📁" },
+  { path: "/terminal", label: "Terminal", icon: ">_" },
+  { path: "/diff", label: "Diff", icon: "±" },
   { path: "/settings", label: "Settings", icon: "⚙" },
 ];
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "n9router/ds/deepseek-chat",
+  "model": "n9router/deepseek/deepseek-chat",
   "default_agent": "orchestrator",
   "instructions": [
     "AGENTS.md",

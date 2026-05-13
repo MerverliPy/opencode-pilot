@@ -18,6 +18,8 @@ e2e/screenshots/
 
 # Server build output
 server/dist/
+server/pilot.db
+pilot.db
 
 # UI build output
 ui/dist/

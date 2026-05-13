@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { useServerStore } from "../store/server";
 import type { ServerConfig } from "@pilot-shared/types";
 import { colors, fonts, fontSizes } from "../theme";
+import { PushSettings } from "../components/PushSettings";
+import { TunnelSettings } from "../components/TunnelSettings";
 
 export function Settings() {
   const servers = useServerStore((s) => s.servers);
@@ -210,6 +212,9 @@ export function Settings() {
           + Add Server
         </button>
       </section>
+
+      <PushSettings />
+      <TunnelSettings />
 
       {/* Edit / Add modal */}
       {editing && (

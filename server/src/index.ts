@@ -8,6 +8,8 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { createProxy } from "./proxy.js";
+import { createPushRouter, type PushConfig } from "./push.js";
+import { createTunnelRouter } from "./tunnel.js";
 
 const app = new Hono();
 
@@ -41,6 +43,18 @@ export function setupProxy(
   app.all("/global/*", proxy); // global endpoints
 }
 
+// ─── Web Push (M3) ─────────────────────────────────────────────────────────────
+export function setupPush(cfg: PushConfig) {
+  const pushRouter = createPushRouter(cfg);
+  app.route("/push", pushRouter);
+}
+
+// ─── Cloudflare Tunnel (M3) ────────────────────────────────────────────────────
+export function setupTunnel(localPort: number) {
+  const tunnelRouter = createTunnelRouter(localPort);
+  app.route("/tunnel", tunnelRouter);
+}
+
 // ─── Static frontend (M2: serve Vite build when available) ─────────────────────
 // In production, serve the built UI from ../ui/dist. In dev, the Vite dev server
 // handles the UI directly.
@@ -64,6 +78,12 @@ export function startServer(
   password?: string,
 ): void {
   setupProxy(openCodeUrl, username, password);
+  setupPush({
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+    vapidSubject: process.env.VAPID_SUBJECT,
+  });
+  setupTunnel(port);
   serve({ fetch: app.fetch, port }, (info) => {
     console.log(`✈  Pilot server listening on http://localhost:${info.port}`);
     if (openCodeUrl) {

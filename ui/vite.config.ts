@@ -1,9 +1,34 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      manifest: false, // Use our own public/manifest.webmanifest
+      workbox: {
+        navigateFallback: "/offline.html",
+        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+        runtimeCaching: [
+          {
+            urlPattern:
+              /\/(api|event|session|file|find|config|agent|command|global)\/.*/,
+            handler: "NetworkFirst",
+            options: {
+              networkTimeoutSeconds: 3,
+              cacheName: "api-cache",
+            },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),

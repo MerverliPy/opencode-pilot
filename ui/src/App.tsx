@@ -6,6 +6,7 @@
  */
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { InstallBanner } from "./components/InstallBanner";
 import { Chat } from "./pages/Chat";
 import { Sessions } from "./pages/Sessions";
 import { Files } from "./pages/Files";
@@ -14,6 +15,7 @@ import { Settings } from "./pages/Settings";
 export function App() {
   return (
     <Layout>
+      <InstallBanner />
       <Routes>
         <Route path="/" element={<Chat />} />
         <Route path="/chat" element={<Chat />} />

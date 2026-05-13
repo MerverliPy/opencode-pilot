@@ -42,41 +42,65 @@
 | 2026-05-09 | Fix AGENTS.md skill count                                       | No changes needed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Prose already reads "29 skills".                                                                                                                                                                                             |
 | 2026-05-09 | Fix README.md plugin/ dir                                       | No changes needed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Phase 1 already added to project structure.                                                                                                                                                                                  |
 | 2026-05-09 | Phase 5: Jest test suite                                        | `jest.config.js`, `jest.setup.js`, `__mocks__/`, `services/__tests__/`, `store/__tests__/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Commit `c9e42c26` on main. 118 tests, all passing. Remote updated.                                                                                                                                                           |
+| 2026-05-13 | Deep audit + implementation plan                                | `IMPLEMENTATION_PLAN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Full repo audit: 37 prioritized tasks across 5 tiers covering security, testing, features, polish.                                                                                                                           |
 
 ---
 
-## Active Work Area: PWA Migration
+## Active Work Area: Production Readiness v0.3.0
 
-**Triggered by:** Decision on 2026-05-12 to pivot from React Native / Expo to a web-first PWA.
-Power features (xterm.js terminal, CodeMirror editor, diff2html, Cloudflare tunnel) are impractical in React Native.
-Full rationale and design spec in `DESIGN.md`.
+**Triggered by:** Deep audit on 2026-05-13 identified critical production-readiness gaps after PWA migration.
+Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`.
 
-### Migration Phases
+### Tier 1 — Critical (Ship Blockers for v0.3.0)
 
-| #      | Task                                    | Priority  | Deliverable                                                            | Validation                                  | Status   |
-| ------ | --------------------------------------- | --------- | ---------------------------------------------------------------------- | ------------------------------------------- | -------- |
-| M0     | ~~Write new DESIGN.md (web PWA spec)~~  | ✅ Done   | `DESIGN.md` replaced with approved web spec                            | File written                                | Done     |
-| M0     | ~~Update TASKS.md with migration plan~~ | ✅ Done   | `TASKS.md` active area updated                                         | File written                                | Done     |
-| **M1** | ~~**Repo restructure**~~                | ✅ Done   | npm workspaces; remove Expo/RN files; scaffold Hono server + Vite app  | 390 tests passing, builds clean             | **Done** |
-| M2     | Core chat parity                        | 🔴 High   | SSE, sessions, messages, prompt input, permission cards, mobile layout | 415 tests passing + manual smoke test       | ✅ Done  |
-| M3     | PWA + remote access                     | 🟡 Medium | Manifest, service worker, Cloudflare tunnel+QR, Web Push, iOS banner   | Lighthouse PWA score ≥ 90                   | ✅ Done  |
-| M4     | Power features                          | 🟡 Medium | xterm.js terminal, CodeMirror file viewer, diff2html Git UI, multi-tab | Terminal sends/receives input; diff renders | ✅ Done  |
-| M5     | Memory plugin port                      | 🟢 Low    | `plugin/memory/` → `server/src/memory/`; React Memory UI screen        | All ported memory tests pass                | ✅ Done  |
+| #   | Task                                             | Effort | Deps | Validation                                   |
+| --- | ------------------------------------------------ | ------ | ---- | -------------------------------------------- |
+| P1  | [x] Update TASKS.md with new active work area    | 0.5h   | —    | File written                                 |
+| P2  | Add Hono rate limiting middleware                | 1h     | —    | `curl -X GET -v http://localhost:3000/api/*` |
+| P3  | Add Hono CORS middleware with configurable list  | 1h     | —    | CORS headers present in response             |
+| P4  | Serve production Vite build from Hono statically | 2h     | —    | `npm run build` → `npm start` → UI loads     |
+| P5  | Add React ErrorBoundary at app root + per-route  | 2h     | —    | Test: throw in component → fallback renders  |
+| P6  | Create `.env.example` with all expected env vars | 0.5h   | —    | File exists, documented                      |
+| P7  | Add server-side test infra (Jest config + setup) | 2h     | —    | `npm run test -w server` — basic suite pass  |
+| P8  | Add unit tests for server proxy routes           | 3h     | P7   | Proxy route coverage ≥ 60%                   |
+| P9  | Add body size limit middleware (10MB default)    | 0.5h   | —    | Large payload rejected with 413              |
+| P10 | Remove stale pnpm-lock.yaml                      | 0.1h   | —    | Only `package-lock.json` present             |
+| P11 | Add E2E job to CI (build server first, then run) | 1.5h   | P4   | GitHub Actions E2E job passes                |
 
-### M1 Detail — Repo Restructure
+### Detail — Tier 1 Tasks
 
-| Step | Action                                                                                                           |
-| ---- | ---------------------------------------------------------------------------------------------------------------- |
-| 1    | Add root `package.json` with `workspaces: ["server", "ui", "shared"]`                                            |
-| 2    | Create `shared/types.ts` (move shared TypeScript types)                                                          |
-| 3    | Scaffold `server/` — Hono app, `package.json`, `tsconfig.json`                                                   |
-| 4    | Scaffold `ui/` — Vite + React app, `package.json`, `tsconfig.json`                                               |
-| 5    | Remove Expo/RN files: `app/`, `app.json`, `eas.json`, `expo-env.d.ts`, `babel.config.js`                         |
-| 6    | Remove Expo/RN deps from root `package.json`                                                                     |
-| 7    | Add `pilot start` CLI entry point in `server/src/cli.ts`                                                         |
-| 8    | Verify `npm run build` succeeds (both workspaces)                                                                |
-| 9    | Update `.github/workflows/ci.yml` for monorepo — run typecheck/lint/test per workspace, update cache keys        |
-| 10   | Enable Docker release job in `.github/workflows/release.yml` — change `if: false` to `if: true` after Dockerfile |
+| Step | Task | Action                                                                                                                                                               |
+| ---- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | P1   | Write new active work area — done above                                                                                                                              |
+| 2    | P2   | Add `@hono/rate-limiter` to server deps; wrap app with rate limiter middleware (100 req/min default, configurable via env)                                           |
+| 3    | P3   | Add `cors()` middleware from `hono/cors` with configurable origin list via `CORS_ORIGINS` env var                                                                    |
+| 4    | P4   | Add `serveStatic` from `@hono/node-server` for `/ui/dist`; replace GET `/` placeholder; verify production flow                                                       |
+| 5    | P5   | Create `ui/src/components/ErrorBoundary.tsx`; wrap `<Routes>` in `App.tsx`; add per-route fallbacks                                                                  |
+| 6    | P6   | Create `.env.example` listing: `PORT`, `OPENCODE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CORS_ORIGINS`, `RATE_LIMIT_MAX`, `BODY_LIMIT_SIZE` |
+| 7    | P7   | Add `jest` + `ts-jest` to server devDeps; add `jest.config.ts`; add test setup; verify first test passes                                                             |
+| 8    | P8   | Mock Hono app + upstream fetch; test proxy route forwarding; test error handling; test SSE passthrough                                                               |
+| 9    | P9   | Add body limit parsing middleware; return 413 on oversized payloads                                                                                                  |
+| 10   | P10  | `rm pnpm-lock.yaml` — only npm is used in CI                                                                                                                         |
+| 11   | P11  | Add E2E job to `.github/workflows/ci.yml`; build server + UI first; run Playwright against built server                                                              |
+
+### Post-Migration Backlog (Moved to Tier 2-3)
+
+These items carry over from the PWA migration backlog into subsequent release tiers.
+See `IMPLEMENTATION_PLAN.md` Tier 2-3 for execution ordering.
+
+- Rich markdown rendering — P12
+- Cost + token display — P13
+- Light theme (system-aware) — P14
+- Session title editing — P15
+- Message retry / resend — P16
+- Offline indicator — P17
+- Session deep linking from push — P18
+- Semantic memory search — P19
+- Memory timeline UI — P20
+- Memory profile UI — P21
+- Memory export / backup — P22
+- Image rendering in messages — P24
+- Session tags / folders — P25
 
 ---
 
@@ -99,34 +123,6 @@ Final state before migration: **498 tests passing, 0 failing. tsc --noEmit passe
 
 ---
 
-## Post-Migration Backlog
-
-These items carry over from the RN backlog and will be implemented in the web PWA:
-
-- Light theme (system-aware via `prefers-color-scheme`) — M2
-- Session title editing — M2
-- Memory timeline UI — M5
-- Memory profile UI — M5
-- Session deep linking from push notification — M3
-- Message retry / resend — M2
-- Offline indicator — M3
-- Cost + token display in chat — M2
-- Semantic memory search — M5
-- Memory export / backup — M5
-- Image rendering in messages — post-M4
-- Rich markdown rendering — M2
-- Session tags / folders — post-M4
-- Server URL QR (replaced by Cloudflare tunnel QR) — M3
-
-Items permanently dropped (iOS-native only, no web equivalent):
-
-- iOS home screen widget
-- Apple Watch companion
-- Siri Shortcuts
-- Face ID / Touch ID (may revisit with WebAuthn)
-
----
-
 ## Milestones
 
 | Milestone  | Target     | Deliverables                                     | Status |
@@ -137,3 +133,7 @@ Items permanently dropped (iOS-native only, no web equivalent):
 | **v0.4.0** | 2026-06-16 | M3 complete — PWA installable, tunnel+QR working | `[x]`  |
 | **v0.5.0** | 2026-07-07 | M4 complete — terminal, editor, diff viewer live | `[x]`  |
 | **v1.0.0** | 2026-08-01 | M5 complete — memory plugin ported, full parity  | `[x]`  |
+| **v0.3.0** | 2026-05-26 | Tier 1 — production hardening, server tests      | `[ ]`  |
+| **v0.4.0** | 2026-06-09 | Tier 2 — feature completeness                    | `[ ]`  |
+| **v0.5.0** | 2026-06-23 | Tier 3 — memory plugin completion                | `[ ]`  |
+| **v1.0.0** | 2026-07-14 | Tier 4 — polish & deployment                     | `[ ]`  |

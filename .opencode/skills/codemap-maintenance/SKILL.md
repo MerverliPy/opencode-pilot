@@ -11,7 +11,7 @@ compatibility: opencode
 
 - Scripts: root and workspace `package.json` files.
 - Architecture: actual imports/exports and folder structure under `server/src`, `ui/src`, `shared/src`, `e2e/tests`.
-- n9router: `N9ROUTER.md` and `opencode.json`.
+- n9router: `opencode.json` and the `/setup-n9router` command.
 
 ## Rules
 

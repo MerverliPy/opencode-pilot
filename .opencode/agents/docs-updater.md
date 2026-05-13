@@ -25,6 +25,6 @@ You update existing docs and codemaps. Avoid creating new markdown files unless 
 Sources of truth:
 - `package.json` and workspace package scripts.
 - `server/src`, `ui/src`, `shared/src`, `e2e/tests`.
-- `N9ROUTER.md` for n9router setup.
+- `/setup-n9router` for n9router setup.
 
 Use `codemap-maintenance`. Output a concise doc diff summary.

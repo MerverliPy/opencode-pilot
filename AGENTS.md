@@ -49,4 +49,4 @@ npm run test:e2e -w e2e
 
 ## n9router
 
-The OpenCode workflow uses `n9router/*` model IDs. Keep n9router as the model-routing layer unless explicitly told otherwise. For setup details, read `N9ROUTER.md` or run `/setup-n9router`.
+The OpenCode workflow uses `n9router/*` model IDs. Keep n9router as the model-routing layer unless explicitly told otherwise. For setup details, run `/setup-n9router`.

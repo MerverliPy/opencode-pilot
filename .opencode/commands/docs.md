@@ -11,5 +11,5 @@ Rules:
 
 - Update existing docs first.
 - Do not create new markdown files unless requested.
-- Use package scripts, source imports, and `N9ROUTER.md` as source of truth.
+- Use package scripts, source imports, and the `/setup-n9router` command as source of truth.
 - Produce a compact diff summary.

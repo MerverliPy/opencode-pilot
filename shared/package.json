@@ -1,0 +1,14 @@
+{
+  "name": "@MerverliPy/pilot-shared",
+  "version": "0.2.0",
+  "private": true,
+  "main": "dist/types.js",
+  "types": "dist/types.d.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  }
+}

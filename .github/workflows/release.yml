@@ -49,7 +49,7 @@ jobs:
     name: Docker image
     runs-on: ubuntu-latest
     needs: release
-    if: false # Enable in M1 Step 10 after Dockerfile is written
+    if: github.event.workflow_run.conclusion == 'success'
     permissions:
       packages: write
       contents: read

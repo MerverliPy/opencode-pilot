@@ -3,20 +3,8 @@
  *
  * Components are called directly as functions so the returned JSX element
  * tree can be inspected without a DOM or react-test-renderer.
- * Pressable onPress callbacks are invoked directly to verify action wiring.
+ * Button onClick callbacks are invoked directly to verify action wiring.
  */
-
-// ── Mocks ─────────────────────────────────────────────────────────────────────
-
-jest.mock("react-native", () => ({
-  Text: "Text",
-  View: "View",
-  Pressable: "Pressable",
-  StyleSheet: { create: (s: any) => s },
-}));
-
-// ── Imports ──────────────────────────────────────────────────────────────────
-
 import React from "react";
 import { MemoryCard } from "../MemoryCard";
 import type { Memory } from "../../../db/schema";
@@ -41,7 +29,7 @@ function makeMemory(overrides: Partial<Memory> = {}): Memory {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Find all elements of a given type in the JSX tree. */
+/** Find all elements of a given HTML type in the JSX tree. */
 function findByType(node: any, type: string): any[] {
   if (!node || typeof node !== "object") return [];
   const results: any[] = [];
@@ -111,10 +99,10 @@ describe("MemoryCard", () => {
       expect(texts).toContain("96%");
     });
 
-    it("renders three action Pressables (pin, archive, delete)", () => {
+    it("renders three action buttons (pin, archive, delete)", () => {
       const { element } = render(makeMemory());
-      const pressables = findByType(element, "Pressable");
-      expect(pressables).toHaveLength(3);
+      const buttons = findByType(element, "button");
+      expect(buttons).toHaveLength(3);
     });
   });
 
@@ -183,7 +171,6 @@ describe("MemoryCard", () => {
     it("renders no tag elements when tags array is empty", () => {
       const { element } = render(makeMemory({ tags: [] }));
       const texts = collectText(element);
-      // No hash-prefixed texts should appear
       expect(texts.some((t) => t.startsWith("#"))).toBe(false);
     });
 
@@ -196,56 +183,56 @@ describe("MemoryCard", () => {
   });
 
   describe("action callbacks", () => {
-    it("calls onPin with memory id and true when pin is pressed (unpinned memory)", () => {
+    it("calls onPin with memory id and true when pin is clicked (unpinned memory)", () => {
       const onPin = jest.fn();
       const { element } = render(
         makeMemory({ id: "mem-42", isPinned: false }),
         { onPin },
       );
-      const pressables = findByType(element, "Pressable");
-      // First action Pressable is pin/unpin
-      pressables[0].props.onPress();
+      const buttons = findByType(element, "button");
+      // First button is pin/unpin
+      buttons[0].props.onClick();
       expect(onPin).toHaveBeenCalledWith("mem-42", true);
     });
 
-    it("calls onPin with memory id and false when unpin is pressed (pinned memory)", () => {
+    it("calls onPin with memory id and false when unpin is clicked (pinned memory)", () => {
       const onPin = jest.fn();
       const { element } = render(makeMemory({ id: "mem-7", isPinned: true }), {
         onPin,
       });
-      const pressables = findByType(element, "Pressable");
-      pressables[0].props.onPress();
+      const buttons = findByType(element, "button");
+      buttons[0].props.onClick();
       expect(onPin).toHaveBeenCalledWith("mem-7", false);
     });
 
-    it("calls onArchive with memory id when archive is pressed", () => {
+    it("calls onArchive with memory id when archive is clicked", () => {
       const onArchive = jest.fn();
       const { element } = render(makeMemory({ id: "mem-99" }), { onArchive });
-      const pressables = findByType(element, "Pressable");
-      // Second action Pressable is archive
-      pressables[1].props.onPress();
+      const buttons = findByType(element, "button");
+      // Second button is archive
+      buttons[1].props.onClick();
       expect(onArchive).toHaveBeenCalledWith("mem-99");
     });
 
-    it("calls onDelete with memory id when delete is pressed", () => {
+    it("calls onDelete with memory id when delete is clicked", () => {
       const onDelete = jest.fn();
       const { element } = render(makeMemory({ id: "mem-3" }), { onDelete });
-      const pressables = findByType(element, "Pressable");
-      // Third action Pressable is delete
-      pressables[2].props.onPress();
+      const buttons = findByType(element, "button");
+      // Third button is delete
+      buttons[2].props.onClick();
       expect(onDelete).toHaveBeenCalledWith("mem-3");
     });
 
-    it("calls each handler exactly once per press", () => {
+    it("calls each handler exactly once per click", () => {
       const onPin = jest.fn();
       const onArchive = jest.fn();
       const onDelete = jest.fn();
       const { element } = render(makeMemory(), { onPin, onArchive, onDelete });
-      const pressables = findByType(element, "Pressable");
+      const buttons = findByType(element, "button");
 
-      pressables[0].props.onPress();
-      pressables[1].props.onPress();
-      pressables[2].props.onPress();
+      buttons[0].props.onClick();
+      buttons[1].props.onClick();
+      buttons[2].props.onClick();
 
       expect(onPin).toHaveBeenCalledTimes(1);
       expect(onArchive).toHaveBeenCalledTimes(1);

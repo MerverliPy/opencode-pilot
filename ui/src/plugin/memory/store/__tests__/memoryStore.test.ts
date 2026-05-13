@@ -1,30 +1,31 @@
 /**
- * Tests for the memory Zustand store.
- * Vanilla zustand — actions are called directly and state is asserted
- * via getState(). No React act() wrappers needed.
+ * Tests for the memory Zustand store (M5 rewrite — HTTP API).
  */
 import { useMemoryStore } from "../memoryStore";
 import type { Memory, MemoryConfig } from "../../db/schema";
+import type { ServerConfig } from "../../../../services/auth";
 
-jest.mock("../../db/MemoryRepository", () => ({
-  getMemoriesByServer: jest.fn(),
-  getMemoryConfig: jest.fn(),
-  saveMemoryConfig: jest.fn(),
+// ── Mock the memory API service ───────────────────────────────────────────────
+
+const mockApi = {
+  listMemories: jest.fn(),
+  getConfig: jest.fn(),
+  saveConfig: jest.fn(),
   deleteMemory: jest.fn(),
   updateMemory: jest.fn(),
-  countMemories: jest.fn(),
+};
+
+jest.mock("../../../../services/memoryApi", () => ({
+  createMemoryApi: jest.fn(() => mockApi),
 }));
 
-import {
-  getMemoriesByServer,
-  getMemoryConfig,
-  saveMemoryConfig,
-  deleteMemory as dbDeleteMemory,
-  updateMemory,
-  countMemories,
-} from "../../db/MemoryRepository";
-
 // ── Fixtures ─────────────────────────────────────────────────────────────────
+
+const mockServer: ServerConfig = {
+  id: "srv-1",
+  name: "Test Server",
+  url: "http://localhost:3000",
+};
 
 const mockMemory = (overrides: Partial<Memory> = {}): Memory => ({
   id: "m1",
@@ -65,7 +66,6 @@ const initialState = {
 // ── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  // Reset store to initial state
   useMemoryStore.setState(initialState);
   jest.clearAllMocks();
 });
@@ -86,11 +86,10 @@ describe("default state", () => {
 describe("loadForServer", () => {
   it("loads memories, config, and count for the given server", async () => {
     const memories = [mockMemory()];
-    (getMemoriesByServer as jest.Mock).mockResolvedValue(memories);
-    (getMemoryConfig as jest.Mock).mockResolvedValue(defaultConfig);
-    (countMemories as jest.Mock).mockResolvedValue(1);
+    mockApi.listMemories.mockResolvedValue({ memories, count: 1 });
+    mockApi.getConfig.mockResolvedValue(defaultConfig);
 
-    await useMemoryStore.getState().loadForServer("srv-1");
+    await useMemoryStore.getState().loadForServer("srv-1", mockServer);
 
     const s = useMemoryStore.getState();
     expect(s.memories).toEqual(memories);
@@ -98,22 +97,19 @@ describe("loadForServer", () => {
     expect(s.memoryCount).toBe(1);
     expect(s.loadedServerId).toBe("srv-1");
 
-    expect(getMemoriesByServer).toHaveBeenCalledWith("srv-1");
-    expect(getMemoryConfig).toHaveBeenCalledWith("srv-1");
-    expect(countMemories).toHaveBeenCalledWith("srv-1");
+    expect(mockApi.listMemories).toHaveBeenCalledWith("srv-1");
+    expect(mockApi.getConfig).toHaveBeenCalledWith("srv-1");
   });
 });
 
 describe("refreshMemories", () => {
   it("reloads memories and count without changing serverId", async () => {
-    // Seed the store with a loadedServerId
     useMemoryStore.setState({ loadedServerId: "srv-1" });
 
     const memories = [mockMemory({ id: "m2", content: "Refreshed memory" })];
-    (getMemoriesByServer as jest.Mock).mockResolvedValue(memories);
-    (countMemories as jest.Mock).mockResolvedValue(1);
+    mockApi.listMemories.mockResolvedValue({ memories, count: 1 });
 
-    await useMemoryStore.getState().refreshMemories();
+    await useMemoryStore.getState().refreshMemories(mockServer);
 
     const s = useMemoryStore.getState();
     expect(s.memories).toEqual(memories);
@@ -123,32 +119,33 @@ describe("refreshMemories", () => {
 
   it("does nothing when loadedServerId is null", async () => {
     useMemoryStore.setState({ loadedServerId: null });
-    await useMemoryStore.getState().refreshMemories();
+    await useMemoryStore.getState().refreshMemories(mockServer);
 
-    expect(getMemoriesByServer).not.toHaveBeenCalled();
-    expect(countMemories).not.toHaveBeenCalled();
+    expect(mockApi.listMemories).not.toHaveBeenCalled();
   });
 });
 
 describe("loadConfig", () => {
-  it("loads config from DB, updates store, and returns it", async () => {
-    (getMemoryConfig as jest.Mock).mockResolvedValue(defaultConfig);
+  it("loads config from server, updates store, and returns it", async () => {
+    mockApi.getConfig.mockResolvedValue(defaultConfig);
 
-    const result = await useMemoryStore.getState().loadConfig("srv-1");
+    const result = await useMemoryStore
+      .getState()
+      .loadConfig("srv-1", mockServer);
 
     expect(result).toEqual(defaultConfig);
     expect(useMemoryStore.getState().config).toEqual(defaultConfig);
-    expect(getMemoryConfig).toHaveBeenCalledWith("srv-1");
+    expect(mockApi.getConfig).toHaveBeenCalledWith("srv-1");
   });
 });
 
 describe("saveConfig", () => {
-  it("persists config to DB and updates store", async () => {
-    (saveMemoryConfig as jest.Mock).mockResolvedValue(undefined);
+  it("persists config to server and updates store", async () => {
+    mockApi.saveConfig.mockResolvedValue(defaultConfig);
 
-    await useMemoryStore.getState().saveConfig(defaultConfig);
+    await useMemoryStore.getState().saveConfig(defaultConfig, mockServer);
 
-    expect(saveMemoryConfig).toHaveBeenCalledWith(defaultConfig);
+    expect(mockApi.saveConfig).toHaveBeenCalledWith("srv-1", defaultConfig);
     expect(useMemoryStore.getState().config).toEqual(defaultConfig);
   });
 });
@@ -180,26 +177,28 @@ describe("deleteMemory", () => {
     useMemoryStore.setState({
       memories: [mockMemory({ id: "keep" }), mockMemory({ id: "remove" })],
       memoryCount: 2,
+      loadedServerId: "srv-1",
     });
-    (dbDeleteMemory as jest.Mock).mockResolvedValue(undefined);
+    mockApi.deleteMemory.mockResolvedValue(undefined);
 
-    await useMemoryStore.getState().deleteMemory("remove");
+    await useMemoryStore.getState().deleteMemory("remove", mockServer);
 
     const s = useMemoryStore.getState();
     expect(s.memories).toHaveLength(1);
     expect(s.memories[0].id).toBe("keep");
     expect(s.memoryCount).toBe(1);
-    expect(dbDeleteMemory).toHaveBeenCalledWith("remove");
+    expect(mockApi.deleteMemory).toHaveBeenCalledWith("srv-1", "remove");
   });
 
   it("does not go below zero for memoryCount", async () => {
     useMemoryStore.setState({
       memories: [mockMemory({ id: "only" })],
       memoryCount: 0,
+      loadedServerId: "srv-1",
     });
-    (dbDeleteMemory as jest.Mock).mockResolvedValue(undefined);
+    mockApi.deleteMemory.mockResolvedValue(undefined);
 
-    await useMemoryStore.getState().deleteMemory("only");
+    await useMemoryStore.getState().deleteMemory("only", mockServer);
 
     expect(useMemoryStore.getState().memoryCount).toBe(0);
   });
@@ -209,17 +208,19 @@ describe("pinMemory", () => {
   it("updates isPinned immutably for the target memory", async () => {
     const m1 = mockMemory({ id: "m1", isPinned: false });
     const m2 = mockMemory({ id: "m2", isPinned: false });
-    useMemoryStore.setState({ memories: [m1, m2] });
-    (updateMemory as jest.Mock).mockResolvedValue(undefined);
+    useMemoryStore.setState({ memories: [m1, m2], loadedServerId: "srv-1" });
+    mockApi.updateMemory.mockResolvedValue({ ...m1, isPinned: true });
 
-    await useMemoryStore.getState().pinMemory("m1", true);
+    await useMemoryStore.getState().pinMemory("m1", true, mockServer);
 
     const s = useMemoryStore.getState();
     expect(s.memories[0].isPinned).toBe(true);
     expect(s.memories[1].isPinned).toBe(false);
     // Verify immutability — original objects unchanged
     expect(m1.isPinned).toBe(false);
-    expect(updateMemory).toHaveBeenCalledWith("m1", { isPinned: true });
+    expect(mockApi.updateMemory).toHaveBeenCalledWith("srv-1", "m1", {
+      isPinned: true,
+    });
   });
 });
 
@@ -228,16 +229,19 @@ describe("archiveMemory", () => {
     useMemoryStore.setState({
       memories: [mockMemory({ id: "m1" }), mockMemory({ id: "m2" })],
       memoryCount: 2,
+      loadedServerId: "srv-1",
     });
-    (updateMemory as jest.Mock).mockResolvedValue(undefined);
+    mockApi.updateMemory.mockResolvedValue(undefined);
 
-    await useMemoryStore.getState().archiveMemory("m1");
+    await useMemoryStore.getState().archiveMemory("m1", mockServer);
 
     const s = useMemoryStore.getState();
     expect(s.memories).toHaveLength(1);
     expect(s.memories[0].id).toBe("m2");
     expect(s.memoryCount).toBe(1);
-    expect(updateMemory).toHaveBeenCalledWith("m1", { isArchived: true });
+    expect(mockApi.updateMemory).toHaveBeenCalledWith("srv-1", "m1", {
+      isArchived: true,
+    });
   });
 });
 

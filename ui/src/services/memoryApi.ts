@@ -1,0 +1,139 @@
+/**
+ * Memory API client — thin fetch wrappers for the server-side /memory routes.
+ *
+ * All calls are relative to `serverUrl` (the Pilot server base URL, not the
+ * OpenCode upstream). Each call requires a `serverId` that scopes the data.
+ */
+import { basicAuthHeader } from "./auth";
+import type { ServerConfig } from "./auth";
+import type {
+  Memory,
+  MemoryConfig,
+  ProfileEntry,
+  TimelineEvent,
+} from "../plugin/memory/db/schema";
+
+export type MemoryListResult = { memories: Memory[]; count: number };
+
+async function req<T>(
+  serverUrl: string,
+  authHeaders: Record<string, string>,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const base = serverUrl.replace(/\/$/, "");
+  const res = await fetch(`${base}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders,
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Memory API ${method} ${path} → ${res.status}: ${text}`);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export function createMemoryApi(server: ServerConfig) {
+  const serverUrl = server.url;
+  const authHeaders = basicAuthHeader(server);
+  const r = <T>(method: string, path: string, body?: unknown) =>
+    req<T>(serverUrl, authHeaders, method, path, body);
+
+  return {
+    listMemories(
+      serverId: string,
+      opts: { includeArchived?: boolean; limit?: number } = {},
+    ): Promise<MemoryListResult> {
+      const qs = new URLSearchParams();
+      if (opts.includeArchived) qs.set("includeArchived", "true");
+      if (opts.limit) qs.set("limit", String(opts.limit));
+      const q = qs.toString() ? `?${qs.toString()}` : "";
+      return r("GET", `/memory/${encodeURIComponent(serverId)}${q}`);
+    },
+
+    searchMemories(
+      serverId: string,
+      query: string,
+    ): Promise<{ memories: Memory[] }> {
+      return r(
+        "GET",
+        `/memory/${encodeURIComponent(serverId)}/search?q=${encodeURIComponent(query)}`,
+      );
+    },
+
+    insertMemory(
+      serverId: string,
+      m: Omit<Memory, "id" | "createdAt" | "updatedAt">,
+    ): Promise<Memory> {
+      return r("POST", `/memory/${encodeURIComponent(serverId)}`, m);
+    },
+
+    updateMemory(
+      serverId: string,
+      id: string,
+      patch: Partial<
+        Pick<
+          Memory,
+          | "content"
+          | "confidence"
+          | "tags"
+          | "isPinned"
+          | "isArchived"
+          | "category"
+        >
+      >,
+    ): Promise<Memory> {
+      return r(
+        "PATCH",
+        `/memory/${encodeURIComponent(serverId)}/${encodeURIComponent(id)}`,
+        patch,
+      );
+    },
+
+    deleteMemory(serverId: string, id: string): Promise<void> {
+      return r(
+        "DELETE",
+        `/memory/${encodeURIComponent(serverId)}/${encodeURIComponent(id)}`,
+      );
+    },
+
+    deleteAllMemories(serverId: string): Promise<void> {
+      return r("DELETE", `/memory/${encodeURIComponent(serverId)}/all`);
+    },
+
+    getConfig(serverId: string): Promise<MemoryConfig> {
+      return r("GET", `/memory/${encodeURIComponent(serverId)}/config`);
+    },
+
+    saveConfig(
+      serverId: string,
+      config: Partial<MemoryConfig>,
+    ): Promise<MemoryConfig> {
+      return r("PUT", `/memory/${encodeURIComponent(serverId)}/config`, config);
+    },
+
+    getProfile(serverId: string): Promise<ProfileEntry[]> {
+      return r("GET", `/memory/${encodeURIComponent(serverId)}/profile`);
+    },
+
+    getTimeline(
+      serverId: string,
+      opts: { limit?: number; offset?: number } = {},
+    ): Promise<TimelineEvent[]> {
+      const qs = new URLSearchParams();
+      if (opts.limit) qs.set("limit", String(opts.limit));
+      if (opts.offset) qs.set("offset", String(opts.offset));
+      const q = qs.toString() ? `?${qs.toString()}` : "";
+      return r("GET", `/memory/${encodeURIComponent(serverId)}/timeline${q}`);
+    },
+  };
+}
+
+export type MemoryApi = ReturnType<typeof createMemoryApi>;

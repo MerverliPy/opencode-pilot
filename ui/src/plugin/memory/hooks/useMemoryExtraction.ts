@@ -6,6 +6,7 @@
  */
 import { useEffect, useRef } from "react";
 import type { OpencodeClient } from "../../../services/api";
+import type { ServerConfig } from "../../../services/auth";
 import type { SessionStatus } from "../../../services/types";
 import type { Turn } from "../../../store/session";
 import { useMemoryStore } from "../store/memoryStore";
@@ -14,11 +15,12 @@ import { MemoryExtractor } from "../extraction/MemoryExtractor";
 export function useMemoryExtraction(opts: {
   client: OpencodeClient | null;
   serverId: string | null;
+  server: ServerConfig | null;
   serverUrl?: string;
   status: SessionStatus;
   turns: Turn[];
 }) {
-  const { client, serverId, serverUrl, status, turns } = opts;
+  const { client, serverId, server, serverUrl, status, turns } = opts;
 
   const config = useMemoryStore((s) => s.config);
   const setExtracting = useMemoryStore((s) => s.setExtracting);
@@ -45,6 +47,12 @@ export function useMemoryExtraction(opts: {
     turnsRef.current = turns;
   });
 
+  // Keep a ref to the server config so the effect closure always has fresh data.
+  const serverRef = useRef(server);
+  useEffect(() => {
+    serverRef.current = server;
+  });
+
   useEffect(() => {
     const wasActive = prevStatusRef.current === "busy";
     prevStatusRef.current = status;
@@ -55,6 +63,7 @@ export function useMemoryExtraction(opts: {
 
     const extractor = extractorRef.current;
     const currentTurns = turnsRef.current;
+    const currentServer = serverRef.current;
     if (currentTurns.length === 0) return;
 
     setExtracting(true);
@@ -68,7 +77,7 @@ export function useMemoryExtraction(opts: {
       })
       .finally(() => {
         setExtracting(false);
-        void refreshMemories();
+        if (currentServer) void refreshMemories(currentServer);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);

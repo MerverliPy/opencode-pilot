@@ -12,6 +12,7 @@ import { createPushRouter, type PushConfig } from "./push.js";
 import { createTunnelRouter } from "./tunnel.js";
 import { attachTerminalWS, listSessions } from "./terminal.js";
 import { createGitRouter } from "./git.js";
+import { createMemoryRouter } from "./memory/memoryRouter.js";
 
 const app = new Hono();
 
@@ -67,6 +68,12 @@ export function setupGit(cwd?: string) {
   app.route("/git", gitRouter);
 }
 
+// ─── Memory plugin (M5) ───────────────────────────────────────────────────────
+export function setupMemory() {
+  const memoryRouter = createMemoryRouter();
+  app.route("/memory", memoryRouter);
+}
+
 // ─── Static frontend (M2: serve Vite build when available) ─────────────────────
 // In production, serve the built UI from ../ui/dist. In dev, the Vite dev server
 // handles the UI directly.
@@ -97,6 +104,7 @@ export function startServer(
   });
   setupTunnel(port);
   setupGit();
+  setupMemory();
   const httpServer = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`✈  Pilot server listening on http://localhost:${info.port}`);
     if (openCodeUrl) {

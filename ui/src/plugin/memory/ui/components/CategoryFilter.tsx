@@ -1,7 +1,7 @@
 /**
  * CategoryFilter: horizontal tab strip for filtering memories by category.
+ * Ported from React Native to HTML/CSS (M5).
  */
-import { Pressable, ScrollView, Text, View } from "react-native";
 import { colors, fonts, fontSizes } from "../../../../theme";
 import type { MemoryCategory } from "../../db/schema";
 
@@ -22,42 +22,38 @@ type Props = {
 
 export function CategoryFilter({ value, onChange }: Props) {
   return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 12,
-          gap: 4,
-          flexDirection: "row",
-        }}
-      >
-        {TABS.map((tab) => {
-          const active = tab.value === value;
-          return (
-            <Pressable
-              key={tab.value}
-              onPress={() => onChange(tab.value)}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderBottomWidth: 2,
-                borderBottomColor: active ? colors.accent : "transparent",
-              }}
-            >
-              <Text
-                style={{
-                  color: active ? colors.accent : colors.muted,
-                  fontFamily: fonts.mono,
-                  fontSize: fontSizes.sm,
-                }}
-              >
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
+    <div
+      style={{
+        borderBottom: `1px solid ${colors.border}`,
+        display: "flex",
+        overflowX: "auto",
+        paddingInline: 12,
+        gap: 4,
+      }}
+    >
+      {TABS.map((tab) => {
+        const active = tab.value === value;
+        return (
+          <button
+            key={tab.value}
+            onClick={() => onChange(tab.value)}
+            style={{
+              background: "none",
+              border: "none",
+              borderBottom: `2px solid ${active ? colors.accent : "transparent"}`,
+              padding: "8px 12px",
+              color: active ? colors.accent : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.sm,
+              cursor: "pointer",
+              flexShrink: 0,
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

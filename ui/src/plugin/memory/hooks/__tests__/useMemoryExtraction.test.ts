@@ -136,6 +136,7 @@ function simulateRender(opts: {
   useMemoryExtraction({
     client: opts.client !== undefined ? opts.client : mockClient,
     serverId: opts.serverId !== undefined ? opts.serverId : "srv-1",
+    server: { id: "srv-1", name: "Test", url: "http://localhost:3000" },
     serverUrl: opts.serverUrl,
     status: opts.status ?? "idle",
     turns: opts.turns ?? [],

@@ -1,18 +1,13 @@
 /**
- * Zustand store for the memory plugin.
- * Manages the in-memory view of memories, config, and extraction status
- * for the currently-active server.
+ * Zustand store for the memory plugin (M5).
+ *
+ * All persistence is now via the Pilot server HTTP API (`/memory/*`).
+ * The store holds an in-memory view of memories + config for the active server.
  */
-import { create } from 'zustand';
-import type { Memory, MemoryConfig } from '../db/schema';
-import {
-  getMemoriesByServer,
-  getMemoryConfig,
-  saveMemoryConfig,
-  deleteMemory as dbDeleteMemory,
-  updateMemory,
-  countMemories,
-} from '../db/MemoryRepository';
+import { create } from "zustand";
+import { createMemoryApi } from "../../../services/memoryApi";
+import type { ServerConfig } from "../../../services/auth";
+import type { Memory, MemoryConfig } from "../db/schema";
 
 type MemoryState = {
   /** Memories for the active server (most-recent first). */
@@ -21,36 +16,40 @@ type MemoryState = {
   memoryCount: number;
   /** Config for the active server, null until first load. */
   config: MemoryConfig | null;
-  /** True while the background extraction is running. */
+  /** True while background extraction is running. */
   isExtracting: boolean;
   /** The serverId these memories belong to, or null if not loaded. */
   loadedServerId: string | null;
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  /** Load memories + config from DB for a given server. */
-  loadForServer: (serverId: string) => Promise<void>;
+  /** Load memories + config from server for a given server. */
+  loadForServer: (serverId: string, server: ServerConfig) => Promise<void>;
 
-  /** Reload memories from DB (without changing the serverId). */
-  refreshMemories: () => Promise<void>;
+  /** Reload memories from server (without changing the serverId). */
+  refreshMemories: (server: ServerConfig) => Promise<void>;
 
   /** Load config only (cheaper than a full reload). */
-  loadConfig: (serverId: string) => Promise<MemoryConfig>;
+  loadConfig: (serverId: string, server: ServerConfig) => Promise<MemoryConfig>;
 
-  /** Persist updated config to DB and update store. */
-  saveConfig: (config: MemoryConfig) => Promise<void>;
+  /** Persist updated config to server and update store. */
+  saveConfig: (config: MemoryConfig, server: ServerConfig) => Promise<void>;
 
-  /** Append newly extracted memories to the list (avoids full DB reload). */
+  /** Append newly extracted memories to the list (avoids full reload). */
   addMemories: (memories: Memory[]) => void;
 
-  /** Delete a memory by id from DB and update store. */
-  deleteMemory: (id: string) => Promise<void>;
+  /** Delete a memory by id from server and update store. */
+  deleteMemory: (id: string, server: ServerConfig) => Promise<void>;
 
   /** Toggle pinned state. */
-  pinMemory: (id: string, isPinned: boolean) => Promise<void>;
+  pinMemory: (
+    id: string,
+    isPinned: boolean,
+    server: ServerConfig,
+  ) => Promise<void>;
 
   /** Archive a memory (soft-delete). */
-  archiveMemory: (id: string) => Promise<void>;
+  archiveMemory: (id: string, server: ServerConfig) => Promise<void>;
 
   /** Set the extracting flag. */
   setExtracting: (v: boolean) => void;
@@ -63,34 +62,34 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   isExtracting: false,
   loadedServerId: null,
 
-  loadForServer: async (serverId) => {
-    const [memories, config, count] = await Promise.all([
-      getMemoriesByServer(serverId),
-      getMemoryConfig(serverId),
-      countMemories(serverId),
+  loadForServer: async (serverId, server) => {
+    const api = createMemoryApi(server);
+    const [{ memories, count }, config] = await Promise.all([
+      api.listMemories(serverId),
+      api.getConfig(serverId),
     ]);
     set({ memories, config, memoryCount: count, loadedServerId: serverId });
   },
 
-  refreshMemories: async () => {
+  refreshMemories: async (server) => {
     const { loadedServerId } = get();
     if (!loadedServerId) return;
-    const [memories, count] = await Promise.all([
-      getMemoriesByServer(loadedServerId),
-      countMemories(loadedServerId),
-    ]);
+    const api = createMemoryApi(server);
+    const { memories, count } = await api.listMemories(loadedServerId);
     set({ memories, memoryCount: count });
   },
 
-  loadConfig: async (serverId) => {
-    const config = await getMemoryConfig(serverId);
+  loadConfig: async (serverId, server) => {
+    const api = createMemoryApi(server);
+    const config = await api.getConfig(serverId);
     set({ config });
     return config;
   },
 
-  saveConfig: async (config) => {
-    await saveMemoryConfig(config);
-    set({ config });
+  saveConfig: async (config, server) => {
+    const api = createMemoryApi(server);
+    const saved = await api.saveConfig(config.serverId, config);
+    set({ config: saved });
   },
 
   addMemories: (newMemories) => {
@@ -100,23 +99,32 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     }));
   },
 
-  deleteMemory: async (id) => {
-    await dbDeleteMemory(id);
+  deleteMemory: async (id, server) => {
+    const { loadedServerId } = get();
+    if (!loadedServerId) return;
+    const api = createMemoryApi(server);
+    await api.deleteMemory(loadedServerId, id);
     set((s) => ({
       memories: s.memories.filter((m) => m.id !== id),
       memoryCount: Math.max(0, s.memoryCount - 1),
     }));
   },
 
-  pinMemory: async (id, isPinned) => {
-    await updateMemory(id, { isPinned });
+  pinMemory: async (id, isPinned, server) => {
+    const { loadedServerId } = get();
+    if (!loadedServerId) return;
+    const api = createMemoryApi(server);
+    await api.updateMemory(loadedServerId, id, { isPinned });
     set((s) => ({
       memories: s.memories.map((m) => (m.id === id ? { ...m, isPinned } : m)),
     }));
   },
 
-  archiveMemory: async (id) => {
-    await updateMemory(id, { isArchived: true });
+  archiveMemory: async (id, server) => {
+    const { loadedServerId } = get();
+    if (!loadedServerId) return;
+    const api = createMemoryApi(server);
+    await api.updateMemory(loadedServerId, id, { isArchived: true });
     set((s) => ({
       memories: s.memories.filter((m) => m.id !== id),
       memoryCount: Math.max(0, s.memoryCount - 1),

@@ -1,7 +1,7 @@
 /**
  * MemoryCard: displays a single memory with pin / archive / delete actions.
+ * Ported from React Native to HTML/CSS (M5).
  */
-import { Pressable, Text, View } from "react-native";
 import { colors, fonts, fontSizes } from "../../../../theme";
 import type { Memory, MemoryCategory } from "../../db/schema";
 
@@ -31,46 +31,37 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
   const catLabel = CATEGORY_LABEL[memory.category] ?? memory.category;
 
   return (
-    <View
+    <div
       style={{
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSubtle,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        borderBottom: `1px solid ${colors.borderSubtle}`,
+        padding: "12px 16px",
         backgroundColor: memory.isPinned ? colors.surface : "transparent",
       }}
     >
-      {/* Category badge + pin indicator */}
-      <View
+      {/* Category badge + pin indicator + confidence */}
+      <div
         style={{
-          flexDirection: "row",
+          display: "flex",
           alignItems: "center",
-          marginBottom: 6,
           gap: 8,
+          marginBottom: 6,
         }}
       >
-        <View
+        <span
           style={{
-            borderWidth: 1,
-            borderColor: catColor,
+            border: `1px solid ${catColor}`,
             borderRadius: 3,
-            paddingHorizontal: 5,
-            paddingVertical: 1,
+            padding: "1px 5px",
+            color: catColor,
+            fontFamily: fonts.mono,
+            fontSize: 9,
+            letterSpacing: "0.5px",
           }}
         >
-          <Text
-            style={{
-              color: catColor,
-              fontFamily: fonts.mono,
-              fontSize: 9,
-              letterSpacing: 0.5,
-            }}
-          >
-            {catLabel.toUpperCase()}
-          </Text>
-        </View>
+          {catLabel.toUpperCase()}
+        </span>
         {memory.isPinned && (
-          <Text
+          <span
             style={{
               color: colors.accent,
               fontFamily: fonts.mono,
@@ -78,9 +69,9 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
             }}
           >
             ★
-          </Text>
+          </span>
         )}
-        <Text
+        <span
           style={{
             color: colors.mutedAlt,
             fontFamily: fonts.mono,
@@ -89,89 +80,94 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
           }}
         >
           {`${Math.round(memory.confidence * 100)}%`}
-        </Text>
-      </View>
+        </span>
+      </div>
 
       {/* Content */}
-      <Text
+      <div
         style={{
           color: colors.foreground,
           fontFamily: fonts.mono,
           fontSize: fontSizes.sm,
-          lineHeight: fontSizes.sm * 1.5,
+          lineHeight: 1.5,
         }}
       >
         {memory.content}
-      </Text>
+      </div>
 
       {/* Tags */}
       {memory.tags.length > 0 && (
-        <View
+        <div
           style={{
-            flexDirection: "row",
+            display: "flex",
             flexWrap: "wrap",
             gap: 4,
             marginTop: 8,
           }}
         >
           {memory.tags.map((tag) => (
-            <Text
+            <span
               key={tag}
               style={{
                 color: colors.muted,
                 fontFamily: fonts.mono,
                 fontSize: 9,
                 backgroundColor: colors.surfaceAlt,
-                paddingHorizontal: 5,
-                paddingVertical: 2,
+                padding: "2px 5px",
                 borderRadius: 3,
               }}
             >
               {`#${tag}`}
-            </Text>
+            </span>
           ))}
-        </View>
+        </div>
       )}
 
       {/* Action row */}
-      <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
-        <Pressable
-          onPress={() => onPin(memory.id, !memory.isPinned)}
-          hitSlop={8}
+      <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+        <button
+          onClick={() => onPin(memory.id, !memory.isPinned)}
+          style={{
+            background: "none",
+            border: "none",
+            color: memory.isPinned ? colors.accent : colors.muted,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.xs,
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
-          <Text
-            style={{
-              color: memory.isPinned ? colors.accent : colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-            }}
-          >
-            {memory.isPinned ? "unpin" : "pin"}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => onArchive(memory.id)} hitSlop={8}>
-          <Text
-            style={{
-              color: colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-            }}
-          >
-            archive
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => onDelete(memory.id)} hitSlop={8}>
-          <Text
-            style={{
-              color: colors.error,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-            }}
-          >
-            delete
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+          {memory.isPinned ? "unpin" : "pin"}
+        </button>
+        <button
+          onClick={() => onArchive(memory.id)}
+          style={{
+            background: "none",
+            border: "none",
+            color: colors.muted,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.xs,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          archive
+        </button>
+        <button
+          onClick={() => onDelete(memory.id)}
+          style={{
+            background: "none",
+            border: "none",
+            color: colors.error,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.xs,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          delete
+        </button>
+      </div>
+    </div>
   );
 }

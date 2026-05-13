@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: "/terminal", label: "Terminal", icon: ">_" },
   { path: "/diff", label: "Diff", icon: "±" },
   { path: "/settings", label: "Settings", icon: "⚙" },
+  { path: "/memory", label: "Memory", icon: "🧠" },
 ];
 
 function NavLink({

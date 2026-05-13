@@ -1,7 +1,7 @@
 /**
  * EmptyState: shown when a memory list is empty.
+ * Ported from React Native to HTML/CSS (M5).
  */
-import { Text, View } from "react-native";
 import { colors, fonts, fontSizes } from "../../../../theme";
 
 type Props = {
@@ -10,36 +10,38 @@ type Props = {
 
 export function EmptyState({ message = "no memories yet" }: Props) {
   return (
-    <View
+    <div
       style={{
         flex: 1,
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         padding: 32,
+        textAlign: "center",
       }}
     >
-      <Text
+      <div
         style={{
           color: colors.mutedAlt,
           fontFamily: fonts.mono,
           fontSize: fontSizes.md,
-          textAlign: "center",
         }}
       >
         {message}
-      </Text>
-      <Text
+      </div>
+      <div
         style={{
           color: colors.mutedAlt,
           fontFamily: fonts.mono,
           fontSize: fontSizes.xs,
-          textAlign: "center",
           marginTop: 8,
-          lineHeight: fontSizes.xs * 1.6,
+          lineHeight: 1.6,
+          whiteSpace: "pre-line",
         }}
       >
         {"memories are extracted automatically\nafter each conversation ends"}
-      </Text>
-    </View>
+      </div>
+    </div>
   );
 }

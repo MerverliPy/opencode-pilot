@@ -4,17 +4,6 @@
  * Components are called directly as functions so the returned JSX element
  * tree can be inspected without a DOM or react-test-renderer.
  */
-
-// ── Mocks ─────────────────────────────────────────────────────────────────────
-
-jest.mock("react-native", () => ({
-  Text: "Text",
-  View: "View",
-  StyleSheet: { create: (s: any) => s },
-}));
-
-// ── Imports ──────────────────────────────────────────────────────────────────
-
 import React from "react";
 import { EmptyState } from "../EmptyState";
 
@@ -33,7 +22,7 @@ function collectText(node: any): string[] {
   return collectText(children);
 }
 
-/** Find all elements of a given type in the tree. */
+/** Find all elements of a given HTML type in the tree. */
 function findByType(node: any, type: string): any[] {
   if (!node || typeof node !== "object") return [];
   const results: any[] = [];
@@ -70,10 +59,12 @@ describe("EmptyState", () => {
       ).toBe(true);
     });
 
-    it("renders two Text elements", () => {
+    it("renders two div children (title + subtitle)", () => {
       const element = EmptyState({});
-      const textNodes = findByType(element, "Text");
-      expect(textNodes).toHaveLength(2);
+      // Root is a div wrapping two child divs
+      const divs = findByType(element, "div");
+      // root + 2 children = at least 3 divs total
+      expect(divs.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -101,12 +92,12 @@ describe("EmptyState", () => {
   });
 
   describe("structure", () => {
-    it("wraps content in a View", () => {
+    it("wraps content in a div", () => {
       const element = EmptyState({});
-      expect(element.type).toBe("View");
+      expect(element.type).toBe("div");
     });
 
-    it("applies flex:1 style to the root View", () => {
+    it("applies flex:1 style to the root div", () => {
       const element = EmptyState({});
       expect((element.props as any).style).toMatchObject({ flex: 1 });
     });

@@ -13,6 +13,7 @@ import { Files } from "./pages/Files";
 import { Terminal } from "./pages/Terminal";
 import { Diff } from "./pages/Diff";
 import { Settings } from "./pages/Settings";
+import { Memory } from "./pages/Memory";
 
 export function App() {
   return (
@@ -27,6 +28,7 @@ export function App() {
         <Route path="/terminal" element={<Terminal />} />
         <Route path="/diff" element={<Diff />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/memory" element={<Memory />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -16,6 +16,8 @@ import { MessageList } from "../components/MessageList";
 import { PromptInput } from "../components/PromptInput";
 import { PermissionCard } from "../components/PermissionCard";
 import { colors, fonts } from "../theme";
+import { useMemoryExtraction } from "../plugin/memory/hooks/useMemoryExtraction";
+import { useMemoryInjection } from "../plugin/memory/hooks/useMemoryInjection";
 
 export function Chat() {
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
@@ -43,6 +45,21 @@ export function Chat() {
 
   const newlyCreatedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Memory hooks ──────────────────────────────────────────────────────────────
+  useMemoryExtraction({
+    client,
+    serverId: server?.id ?? null,
+    server: server ?? null,
+    serverUrl: server?.url,
+    status,
+    turns,
+  });
+
+  const { buildPrefix } = useMemoryInjection({
+    serverId: server?.id ?? null,
+    serverUrl: server?.url,
+  });
 
   // ── SSE event handler ─────────────────────────────────────────────────────────
   const handleEvent = (event: ServerEvent) => {
@@ -170,8 +187,10 @@ export function Chat() {
     if (!client || !session) return;
     try {
       setStatus("busy");
+      const prefix = await buildPrefix(text);
+      const fullText = prefix ? `${prefix}\n\n${text}` : text;
       await client.promptAsync(session.id, {
-        parts: [{ type: "text", text }],
+        parts: [{ type: "text", text: fullText }],
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

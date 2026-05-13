@@ -7,6 +7,8 @@
  * jest uses the actual __mocks__/ files at runtime.
  */
 
+/// <reference types="@testing-library/jest-dom" />
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 declare module "expo-secure-store" {

@@ -2,6 +2,8 @@
  * Jest setup file — runs once before all test suites.
  */
 
+require("@testing-library/jest-dom");
+
 // setImmediate is not available in jsdom — polyfill with setTimeout
 if (typeof global.setImmediate === "undefined") {
   global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
@@ -9,6 +11,9 @@ if (typeof global.setImmediate === "undefined") {
 
 // Global fetch mock
 global.fetch = jest.fn();
+
+// scrollIntoView is not available in jsdom
+global.HTMLElement.prototype.scrollIntoView = jest.fn();
 
 // localStorage mock for jsdom (jsdom provides a basic implementation but
 // we ensure it's fully functional for auth tests)

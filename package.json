@@ -34,6 +34,7 @@
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.5.0",
     "globals": "^17.0.0",
+    "n9router": "^0.4.30",
     "prettier": "^3.8.3",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.0.0"

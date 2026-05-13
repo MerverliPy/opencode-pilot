@@ -39,3 +39,4 @@ Thumbs.db
 *.swp
 *.swo
 .bench-out/
+.opencode/package-lock.json

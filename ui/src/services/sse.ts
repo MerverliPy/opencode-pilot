@@ -5,7 +5,6 @@
  * Auto-reconnects with exponential backoff.
  */
 import { useEffect, useRef } from "react";
-import { basicAuthHeader } from "./auth";
 import type { ServerConfig, ServerEvent } from "@pilot-shared/types";
 import { log } from "./logger";
 
@@ -21,6 +20,11 @@ type Handler = (event: ServerEvent) => void;
  */
 export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
   const handlerRef = useRef(onEvent);
+
+  // Keep ref in sync with the latest handler on every render so the connection
+  // effect always calls the current version without needing to be re-run.
+  // Writing (not reading) a ref during render is safe per React docs.
+  // eslint-disable-next-line react-hooks/refs
   handlerRef.current = onEvent;
 
   useEffect(() => {
@@ -64,5 +68,8 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
       stopped = true;
       es?.close();
     };
+    // Depend on individual properties so a new server object with identical
+    // values does not trigger an unnecessary reconnect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server?.id, server?.url, server?.username, server?.password]);
 }

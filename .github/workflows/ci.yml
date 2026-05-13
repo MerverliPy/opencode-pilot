@@ -58,6 +58,9 @@ jobs:
       - name: Type check (shared)
         run: npm run typecheck -w shared
 
+      - name: Build shared (required for server type resolution)
+        run: npm run build -w shared
+
       - name: Type check (server)
         run: npm run typecheck -w server
 

@@ -22,6 +22,17 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
+  // Global rule overrides — apply to all source files
+  {
+    rules: {
+      "no-console": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+
   // UI workspace — React + TypeScript
   {
     files: ["ui/src/**/*.{ts,tsx}"],
@@ -56,5 +67,22 @@ export default tseslint.config(
   // Shared workspace — TypeScript
   {
     files: ["shared/src/**/*.ts"],
+  },
+
+  // Test files — relax strict rules that don't apply to test code
+  {
+    files: [
+      "**/__tests__/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unsafe-function-type": "off",
+      "react-hooks/rules-of-hooks": "off",
+      "no-console": "off",
+    },
   },
 );

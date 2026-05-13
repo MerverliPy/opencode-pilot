@@ -2,10 +2,12 @@
   "name": "@MerverliPy/pilot",
   "version": "0.2.0",
   "private": true,
+  "type": "module",
   "workspaces": [
     "server",
     "ui",
-    "shared"
+    "shared",
+    "e2e"
   ],
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w ui",
@@ -17,13 +19,23 @@
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w ui",
     "lint": "npm run lint -w ui",
     "test": "npm run test -w ui",
+    "test:e2e": "npm run test -w e2e",
     "test:coverage": "npm run test:coverage -w ui",
     "test:watch": "npm run test:watch -w ui",
     "start": "npm run start -w server"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^19.0.0",
+    "@eslint/js": "^10.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/git": "^10.0.0",
+    "@semantic-release/npm": "^12.0.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint-plugin-react-refresh": "^0.5.0",
+    "globals": "^17.0.0",
     "prettier": "^3.8.3",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.0.0"
   }
 }

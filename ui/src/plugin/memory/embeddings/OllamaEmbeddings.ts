@@ -3,7 +3,12 @@
  * Ollama uses a different request/response shape from the OpenAI standard.
  * The base URL defaults to port 11434 on the same host as the OpenCode server.
  */
-import type { EmbeddingModel, EmbeddingProvider, EmbeddingProviderConfig, EmbeddingTaskType } from './types';
+import type {
+  EmbeddingModel,
+  EmbeddingProvider,
+  EmbeddingProviderConfig,
+  EmbeddingTaskType,
+} from "./types";
 
 type OllamaEmbedRequest = {
   model: string;
@@ -21,10 +26,9 @@ export class OllamaEmbeddings implements EmbeddingProvider {
   constructor(model: EmbeddingModel, config: EmbeddingProviderConfig) {
     this.model = model;
     // Use provided baseUrl, or derive from OpenCode server URL by replacing port with 11434
-    this.baseUrl = config.baseUrl ?? 'http://localhost:11434';
+    this.baseUrl = config.baseUrl ?? "http://localhost:11434";
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async embed(texts: string[], _task?: EmbeddingTaskType): Promise<number[][]> {
     const body: OllamaEmbedRequest = {
       model: this.model.id,
@@ -32,8 +36,8 @@ export class OllamaEmbeddings implements EmbeddingProvider {
     };
 
     const res = await fetch(`${this.baseUrl}/api/embed`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 

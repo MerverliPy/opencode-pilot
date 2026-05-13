@@ -13,6 +13,7 @@ import type { OpencodeClient } from "../../../services/api";
 import type { Part } from "../../../services/types";
 import type { Turn } from "../../../store/session";
 import type { Memory, MemoryCategory, MemoryConfig } from "../db/schema";
+import type { MemoryApi } from "../../../services/memoryApi";
 import { insertMemory } from "../db/MemoryRepository";
 import { insertEmbedding } from "../db/EmbeddingRepository";
 import { createProviderFromConfig } from "../embeddings/EmbeddingProviderFactory";
@@ -92,6 +93,7 @@ export class MemoryExtractor {
     private client: OpencodeClient,
     private serverId: string,
     private serverUrl?: string,
+    private api?: MemoryApi,
   ) {
     this.extractionSession = new ExtractionSession(client);
     this.deduplicator = new Deduplicator(serverId, serverUrl);
@@ -158,15 +160,25 @@ export class MemoryExtractor {
       );
       if (isDup) continue;
 
-      const memory = await insertMemory({
-        serverId: this.serverId,
-        content: candidate.content,
-        category: candidate.category,
-        confidence: candidate.confidence,
-        tags: candidate.tags,
-        isPinned: false,
-        isArchived: false,
-      });
+      const memory = this.api
+        ? await this.api.insertMemory(this.serverId, {
+            serverId: this.serverId,
+            content: candidate.content,
+            category: candidate.category,
+            confidence: candidate.confidence,
+            tags: candidate.tags,
+            isPinned: false,
+            isArchived: false,
+          })
+        : await insertMemory({
+            serverId: this.serverId,
+            content: candidate.content,
+            category: candidate.category,
+            confidence: candidate.confidence,
+            tags: candidate.tags,
+            isPinned: false,
+            isArchived: false,
+          });
 
       // Embed and store the vector.
       if (provider) {

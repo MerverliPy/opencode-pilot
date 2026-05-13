@@ -25,7 +25,6 @@ jest.mock("../../../../services/auth", () => ({
 
 import { findModel } from "../ModelRegistry";
 import { loadN9RouterConfig } from "../../../../services/auth";
-import * as SecureStore from "expo-secure-store";
 
 // ---------------------------------------------------------------------------
 // Model fixtures
@@ -84,6 +83,10 @@ const n9routerModel: EmbeddingModel = {
 describe("EmbeddingProviderFactory", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
+    jest.spyOn(Storage.prototype, "getItem");
+    jest.spyOn(Storage.prototype, "setItem");
+    jest.spyOn(Storage.prototype, "removeItem");
   });
 
   // ── createProvider ─────────────────────────────────────────────────────
@@ -146,30 +149,28 @@ describe("EmbeddingProviderFactory", () => {
       expect(apiKeyStoreKey("cohere")).toBe("memory_apikey_cohere");
     });
 
-    it("storeApiKey calls SecureStore.setItemAsync with correct key", async () => {
+    it("storeApiKey writes the key to localStorage", async () => {
       await storeApiKey("openai", "sk-test");
 
-      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      expect(localStorage.setItem).toHaveBeenCalledWith(
         "memory_apikey_openai",
         "sk-test",
       );
     });
 
-    it("getStoredApiKey calls SecureStore.getItemAsync with correct key", async () => {
-      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("sk-stored");
+    it("getStoredApiKey reads from localStorage and returns stored value", async () => {
+      localStorage.setItem("memory_apikey_cohere", "sk-stored");
 
       const key = await getStoredApiKey("cohere");
 
-      expect(SecureStore.getItemAsync).toHaveBeenCalledWith(
-        "memory_apikey_cohere",
-      );
+      expect(localStorage.getItem).toHaveBeenCalledWith("memory_apikey_cohere");
       expect(key).toBe("sk-stored");
     });
 
-    it("deleteStoredApiKey calls SecureStore.deleteItemAsync with correct key", async () => {
+    it("deleteStoredApiKey removes the key from localStorage", async () => {
       await deleteStoredApiKey("openai");
 
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
+      expect(localStorage.removeItem).toHaveBeenCalledWith(
         "memory_apikey_openai",
       );
     });
@@ -219,9 +220,9 @@ describe("EmbeddingProviderFactory", () => {
       expect(loadN9RouterConfig).toHaveBeenCalled();
     });
 
-    it("for non-n9router: loads api key, returns OpenAICompatibleEmbeddings", async () => {
+    it("for non-n9router: loads api key from localStorage, returns OpenAICompatibleEmbeddings", async () => {
       (findModel as jest.Mock).mockReturnValue(openaiModel);
-      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("sk-openai");
+      localStorage.setItem("memory_apikey_openai", "sk-openai");
 
       const provider = await createProviderFromConfig({
         modelId: "text-embedding-3-small",
@@ -239,12 +240,10 @@ describe("EmbeddingProviderFactory", () => {
       ).toBe(512);
 
       expect(findModel).toHaveBeenCalledWith("text-embedding-3-small");
-      expect(SecureStore.getItemAsync).toHaveBeenCalledWith(
-        "memory_apikey_openai",
-      );
+      expect(localStorage.getItem).toHaveBeenCalledWith("memory_apikey_openai");
     });
 
-    it("for ollama: derives ollama URL, returns OllamaEmbeddings, no API key call", async () => {
+    it("for ollama: derives ollama URL, returns OllamaEmbeddings, no localStorage read for key", async () => {
       (findModel as jest.Mock).mockReturnValue(ollamaModel);
 
       const provider = await createProviderFromConfig({
@@ -257,13 +256,13 @@ describe("EmbeddingProviderFactory", () => {
       expect((provider as unknown as { baseUrl: string }).baseUrl).toBe(
         "https://my-opencode-server.com:11434",
       );
-      // ollama models don't require API key → getItemAsync should NOT be called
-      expect(SecureStore.getItemAsync).not.toHaveBeenCalled();
+      // ollama models don't require API key → localStorage.getItem should NOT be called
+      expect(localStorage.getItem).not.toHaveBeenCalled();
     });
 
-    it("for cohere: loads api key, returns CohereEmbeddings", async () => {
+    it("for cohere: loads api key from localStorage, returns CohereEmbeddings", async () => {
       (findModel as jest.Mock).mockReturnValue(cohereModel);
-      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("sk-cohere");
+      localStorage.setItem("memory_apikey_cohere", "sk-cohere");
 
       const provider = await createProviderFromConfig({
         modelId: "embed-english-v3.0",
@@ -272,9 +271,7 @@ describe("EmbeddingProviderFactory", () => {
 
       expect(provider).toBeInstanceOf(CohereEmbeddings);
       expect(provider.model.id).toBe("embed-english-v3.0");
-      expect(SecureStore.getItemAsync).toHaveBeenCalledWith(
-        "memory_apikey_cohere",
-      );
+      expect(localStorage.getItem).toHaveBeenCalledWith("memory_apikey_cohere");
     });
   });
 });

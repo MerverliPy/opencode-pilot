@@ -9,6 +9,7 @@ import type { OpencodeClient } from "../../../services/api";
 import type { ServerConfig } from "../../../services/auth";
 import type { SessionStatus } from "../../../services/types";
 import type { Turn } from "../../../store/session";
+import { createMemoryApi } from "../../../services/memoryApi";
 import { useMemoryStore } from "../store/memoryStore";
 import { MemoryExtractor } from "../extraction/MemoryExtractor";
 
@@ -35,8 +36,13 @@ export function useMemoryExtraction(opts: {
       extractorRef.current = null;
       return;
     }
-    extractorRef.current = new MemoryExtractor(client, serverId, serverUrl);
-  }, [client, serverId, serverUrl]);
+    extractorRef.current = new MemoryExtractor(
+      client,
+      serverId,
+      serverUrl,
+      server ? createMemoryApi(server) : undefined,
+    );
+  }, [client, serverId, serverUrl, server]);
 
   // Track the previous status so we can detect busy → idle transitions.
   const prevStatusRef = useRef<SessionStatus>("idle");

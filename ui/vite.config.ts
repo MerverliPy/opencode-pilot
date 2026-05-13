@@ -32,6 +32,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
+      "expo-sqlite": resolve(__dirname, "src/stubs/expo-sqlite.ts"),
     },
   },
   server: {

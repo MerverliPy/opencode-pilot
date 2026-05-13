@@ -40,6 +40,10 @@ jest.mock("../../extraction/MemoryExtractor", () => ({
   MemoryExtractor: jest.fn(),
 }));
 
+jest.mock("../../../../services/memoryApi", () => ({
+  createMemoryApi: jest.fn(() => ({ insertMemory: jest.fn() })),
+}));
+
 // ── Imports ──────────────────────────────────────────────────────────────────
 
 import { useMemoryExtraction } from "../useMemoryExtraction";
@@ -178,6 +182,7 @@ describe("extractor setup (first effect)", () => {
       mockClient,
       "srv-1",
       "http://localhost:4096",
+      expect.anything(),
     );
     // extractorRef.current should be truthy (refs[0] is the extractorRef)
     expect(reactMock.__state.refs[0]?.current).toBeTruthy();

@@ -1,9 +1,8 @@
 /**
  * Factory that maps an EmbeddingModel to the right provider class.
  * Also handles Ollama base-URL derivation from the OpenCode server URL,
- * and n9router URL/key loading from the n9router SecureStore config.
+ * and n9router URL/key loading from the n9router localStorage config.
  */
-import * as SecureStore from "expo-secure-store";
 import type {
   EmbeddingModel,
   EmbeddingProvider,
@@ -23,18 +22,18 @@ export function apiKeyStoreKey(provider: string): string {
 export async function getStoredApiKey(
   provider: string,
 ): Promise<string | null> {
-  return SecureStore.getItemAsync(apiKeyStoreKey(provider));
+  return localStorage.getItem(apiKeyStoreKey(provider));
 }
 
 export async function storeApiKey(
   provider: string,
   key: string,
 ): Promise<void> {
-  await SecureStore.setItemAsync(apiKeyStoreKey(provider), key);
+  localStorage.setItem(apiKeyStoreKey(provider), key);
 }
 
 export async function deleteStoredApiKey(provider: string): Promise<void> {
-  await SecureStore.deleteItemAsync(apiKeyStoreKey(provider));
+  localStorage.removeItem(apiKeyStoreKey(provider));
 }
 
 /**

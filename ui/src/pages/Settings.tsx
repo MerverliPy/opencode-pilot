@@ -7,6 +7,7 @@ import type { ServerConfig } from "@pilot-shared/types";
 import { colors, fonts, fontSizes } from "../theme";
 import { PushSettings } from "../components/PushSettings";
 import { TunnelSettings } from "../components/TunnelSettings";
+import { downloadDebugLog } from "../services/logger";
 
 export function Settings() {
   const servers = useServerStore((s) => s.servers);
@@ -217,6 +218,27 @@ export function Settings() {
 
       <PushSettings />
       <TunnelSettings />
+
+      <section style={{ marginTop: 24 }}>
+        <h2 style={{ fontFamily: fonts.sans, fontSize: fontSizes.md, color: colors.text, margin: "0 0 12px" }}>
+          Debug
+        </h2>
+        <button
+          onClick={downloadDebugLog}
+          style={{
+            backgroundColor: colors.surfaceAlt,
+            color: colors.text,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 6,
+            padding: "8px 14px",
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.sm,
+            cursor: "pointer",
+          }}
+        >
+          Download Debug Log
+        </button>
+      </section>
 
       {/* Edit / Add modal */}
       {editing && (

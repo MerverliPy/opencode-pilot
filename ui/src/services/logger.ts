@@ -1,14 +1,13 @@
 /**
- * Lightweight structured logger.
- * Entries are stored in the log Zustand store (ring-buffer, 100 max) AND
- * mirrored to the metro console so they appear in the bundler output.
+ * Structured logger with localStorage persistence and global error capture.
  *
  * Usage:
- *   import { log } from '@/services/logger';
- *   log.error('api', 'request failed', { status: 404, body: '...' });
+ *   import { log, downloadDebugLog, initLogCapture } from '@/services/logger';
+ *   log.error('api', 'request failed', { status: 404 });
+ *   initLogCapture(); // call once at app startup
  */
 import { useLogStore } from "../store/log";
-import type { LogLevel } from "../store/log";
+import type { LogEntry, LogLevel } from "../store/log";
 
 let _seq = 0;
 
@@ -29,7 +28,7 @@ function addEntry(
   extra?: unknown,
 ): void {
   const id = `${Date.now()}-${++_seq}`;
-  const entry = {
+  const entry: LogEntry = {
     id,
     ts: Date.now(),
     level,
@@ -38,19 +37,14 @@ function addEntry(
     data: serialize(extra),
   };
 
-  // Write to store (ring-buffer; works even before React mounts)
   useLogStore.getState().addEntry(entry);
 
-  // Mirror to metro so logs show up in the bundler terminal
   const prefix = `[pilot:${tag}] ${message}`;
   if (level === "error") {
-    // eslint-disable-next-line no-console
     console.error(prefix, extra ?? "");
   } else if (level === "warn") {
-    // eslint-disable-next-line no-console
     console.warn(prefix, extra ?? "");
   } else {
-    // eslint-disable-next-line no-console
     console.log(prefix, extra ?? "");
   }
 }
@@ -65,3 +59,33 @@ export const log = {
   error: (tag: string, message: string, extra?: unknown) =>
     addEntry("error", tag, message, extra),
 };
+
+function fmt(entry: LogEntry): string {
+  const ts = new Date(entry.ts).toISOString();
+  return `[${ts}] ${entry.level.padEnd(5)} [${entry.tag}] ${entry.message}${entry.data ? `\n  ${entry.data}` : ""}`;
+}
+
+export function downloadDebugLog(): void {
+  const entries = useLogStore.getState().entries;
+  const body = entries.map(fmt).join("\n");
+  const blob = new Blob([`Pilot Debug Log — ${new Date().toISOString()}\n${"=".repeat(60)}\n${body}`], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pilot-debug-${Date.now()}.log`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function initLogCapture(): void {
+  window.addEventListener("error", (event) => {
+    const msg = event.error?.message ?? event.message ?? String(event.error);
+    addEntry("error", "uncaught", msg, { stack: event.error?.stack, filename: event.filename, lineno: event.lineno });
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const err = event.reason;
+    const msg = err?.message ?? String(err);
+    addEntry("error", "unhandled", msg, { stack: err?.stack });
+  });
+}

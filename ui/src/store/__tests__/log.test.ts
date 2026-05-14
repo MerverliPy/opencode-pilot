@@ -2,6 +2,7 @@ import { useLogStore } from "../log";
 
 describe("useLogStore", () => {
   beforeEach(() => {
+    localStorage.removeItem("pilot-debug-log");
     useLogStore.getState().clearLog();
   });
 
@@ -30,8 +31,8 @@ describe("useLogStore", () => {
     expect(entries[1].message).toBe("first");
   });
 
-  it("caps at MAX_ENTRIES (100)", () => {
-    for (let i = 0; i < 105; i++) {
+  it("caps at MAX_ENTRIES (500)", () => {
+    for (let i = 0; i < 505; i++) {
       useLogStore.getState().addEntry({
         id: String(i),
         ts: i,
@@ -40,7 +41,7 @@ describe("useLogStore", () => {
         message: String(i),
       });
     }
-    expect(useLogStore.getState().entries).toHaveLength(100);
+    expect(useLogStore.getState().entries).toHaveLength(500);
   });
 
   it("clears all entries", () => {

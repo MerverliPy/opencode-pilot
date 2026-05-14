@@ -8,11 +8,30 @@ export type LogEntry = {
   level: LogLevel;
   tag: string;
   message: string;
-  /** JSON-stringified extra payload, if any */
   data?: string;
 };
 
-const MAX_ENTRIES = 100;
+const MAX_ENTRIES = 500;
+const STORAGE_KEY = "pilot-debug-log";
+
+function loadPersisted(): LogEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LogEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_ENTRIES) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persist(entries: LogEntry[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
+  } catch {
+    // storage full — silently drop
+  }
+}
 
 type LogState = {
   entries: LogEntry[];
@@ -21,12 +40,17 @@ type LogState = {
 };
 
 export const useLogStore = create<LogState>((set) => ({
-  entries: [],
+  entries: loadPersisted(),
 
   addEntry: (entry) =>
-    set((state) => ({
-      entries: [entry, ...state.entries].slice(0, MAX_ENTRIES),
-    })),
+    set((state) => {
+      const entries = [entry, ...state.entries].slice(0, MAX_ENTRIES);
+      persist(entries);
+      return { entries };
+    }),
 
-  clearLog: () => set({ entries: [] }),
+  clearLog: () => {
+    persist([]);
+    set({ entries: [] });
+  },
 }));

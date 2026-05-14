@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "path";
 
+const proxyTarget = process.env.PROXY_TARGET || "http://localhost:3000";
+
 export default defineConfig({
   plugins: [
     react(),
@@ -37,11 +39,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:3000",
-      "/event": "http://localhost:3000",
-      "/git": "http://localhost:3000",
+      "/api": proxyTarget,
+      "/event": proxyTarget,
+      "/git": proxyTarget,
       "/terminal": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         ws: true,
       },
     },

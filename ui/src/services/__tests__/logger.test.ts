@@ -3,6 +3,7 @@ import { useLogStore } from "../../store/log";
 
 describe("logger", () => {
   beforeEach(() => {
+    localStorage.removeItem("pilot-debug-log");
     useLogStore.getState().clearLog();
     jest.clearAllMocks();
   });
@@ -66,20 +67,20 @@ describe("logger", () => {
   });
 
   describe("ring buffer limit", () => {
-    it("keeps at most MAX_ENTRIES (100)", () => {
-      for (let i = 0; i < 105; i++) {
+    it("keeps at most MAX_ENTRIES (500)", () => {
+      for (let i = 0; i < 505; i++) {
         log.info("flood", String(i));
       }
-      expect(useLogStore.getState().entries).toHaveLength(100);
+      expect(useLogStore.getState().entries).toHaveLength(500);
     });
 
     it("evicts oldest entries first", () => {
-      for (let i = 0; i < 102; i++) {
+      for (let i = 0; i < 502; i++) {
         log.info("flood", String(i));
       }
       const entries = useLogStore.getState().entries;
       expect(entries[entries.length - 1].message).toBe("2");
-      expect(entries[0].message).toBe("101");
+      expect(entries[0].message).toBe("501");
     });
   });
 

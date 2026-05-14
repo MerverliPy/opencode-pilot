@@ -9,7 +9,7 @@ import { ROUTES } from "../../utils/routes";
  * with `--update-snapshots` and stored alongside this test file.
  */
 
-const { maxDiffPixelRatio } = { maxDiffPixelRatio: 0.01 };
+// maxDiffPixelRatio controlled globally via playwright.config.ts expect.toHaveScreenshot
 
 test.describe("Screenshot — full-page per route", () => {
   const routes = [ROUTES.HOME, ROUTES.CHAT, ROUTES.SESSIONS, ROUTES.FILES, ROUTES.SETTINGS];
@@ -22,7 +22,7 @@ test.describe("Screenshot — full-page per route", () => {
       await page.waitForLoadState("domcontentloaded");
       await expect(page.getByTestId("main-content")).toBeVisible();
 
-      await expect(page).toHaveScreenshot({ fullPage: true, maxDiffPixelRatio });
+      await expect(page).toHaveScreenshot({ fullPage: true });
     });
   }
 });
@@ -35,7 +35,7 @@ test.describe("Screenshot — element-level snapshots", () => {
     const input = page.getByPlaceholder("ask opencode…");
     await expect(input).toBeVisible();
 
-    await expect(input).toHaveScreenshot({ maxDiffPixelRatio });
+    await expect(input).toHaveScreenshot();
   });
 
   test("settings form snapshot", async ({ page }) => {
@@ -43,9 +43,7 @@ test.describe("Screenshot — element-level snapshots", () => {
     await page.waitForLoadState("domcontentloaded");
     await expect(page.getByTestId("main-content")).toBeVisible();
 
-    await expect(page.getByTestId("main-content")).toHaveScreenshot({
-      maxDiffPixelRatio,
-    });
+    await expect(page.getByTestId("main-content")).toHaveScreenshot();
   });
 });
 
@@ -55,6 +53,6 @@ test.describe("Screenshot — viewport vs fullPage", () => {
     await page.waitForLoadState("domcontentloaded");
     await expect(page.getByTestId("prompt-input")).toBeVisible();
 
-    await expect(page).toHaveScreenshot({ fullPage: false, maxDiffPixelRatio });
+    await expect(page).toHaveScreenshot({ fullPage: false });
   });
 });

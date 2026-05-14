@@ -8,7 +8,7 @@ import { ROUTES } from "../../utils/routes";
  * using Playwright's `toHaveScreenshot()` for pixel-level comparison.
  */
 
-const { maxDiffPixelRatio } = { maxDiffPixelRatio: 0.01 };
+// maxDiffPixelRatio controlled globally via playwright.config.ts expect.toHaveScreenshot
 
 test.describe("Regression — settings page states", () => {
   test("settings page — empty state (no servers configured)", async ({
@@ -20,7 +20,6 @@ test.describe("Regression — settings page states", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 
@@ -42,7 +41,6 @@ test.describe("Regression — settings page states", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 });
@@ -56,7 +54,6 @@ test.describe("Regression — terminal page", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 });
@@ -68,7 +65,6 @@ test.describe("Regression — chat page", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 });
@@ -84,7 +80,6 @@ test.describe("Regression — responsive viewports", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 
@@ -98,7 +93,6 @@ test.describe("Regression — responsive viewports", () => {
 
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      maxDiffPixelRatio,
     });
   });
 });

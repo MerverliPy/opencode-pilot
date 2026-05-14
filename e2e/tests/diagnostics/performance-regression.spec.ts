@@ -18,6 +18,9 @@ interface PerformanceMetrics {
 }
 
 test.describe("Performance regression — navigation", () => {
+  test.beforeEach(() => {
+    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+  });
   // Baseline: navigating between all routes should be fast
   test("rapid navigation between routes stays under performance budget", async ({ page }) => {
     const routes = [ROUTES.HOME, ROUTES.CHAT, ROUTES.SESSIONS, ROUTES.FILES, ROUTES.SETTINGS];
@@ -64,6 +67,9 @@ test.describe("Performance regression — navigation", () => {
 });
 
 test.describe("Performance regression — memory", () => {
+  test.beforeEach(() => {
+    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+  });
   test("heap does not grow significantly during navigation", async ({ page }) => {
     // Navigate to home and measure initial heap
     await page.goto(ROUTES.HOME);
@@ -109,6 +115,9 @@ test.describe("Performance regression — memory", () => {
 });
 
 test.describe("Performance regression — rendering", () => {
+  test.beforeEach(() => {
+    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+  });
   test("settings form interaction is responsive", async ({ page }) => {
     await page.goto(ROUTES.SETTINGS);
     await page.waitForLoadState("domcontentloaded");

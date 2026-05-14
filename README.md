@@ -135,7 +135,13 @@ In dev mode, the Vite dev server proxies API calls to the Hono server on `:3000`
 | `npm run typecheck`  | —         | Run tsc --noEmit across all workspaces |
 | `npm run lint`       | ui        | ESLint check                           |
 | `npm test`           | ui        | Run Jest test suite                    |
-| `npm run test:e2e`   | e2e       | Run Playwright E2E tests               |
+| `npm run test:e2e`   | e2e       | Run Playwright E2E tests (UI-only)      |
+| `npm run test:e2e:fullstack` | e2e | Run E2E tests with Hono + Vite   |
+| `npm run test -w e2e -- <spec>` | e2e | Run single E2E spec             |
+| `npm run test -w e2e -- --debug` | e2e | Run E2E in debug mode         |
+| `npm run test -w e2e -- --ui` | e2e | Open Playwright interactive UI    |
+| `npm run test -w e2e -- --headed` | e2e | Run E2E in headed browser     |
+| `npm run test -w e2e -- --update-snapshots` | e2e | Rebaseline visual snapshots |
 | `npm run dev:server` | server    | Start Hono server with tsx watch       |
 | `npm run dev:ui`     | ui        | Start Vite dev server                  |
 
@@ -170,6 +176,22 @@ pilot/
 │       ├── services/    # api.ts, sse.ts, auth.ts, logger.ts
 │       ├── store/       # Zustand: server, session, ui, log
 │       └── theme/       # colors.ts, fonts.ts
+├── e2e/                  # Playwright E2E tests
+│   ├── playwright.config.ts
+│   ├── tests/            # Journey-based test directories
+│   │   ├── navigation/   # Route rendering, links, multi-page
+│   │   ├── chat/         # Chat UI, permission cards, SSE flow
+│   │   ├── settings/     # Server config, form input
+│   │   ├── terminal/     # WebSocket terminal
+│   │   ├── visual/       # Screenshots, visual regression
+│   │   ├── viewport/     # Emulation, responsive layout
+│   │   ├── diagnostics/  # Console, network, performance
+│   │   └── accessibility/# WCAG 2.2 AA audits
+│   ├── pages/            # Page Object Model (ChatPage, SettingsPage, etc.)
+│   ├── fixtures/         # Custom fixtures (console tracking, viewports)
+│   ├── utils/            # Shared routes, selectors, viewport presets
+│   ├── docs/             # Quick-start and in-depth guides
+│   └── screenshots/      # Route and element screenshots
 └── shared/
     └── types.ts         # Shared TypeScript types
 ```

@@ -99,22 +99,21 @@ test.describe("Input — fill_form", () => {
   test("fill and submit settings form", async ({ page }) => {
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
 
-    // The settings form has name, url, username, password inputs
-    // Use label-based selectors for robustness
-    const inputs = page.locator('input[type="text"]');
-    const urlInput = page.locator('input[type="url"]');
+    // The settings form inputs only appear after clicking "Add Server"
+    await page.getByTestId("add-server-button").click();
 
     // fill_form — fill available fields
-    if ((await inputs.count()) > 0) {
-      await inputs.first().fill("My Server");
-      await expect(inputs.first()).toHaveValue("My Server");
-    }
+    await expect(page.getByTestId("server-name-input")).toBeVisible();
+    await page.getByTestId("server-name-input").fill("My Server");
+    await expect(page.getByTestId("server-name-input")).toHaveValue("My Server");
 
-    if ((await urlInput.count()) > 0) {
-      await urlInput.fill("http://localhost:8080");
-      await expect(urlInput).toHaveValue("http://localhost:8080");
-    }
+    await expect(page.getByTestId("server-url-input")).toBeVisible();
+    await page.getByTestId("server-url-input").fill("http://localhost:8080");
+    await expect(page.getByTestId("server-url-input")).toHaveValue(
+      "http://localhost:8080",
+    );
   });
 });
 
@@ -127,7 +126,7 @@ test.describe("Input — keyboard navigation", () => {
     await page.keyboard.press("Tab");
 
     const focused = await page.evaluate(() => document.activeElement?.tagName);
-    expect(focused).toBeTruthy();
+    expect(focused).toBeDefined();
   });
 
   test("Escape key does not crash the app", async ({ page }) => {

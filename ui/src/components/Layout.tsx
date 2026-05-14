@@ -135,6 +135,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     >
       {/* Desktop sidebar */}
       <aside
+        data-testid="desktop-sidebar"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -204,6 +205,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content area */}
       <main
+        data-testid="main-content"
         style={{
           flex: 1,
           display: "flex",
@@ -227,6 +229,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile bottom nav */}
         <nav
+          data-testid="mobile-nav"
           className="mobile-nav"
           style={{
             display: "none",

@@ -133,7 +133,7 @@ export function TunnelSettings() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              data-testid="tunnel-start"
+              data-testid="start-tunnel-button"
               onClick={() => void handleStart()}
               disabled={loading || status?.active}
               style={{
@@ -151,7 +151,7 @@ export function TunnelSettings() {
               Start
             </button>
             <button
-              data-testid="tunnel-stop"
+              data-testid="stop-tunnel-button"
               onClick={() => void handleStop()}
               disabled={loading || !status?.active}
               style={{
@@ -179,17 +179,18 @@ export function TunnelSettings() {
               gap: 8,
               flexWrap: "wrap",
             }}
-          >
-            <span
-              style={{
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.sm,
-                color: colors.accent,
-                wordBreak: "break-all",
-              }}
-            >
-              {status.url}
-            </span>
+>
+              <span
+                 data-testid="tunnel-url"
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.sm,
+                  color: colors.accent,
+                  wordBreak: "break-all",
+                }}
+              >
+                {status.url}
+              </span>
             <button
               data-testid="tunnel-copy"
               onClick={() => void copyUrl()}

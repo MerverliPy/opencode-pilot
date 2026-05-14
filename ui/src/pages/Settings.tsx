@@ -199,6 +199,7 @@ export function Settings() {
         )}
 
         <button
+          data-testid="add-server-button"
           onClick={startAdd}
           style={{
             marginTop: 12,
@@ -290,6 +291,7 @@ export function Settings() {
                   Name
                 </span>
                 <input
+                  data-testid="server-name-input"
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
@@ -320,6 +322,7 @@ export function Settings() {
                   URL
                 </span>
                 <input
+                  data-testid="server-url-input"
                   value={form.url}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, url: e.target.value }))

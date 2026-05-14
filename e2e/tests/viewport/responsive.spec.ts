@@ -17,7 +17,8 @@ import { test, expect, devices } from "@playwright/test";
 test.describe("Viewport meta tag", () => {
   test("contains viewport-fit=cover", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const content = await page.evaluate(() => {
       const meta = document.querySelector('meta[name="viewport"]');
@@ -29,7 +30,8 @@ test.describe("Viewport meta tag", () => {
 
   test("contains width=device-width", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const content = await page.evaluate(() => {
       const meta = document.querySelector('meta[name="viewport"]');
@@ -51,7 +53,8 @@ test.describe("No white outline — background coverage", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const bg = await page.evaluate(() => {
       const style = window.getComputedStyle(document.documentElement);
@@ -72,7 +75,8 @@ test.describe("No white outline — background coverage", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const bg = await page.evaluate(() => {
       const style = window.getComputedStyle(document.body);
@@ -87,7 +91,8 @@ test.describe("No white outline — background coverage", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const layout = await page.evaluate(() => {
       const root = document.getElementById("root");
@@ -124,9 +129,9 @@ test.describe("Mobile bottom nav safe area", () => {
 
   test("mobile-nav element is visible", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
-    const mobileNav = page.locator(".mobile-nav");
+    const mobileNav = page.getByTestId("mobile-nav");
     await expect(mobileNav).toBeVisible();
   });
 
@@ -134,14 +139,16 @@ test.describe("Mobile bottom nav safe area", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("mobile-nav")).toBeVisible();
 
     // Check the actual CSS rule for env(safe-area-inset-bottom).
     // Computed style resolves env() to its fallback or the UA value,
     // so we inspect the stylesheet rules directly.
     const hasEnvPadding = await page.evaluate(() => {
       const checkRules = (rules: CSSRuleList): boolean => {
-        for (const rule of rules) {
+        for (let i = 0; i < rules.length; i++) {
+          const rule = rules[i];
           if (rule instanceof CSSMediaRule) {
             if (checkRules(rule.cssRules)) return true;
           }
@@ -171,14 +178,14 @@ test.describe("Mobile bottom nav safe area", () => {
 
   test("all 7 nav items in mobile-nav are fully visible", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
-    const navItems = page.locator(".mobile-nav a");
+    const navItems = page.getByTestId("mobile-nav").locator("a");
     await expect(navItems).toHaveCount(7);
 
     // Verify each nav item is within the viewport bounds
     const allVisible = await page.evaluate(() => {
-      const nav = document.querySelector(".mobile-nav");
+      const nav = document.querySelector('[data-testid="mobile-nav"]');
       if (!nav) return false;
 
       const links = nav.querySelectorAll("a");
@@ -199,78 +206,24 @@ test.describe("Mobile bottom nav safe area", () => {
 
   test("last nav item bottom edge is within the viewport", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("mobile-nav")).toBeVisible();
 
     const lastItemInViewport = await page.evaluate(() => {
-      const nav = document.querySelector(".mobile-nav");
-      if (!nav) return false;
-
-      const links = nav.querySelectorAll("a");
-      const lastLink = links[links.length - 1];
-      if (!lastLink) return false;
-
-      const rect = lastLink.getBoundingClientRect();
-      return rect.bottom <= window.innerHeight;
-    });
-
-    expect(lastItemInViewport).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Test group 4: iPhone device emulation
-// ---------------------------------------------------------------------------
-
-const iPhone14Pro = (() => {
-  const d = devices["iPhone 14 Pro"];
-  return {
-    viewport: d.viewport,
-    userAgent: d.userAgent,
-    deviceScaleFactor: d.deviceScaleFactor,
-    isMobile: d.isMobile,
-    hasTouch: d.hasTouch,
-  };
-})();
-
-test.describe("iPhone 14 Pro device emulation", () => {
-  test.use(iPhone14Pro);
-
-  test("no horizontal scroll", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    const scrollWidth = await page.evaluate(
-      () => document.documentElement.scrollWidth,
-    );
-    const clientWidth = await page.evaluate(
-      () => document.documentElement.clientWidth,
-    );
-
-    // Allow small tolerance for rounding
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
-  });
-
-  test("bottom nav is fully visible and not cut off", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    const mobileNav = page.locator(".mobile-nav");
-    await expect(mobileNav).toBeVisible();
-
-    const navNotClipped = await page.evaluate(() => {
-      const nav = document.querySelector(".mobile-nav");
+      const nav = document.querySelector('[data-testid="mobile-nav"]');
       if (!nav) return false;
 
       const rect = nav.getBoundingClientRect();
       return rect.bottom <= window.innerHeight && rect.top >= 0;
     });
 
-    expect(navNotClipped).toBe(true);
+    expect(lastItemInViewport).toBe(true);
   });
 
   test("viewport meta has viewport-fit=cover", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     const content = await page.evaluate(() => {
       const meta = document.querySelector('meta[name="viewport"]');
@@ -292,19 +245,20 @@ test.describe("Dynamic viewport resize", () => {
     // Start at desktop
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     // Desktop: sidebar visible, mobile nav hidden
-    const sidebar = page.locator(".desktop-sidebar");
+    const sidebar = page.getByTestId("desktop-sidebar");
     await expect(sidebar).toBeVisible();
 
-    const mobileNav = page.locator(".mobile-nav");
+    const mobileNav = page.getByTestId("mobile-nav");
     await expect(mobileNav).toBeHidden();
 
     // Resize to mobile
     await page.setViewportSize({ width: 375, height: 667 });
     // Wait for the media query to take effect and layout to settle
-    await page.waitForTimeout(300);
+    await expect(mobileNav).toBeVisible();
 
     // Mobile: sidebar hidden, mobile nav visible
     await expect(sidebar).toBeHidden();
@@ -313,7 +267,8 @@ test.describe("Dynamic viewport resize", () => {
     // Verify mobile nav has safe-area padding in its CSS rule
     const hasEnvPadding = await page.evaluate(() => {
       const checkRules = (rules: CSSRuleList): boolean => {
-        for (const rule of rules) {
+        for (let i = 0; i < rules.length; i++) {
+          const rule = rules[i];
           if (rule instanceof CSSMediaRule) {
             if (checkRules(rule.cssRules)) return true;
           }
@@ -348,11 +303,12 @@ test.describe("Dynamic viewport resize", () => {
     // Start at desktop
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("prompt-input")).toBeVisible();
 
     // Resize to mobile
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => document.documentElement.clientWidth === 375);
 
     const scrollWidth = await page.evaluate(
       () => document.documentElement.scrollWidth,

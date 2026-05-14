@@ -102,11 +102,13 @@ test.describe("Navigation — multi-page", () => {
     // new_page — create two pages
     const page1 = await context.newPage();
     await page1.goto("/");
-    await page1.waitForLoadState("networkidle");
+    await page1.waitForLoadState("domcontentloaded");
+    await expect(page1.getByTestId("prompt-input")).toBeVisible();
 
     const page2 = await context.newPage();
     await page2.goto("/settings");
-    await page2.waitForLoadState("networkidle");
+    await page2.waitForLoadState("domcontentloaded");
+    await expect(page2.getByTestId("main-content")).toBeVisible();
 
     // list_pages — verify both exist
     pages = context.pages();

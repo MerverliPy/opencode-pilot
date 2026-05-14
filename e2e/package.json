@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:debug": "playwright test --debug"
+    "test:debug": "playwright test --debug",
+    "test:e2e:fullstack": "E2E_FULL_STACK=1 playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^22.0.0"
   }
 }

@@ -236,6 +236,7 @@ export function Terminal() {
 
   return (
     <div
+      data-testid="terminal-container"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -247,6 +248,7 @@ export function Terminal() {
     >
       {/* Tab bar */}
       <div
+        data-testid="terminal-tab-bar"
         style={{
           display: "flex",
           alignItems: "center",

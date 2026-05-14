@@ -1,37 +1,65 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/**
- * Playwright configuration for Pilot E2E tests.
- *
- * Mirrors capabilities exposed by chrome-devtools-mcp:
- * - Navigation, input automation, screenshots, console inspection
- * - Network monitoring, device emulation, performance tracing
- *
- * Chromium is the only browser since chrome-devtools-mcp is Chrome-only.
- */
+const isFullStack = !!process.env.E2E_FULL_STACK;
+const isCI = !!process.env.CI;
+
+const serverPort = process.env.PORT || "3000";
+const uiPort = "5173";
+
+const webServer = isFullStack
+  ? [
+      {
+        command: `npx tsx server/src/cli.ts --port ${serverPort}`,
+        port: Number(serverPort),
+        reuseExistingServer: !isCI,
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          PORT: serverPort,
+          OPENCODE_URL: process.env.OPENCODE_URL || "",
+          CORS_ORIGINS: `http://localhost:${uiPort}`,
+        },
+      },
+      {
+        command: `npm run dev:ui -w ui`,
+        url: `http://localhost:${uiPort}`,
+        reuseExistingServer: !isCI,
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          PROXY_TARGET: `http://localhost:${serverPort}`,
+        },
+      },
+    ]
+  : isCI
+    ? undefined
+    : {
+        command: "npm run dev:ui -w ui",
+        url: `http://localhost:${uiPort}`,
+        reuseExistingServer: true,
+        timeout: 120_000,
+      };
+
 export default defineConfig({
   testDir: "./tests",
+  snapshotPathTemplate:
+    "{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}",
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "list",
-
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
+  reporter: [["list"], ["html"]],
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:5173",
+    baseURL: process.env.E2E_BASE_URL || `http://localhost:${uiPort}`,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: "cd .. && npm run dev:ui",
-        url: "http://localhost:5173",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+  webServer,
 });

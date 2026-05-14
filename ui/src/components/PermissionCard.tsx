@@ -12,6 +12,7 @@ type Props = {
 export function PermissionCard({ permission, onRespond }: Props) {
   return (
     <div
+      data-testid="permission-card"
       style={{
         border: `1px solid ${colors.border}`,
         borderRadius: 8,
@@ -43,6 +44,7 @@ export function PermissionCard({ permission, onRespond }: Props) {
       )}
       <div style={{ display: "flex", gap: 8 }}>
         <button
+          data-testid="permission-approve-button"
           onClick={() => onRespond("always")}
           style={{
             backgroundColor: colors.success,
@@ -58,6 +60,7 @@ export function PermissionCard({ permission, onRespond }: Props) {
           Always
         </button>
         <button
+          data-testid="permission-once-button"
           onClick={() => onRespond("once")}
           style={{
             backgroundColor: colors.accent,
@@ -73,6 +76,7 @@ export function PermissionCard({ permission, onRespond }: Props) {
           Once
         </button>
         <button
+          data-testid="permission-reject-button"
           onClick={() => onRespond("reject")}
           style={{
             backgroundColor: "transparent",

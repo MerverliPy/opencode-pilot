@@ -25,28 +25,29 @@ test.describe("Network — API proxy routes", () => {
 
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(1000);
+    await expect(page.getByTestId("main-content")).toBeVisible();
 
-    // We capture any API requests if they occur; the assertion just
-    // validates the interception mechanism is working.
-    expect(Array.isArray(apiRequests)).toBe(true);
+    // We capture any API requests if they occur; the assertion validates
+    // that the request interception mechanism produced a usable array.
+    expect(apiRequests.length).toBeGreaterThanOrEqual(0);
   });
 
   test("list_network_requests captures all requests", async ({ page }) => {
     const requests: { method: string; url: string; hasResponse: boolean }[] =
       [];
 
-    page.on("requestfinished", (req) => {
+    page.on("requestfinished", async (req) => {
+      const resp = await req.response();
       requests.push({
         method: req.method(),
         url: req.url(),
-        hasResponse: req.response() !== null,
+        hasResponse: resp !== null,
       });
     });
 
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState("load");
 
     expect(requests.length).toBeGreaterThan(0);
 
@@ -95,11 +96,11 @@ test.describe("Network — no external leakages", () => {
 
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState("load");
 
     // The app should not make unsolicited external requests on initial load
     // (fonts/CDNs/etc should be self-hosted or explicitly allowed)
-    const uniqueExternal = [...new Set(externalHosts)];
+    const uniqueExternal = Array.from(new Set(externalHosts));
     expect(uniqueExternal).toHaveLength(0);
   });
 });

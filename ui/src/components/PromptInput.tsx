@@ -61,6 +61,7 @@ export function PromptInput({ onSubmit, disabled }: Props) {
           {">"}
         </span>
         <textarea
+          data-testid="prompt-input"
           ref={textareaRef}
           value={text}
           onChange={handleChange}

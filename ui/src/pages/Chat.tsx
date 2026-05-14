@@ -258,6 +258,7 @@ export function Chat() {
     >
       {/* Top bar */}
       <header
+        data-testid="session-bar"
         style={{
           display: "flex",
           alignItems: "center",
@@ -324,7 +325,7 @@ export function Chat() {
       )}
 
       {/* Message list */}
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+      <div data-testid="message-list" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         <MessageList turns={turns} />
       </div>
 

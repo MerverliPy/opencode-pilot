@@ -144,6 +144,9 @@ In dev mode, the Vite dev server proxies API calls to the Hono server on `:3000`
 | `npm run test -w e2e -- --update-snapshots` | e2e | Rebaseline visual snapshots |
 | `npm run dev:server` | server    | Start Hono server with tsx watch       |
 | `npm run dev:ui`     | ui        | Start Vite dev server                  |
+| `docker compose -f docker/docker-compose.yml up -d` | — | Start n9router (port 20128) |
+| `docker compose --profile tunnel up -d` | — | n9router + Cloudflare tunnel |
+| `docker compose --profile full-stack up -d` | — | n9router + Pilot server |
 
 ### n9router integration
 
@@ -154,7 +157,24 @@ Pilot works with [n9router](https://9router.com) as an AI routing gateway. Confi
 - View per-model usage stats and cost estimates
 - Enable/disable the Cloudflare tunnel from the UI
 
-For full documentation see [`MEMORY.md`](MEMORY.md) and the n9router skill at `.opencode/skills/9router/SKILL.md`.
+#### Docker setup (recommended)
+
+The easiest way to run n9router alongside Pilot:
+
+```bash
+# Start n9router on port 20128
+docker compose -f docker/docker-compose.yml up -d
+
+# With Cloudflare tunnel for remote access
+docker compose --profile tunnel up -d
+
+# With Pilot server (full-stack testing)
+docker compose --profile full-stack up -d
+```
+
+Copy `docker/.env.example` to `docker/.env` to configure API keys and ports. n9router is also accessible over Tailscale at `http://100.81.83.98:20128`.
+
+For full documentation see [`MEMORY.md`](MEMORY.md) and the n9router skill at `.opencode/skills/n9router-workflow/SKILL.md`.
 
 ## Project Structure
 
@@ -163,7 +183,7 @@ pilot/
 ├── server/              # Hono server
 │   └── src/
 │       ├── index.ts     # App entry, routing
-│       ├── proxy.ts     # OpenCode HTTP/SSE proxy
+│       ├── proxy.ts     # OpenCode HTTP/SSE proxy (or n9router)
 │       ├── auth.ts      # Session auth (httpOnly cookies)
 │       ├── push.ts      # Web Push relay
 │       ├── tunnel.ts    # Cloudflare tunnel + QR
@@ -192,6 +212,13 @@ pilot/
 │   ├── utils/            # Shared routes, selectors, viewport presets
 │   ├── docs/             # Quick-start and in-depth guides
 │   └── screenshots/      # Route and element screenshots
+├── docker/               # Docker setup for n9router
+│   ├── docker-compose.yml
+│   ├── n9router.Dockerfile
+│   └── .env.example
+├── scripts/
+│   └── start.sh          # Dev startup: Pilot + Vite, defaults to n9router :20128
+├── opencode.json.example # Per-developer n9router config template
 └── shared/
     └── types.ts         # Shared TypeScript types
 ```

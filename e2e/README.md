@@ -2,6 +2,18 @@
 
 Playwright end-to-end tests for the Pilot PWA. Covers UI rendering, accessibility, visual regression, performance, terminal WebSocket, and full-stack flows.
 
+## Quickstart
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+New to E2E tests? Start with the [Quick Guide](docs/quick-guide.md).
+
+---
+
 ## Test structure
 
 Tests organized by journey in subdirectories under `tests/`:
@@ -14,7 +26,8 @@ Tests organized by journey in subdirectories under `tests/`:
 | `terminal/`     | `websocket.spec.ts`                           | WebSocket terminal connection, command I/O            |
 | `visual/`       | `screenshot.spec.ts`, `regression.spec.ts`    | Screenshot baselines, pixel-level visual regression   |
 | `viewport/`     | `emulation.spec.ts`, `responsive.spec.ts`     | Mobile/tablet/desktop viewports, safe-area, resize    |
-| `diagnostics/`  | `console.spec.ts`, `network.spec.ts`, `performance.spec.ts`, `performance-regression.spec.ts` | Console errors, network, CDP metrics, perf budgets |
+| `diagnostics/`  | `console.spec.ts`, `network.spec.ts` | Console errors, network requests |
+| `diagnostics/`  | `performance.spec.ts`, `performance-regression.spec.ts` | CDP metrics, perf budgets |
 | `accessibility/`| `wcag.spec.ts`                                | WCAG 2.2 AA audits via @axe-core/playwright           |
 
 ## Commands

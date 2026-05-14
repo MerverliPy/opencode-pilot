@@ -67,6 +67,9 @@ jobs:
       - name: Type check (ui)
         run: npm run typecheck -w ui
 
+      - name: Type check (e2e)
+        run: npm run typecheck -w e2e
+
   # ─── Lint ───────────────────────────────────────────────────────────────────
   lint:
     name: Lint
@@ -196,11 +199,11 @@ jobs:
           curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:3000/health
 
       - name: Run E2E tests
-        run: npx playwright test
-        working-directory: e2e
+        run: npm run test:e2e
         env:
           CI: true
           E2E_BASE_URL: http://localhost:3000
+          OPENCODE_URL: ""  # No upstream in CI, tests use UI-only mode
 
       - name: Upload Playwright artifacts
         if: failure()

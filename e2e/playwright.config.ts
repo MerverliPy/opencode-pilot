@@ -55,6 +55,13 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
+
+  // Relax screenshot tolerance in CI (different font rendering, no anti-aliasing)
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: isCI ? 0.05 : 0.01,
+    },
+  },
   projects: [
     {
       name: "chromium",

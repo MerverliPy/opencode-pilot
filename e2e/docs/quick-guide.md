@@ -27,10 +27,17 @@ Fastest mode. Covers most tests — rendering, console errors, accessibility, vi
 
 ### Full-stack mode
 
-Starts both Hono server (`:3000`) and Vite dev server (`:5173`):
+Starts both Hono server (`:3000`) and Vite dev server (`:5173`), proxying to n9router at `http://localhost:20128`:
 
 ```bash
 npm run test:e2e:fullstack
+```
+
+For full-stack tests against a Docker-hosted n9router, start it first:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+E2E_FULL_STACK=1 npm run test:e2e:fullstack
 ```
 
 Required for:

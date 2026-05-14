@@ -43,5 +43,15 @@ echo "UI:       http://localhost:5173"
 echo "          http://$TAILSCALE_IP:5173 (Tailscale)"
 echo "API:      http://$TAILSCALE_IP:$PORT (configure in Settings)"
 echo "n9router: http://$TAILSCALE_IP:$OPENCODE_PORT (model routing)"
+
+# Verify servers are responding
+for url in "http://localhost:$PORT/health" "http://localhost:5173"; do
+  if curl -sf "$url" > /dev/null 2>&1; then
+    echo "  ✓ $url is responding"
+  else
+    echo "  ⚠ $url is not responding yet (check logs in /tmp/)"
+  fi
+done
+
 echo ""
 echo "Stop: pkill -f tsx.*src/cli.ts; pkill -f vite"

@@ -52,7 +52,7 @@ test.describe("Regression — terminal page", () => {
     await page.goto(ROUTES.TERMINAL);
     await page.waitForLoadState("domcontentloaded");
     // Wait for the page to finish rendering (terminal or fallback)
-    await page.waitForLoadState("networkidle");
+    await expect(page.getByTestId("main-content")).toBeVisible();
 
     await expect(page).toHaveScreenshot({
       fullPage: true,

@@ -505,6 +505,22 @@ test.describe("Terminal — WebSocket", () => {
 
 ### Docker setup
 
+For full-stack testing, run n9router via Docker Compose on its default port (`20128`). The `OPENCODE_URL` defaults to `http://localhost:20128` in `playwright.config.ts`:
+
+```bash
+# Terminal 1: Start n9router via Docker
+docker compose -f docker/docker-compose.yml up -d
+
+# Terminal 2: Run full-stack tests (connects to n9router at localhost:20128)
+E2E_FULL_STACK=1 npm run test:e2e:fullstack
+```
+
+With the `full-stack` profile, Docker Compose also starts the Pilot Hono server:
+
+```bash
+docker compose -f docker/docker-compose.yml --profile full-stack up -d
+```
+
 For CI, build a Docker image with both servers:
 
 ```dockerfile
@@ -513,6 +529,12 @@ WORKDIR /app
 COPY . .
 RUN npm ci && npx playwright install chromium
 CMD ["npx", "playwright", "test", "--config", "e2e/playwright.config.ts"]
+```
+
+The Playwright config reads `OPENCODE_URL` from the environment. When unset with `E2E_FULL_STACK=1`, it defaults to `http://localhost:20128` (the Docker n9router port). To use a different n9router address:
+
+```bash
+OPENCODE_URL=http://192.168.1.50:20128 E2E_FULL_STACK=1 npm run test:e2e:fullstack
 ```
 
 ---

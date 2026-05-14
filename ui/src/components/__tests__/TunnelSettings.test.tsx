@@ -53,8 +53,8 @@ describe("TunnelSettings", () => {
       expect(screen.getByText("Cloudflare Tunnel")).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("tunnel-start")).toBeInTheDocument();
-    expect(screen.getByTestId("tunnel-stop")).toBeInTheDocument();
+    expect(screen.getByTestId("start-tunnel-button")).toBeInTheDocument();
+    expect(screen.getByTestId("stop-tunnel-button")).toBeInTheDocument();
   });
 
   it("shows tunnel URL and QR when active", async () => {
@@ -87,10 +87,10 @@ describe("TunnelSettings", () => {
     render(<TunnelSettings />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("tunnel-start")).toBeEnabled();
+      expect(screen.getByTestId("start-tunnel-button")).toBeEnabled();
     });
 
-    fireEvent.click(screen.getByTestId("tunnel-start"));
+    fireEvent.click(screen.getByTestId("start-tunnel-button"));
 
     await waitFor(() => {
       expect(mockedStartTunnel).toHaveBeenCalled();
@@ -108,10 +108,10 @@ describe("TunnelSettings", () => {
     render(<TunnelSettings />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("tunnel-stop")).toBeEnabled();
+      expect(screen.getByTestId("stop-tunnel-button")).toBeEnabled();
     });
 
-    fireEvent.click(screen.getByTestId("tunnel-stop"));
+    fireEvent.click(screen.getByTestId("stop-tunnel-button"));
 
     await waitFor(() => {
       expect(mockedStopTunnel).toHaveBeenCalled();

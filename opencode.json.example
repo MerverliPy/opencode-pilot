@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy this file to opencode.json and update the baseURL to your n9router instance. Options: http://localhost:20128/v1 (local Docker), http://100.81.83.98:20128/v1 (Tailscale), or any n9router URL.",
+  "_comment": "Copy this file to opencode.json and update the baseURL to your n9router instance. Options: http://localhost:20128/v1 (local Docker), http://localhost:20128/v1 (Tailscale), or any n9router URL.",
   "$schema": "https://opencode.ai/config.json",
   "model": "n9router/opencode/deepseek-v4-flash-free",
   "default_agent": "orchestrator",

@@ -47,7 +47,6 @@ app.use(async (c, next) => {
     await next();
     return;
   }
-
   const ip = c.req.header("x-forwarded-for") ?? "local";
   const now = Date.now();
   let entry = rateLimitMap.get(ip);

@@ -4,9 +4,50 @@
  * Auto-scrolls to the bottom when new content arrives.
  */
 import { useEffect, useRef } from "react";
+import type { Message } from "@pilot-shared/types";
 import type { Turn } from "../store/session";
 import { colors, fonts, fontSizes } from "../theme";
 import { MarkdownContent } from "./MarkdownContent";
+
+function formatTokenCount(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
+}
+
+function MessageCostFooter({ message }: { message: Message }) {
+  if (message.cost === undefined && message.tokens === undefined) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (message.cost !== undefined) {
+    parts.push(`$${message.cost}`);
+  }
+
+  if (message.tokens) {
+    const tokenParts: string[] = [];
+    tokenParts.push(`${formatTokenCount(message.tokens.input)} in`);
+    tokenParts.push(`${formatTokenCount(message.tokens.output)} out`);
+    if (message.tokens.reasoning && message.tokens.reasoning > 0) {
+      tokenParts.push(`${formatTokenCount(message.tokens.reasoning)} reason`);
+    }
+    parts.push(tokenParts.join(" · "));
+  }
+
+  return (
+    <div
+      style={{
+        fontFamily: fonts.mono,
+        fontSize: fontSizes.xs,
+        color: colors.muted,
+        marginTop: 4,
+        textAlign: "right",
+      }}
+    >
+      {parts.join(" · ")}
+    </div>
+  );
+}
 
 function TurnView({ turn }: { turn: Turn }) {
   const isUser = turn.message.role === "user";
@@ -181,6 +222,7 @@ function TurnView({ turn }: { turn: Turn }) {
           })
         )}
       </div>
+      {!isUser && <MessageCostFooter message={turn.message} />}
     </div>
   );
 }

@@ -197,3 +197,29 @@ describe("MessageList", () => {
     expect(screen.getByText("test.ts")).toBeInTheDocument();
   });
 });
+
+it("renders text part with markdown content", () => {
+  const turns: Turn[] = [
+    {
+      message: {
+        id: "m1",
+        sessionID: "s1",
+        role: "assistant",
+        time: { created: 1 },
+      },
+      parts: [
+        {
+          id: "p1",
+          messageID: "m1",
+          sessionID: "s1",
+          type: "text",
+          text: "**bold** text and `code`",
+        },
+      ],
+    },
+  ];
+  render(<MessageList turns={turns} />);
+  // MarkdownContent mock renders children in a div
+  const markdown = screen.getByTestId("markdown");
+  expect(markdown).toHaveTextContent("**bold** text and `code`");
+});

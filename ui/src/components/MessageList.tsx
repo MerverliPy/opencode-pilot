@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import type { Turn } from "../store/session";
 import { colors, fonts, fontSizes } from "../theme";
+import { MarkdownContent } from "./MarkdownContent";
 
 function TurnView({ turn }: { turn: Turn }) {
   const isUser = turn.message.role === "user";
@@ -40,7 +41,7 @@ function TurnView({ turn }: { turn: Turn }) {
           borderRadius: 10,
           backgroundColor: isUser ? colors.accent : colors.surface,
           color: isUser ? "#000" : colors.text,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.sm,
           lineHeight: 1.5,
           wordBreak: "break-word",
@@ -53,8 +54,8 @@ function TurnView({ turn }: { turn: Turn }) {
             switch (part.type) {
               case "text":
                 return (
-                  <div key={part.id} style={{ whiteSpace: "pre-wrap" }}>
-                    {part.text}
+                  <div key={part.id}>
+                    <MarkdownContent text={part.text} />
                   </div>
                 );
               case "reasoning":

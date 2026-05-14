@@ -5,11 +5,14 @@ module.exports = {
     "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
-moduleNameMapper: {
+  moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@pilot-shared/types$": "<rootDir>/../shared/src/types.ts",
     "^@opencode-ai/plugin$": "<rootDir>/__mocks__/@opencode-ai/plugin.ts",
     "\\.(css|less|scss|sass)$": "<rootDir>/__mocks__/style.cjs",
+    "^react-markdown$": "<rootDir>/__mocks__/react-markdown.tsx",
+    "^remark-gfm$": "<rootDir>/__mocks__/remark-gfm.cjs",
+    "^rehype-highlight$": "<rootDir>/__mocks__/rehype-highlight.cjs",
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.cjs"],
   testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],

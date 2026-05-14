@@ -28,7 +28,7 @@
         "-y",
         "@modelcontextprotocol/server-github"
       ],
-      "enabled": false
+      "enabled": true
     },
     "memory": {
       "type": "local",
@@ -57,7 +57,7 @@
         "chrome-devtools-mcp@latest",
         "--headless"
       ],
-      "enabled": false
+      "enabled": true
     }
   },
   "permission": {

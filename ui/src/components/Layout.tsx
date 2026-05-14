@@ -219,6 +219,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             minHeight: 0,
             display: "flex",
             flexDirection: "column",
+            paddingTop: "env(safe-area-inset-top, 0px)",
           }}
         >
           {children}

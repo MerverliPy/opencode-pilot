@@ -133,6 +133,8 @@ export function Terminal() {
 
     // Connect after state update (container div will be created)
     setTimeout(() => {
+      const stillExists = tabsRef.current.some((t) => t.id === tab.id);
+      if (!stillExists) return;
       const container = ref.current;
       if (container && !container.hasChildNodes()) {
         tab.term.open(container);
@@ -208,6 +210,7 @@ export function Terminal() {
         tab.ws?.close();
         tab.term.dispose();
       }
+      tabsRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

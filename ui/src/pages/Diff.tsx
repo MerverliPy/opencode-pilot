@@ -13,6 +13,7 @@ import "diff2html/bundles/css/diff2html.min.css";
 import { useServerStore } from "../store/server";
 import { colors, fonts, fontSizes } from "../theme";
 import { log } from "../services/logger";
+import { friendlyError } from "../lib/errors";
 
 interface GitStatus {
   branch: string;
@@ -137,7 +138,7 @@ export function Diff() {
       const st = await fetchJson<GitStatus>("/git/status");
       setStatus(st);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyError(err));
       log.error("diff", "status failed", err);
     } finally {
       setLoadingStatus(false);
@@ -178,7 +179,7 @@ export function Diff() {
       await loadDiffs();
       setCommitResult(`committed ${result.hash}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyError(err));
     } finally {
       setCommitting(false);
     }

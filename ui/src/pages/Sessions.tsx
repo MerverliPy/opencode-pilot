@@ -8,6 +8,7 @@ import { OpencodeClient } from "../services/api";
 import type { Session } from "@pilot-shared/types";
 import { colors, fonts, fontSizes } from "../theme";
 import { log } from "../services/logger";
+import { friendlyError } from "../lib/errors";
 
 export function Sessions() {
   const server = useServerStore((s) => s.active());
@@ -28,7 +29,7 @@ export function Sessions() {
         if (!cancelled) setSessions(list);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
+          setError(friendlyError(err));
           log.error("sessions", "list failed", err);
         }
       } finally {
@@ -47,6 +48,7 @@ export function Sessions() {
       const sess = await client.createSession({ title: "new session" });
       setSessions((prev) => [sess, ...prev]);
     } catch (err) {
+      setError(friendlyError(err));
       log.error("sessions", "create failed", err);
     }
   };
@@ -57,6 +59,7 @@ export function Sessions() {
       await client.deleteSession(id);
       setSessions((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
+      setError(friendlyError(err));
       log.error("sessions", "delete failed", err);
     }
   };

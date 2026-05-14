@@ -16,6 +16,7 @@ import { MessageList } from "../components/MessageList";
 import { PromptInput } from "../components/PromptInput";
 import { PermissionCard } from "../components/PermissionCard";
 import { colors, fonts } from "../theme";
+import { friendlyError } from "../lib/errors";
 import { useMemoryExtraction } from "../plugin/memory/hooks/useMemoryExtraction";
 import { useMemoryInjection } from "../plugin/memory/hooks/useMemoryInjection";
 
@@ -140,8 +141,8 @@ export function Chat() {
 
     (async () => {
       try {
-        if (!cancelled) setError(null);
-        let sess = null;
+      if (!cancelled) setError(null);
+      let sess: import("@pilot-shared/types").Session | null = null;
 
         // Priority 1: session from URL param
         if (urlSessionId) {
@@ -165,9 +166,8 @@ export function Chat() {
         );
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
-        log.error("chat", "session bootstrap failed", msg);
+        setError(friendlyError(err));
+        log.error("chat", "session bootstrap failed", err);
       }
     })();
 
@@ -194,10 +194,9 @@ export function Chat() {
         parts: [{ type: "text", text: fullText }],
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(friendlyError(err));
       setStatus("error");
-      log.error("chat", "prompt failed", msg);
+      log.error("chat", "prompt failed", err);
     }
   };
 
@@ -264,8 +263,13 @@ export function Chat() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "10px 16px",
+          paddingTop: "env(safe-area-inset-top, 10px)",
           borderBottom: `1px solid ${colors.border}`,
           backgroundColor: colors.surface,
+          flexShrink: 0,
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div

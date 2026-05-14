@@ -13,6 +13,7 @@ import { CategoryFilter } from "../plugin/memory/ui/components/CategoryFilter";
 import { EmptyState } from "../plugin/memory/ui/components/EmptyState";
 import type { FilterCategory } from "../plugin/memory/ui/components/CategoryFilter";
 import { colors, fonts, fontSizes } from "../theme";
+import { friendlyError } from "../lib/errors";
 
 export function Memory() {
   const servers = useServerStore((s) => s.servers);
@@ -47,7 +48,7 @@ export function Memory() {
   useEffect(() => {
     if (!activeServer) return;
     void loadForServer(activeServer.id, activeServer).catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : "Failed to load memories");
+      setError(friendlyError(e));
     });
   }, [activeServer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,8 +66,9 @@ export function Memory() {
         .then(({ memories: results }) => {
           setSearchResults(results);
         })
-        .catch(() => {
+        .catch((e: unknown) => {
           setSearchResults([]);
+          setError(friendlyError(e));
         })
         .finally(() => setIsSearching(false));
     }, 300);

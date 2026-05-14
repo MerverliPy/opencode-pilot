@@ -10,6 +10,7 @@ import { OpencodeClient } from "../services/api";
 import type { FileNode } from "@pilot-shared/types";
 import { colors, fonts, fontSizes } from "../theme";
 import { log } from "../services/logger";
+import { friendlyError } from "../lib/errors";
 import { CodeMirrorViewer } from "../components/CodeMirrorViewer";
 
 interface SelectedFile {
@@ -40,7 +41,7 @@ export function Files() {
         if (!cancelled) setFiles(list);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
+          setError(friendlyError(err));
           log.error("files", "list failed", err);
         }
       } finally {
@@ -69,7 +70,7 @@ export function Files() {
         setSelected({
           path: node.path,
           name: node.name,
-          content: `(error loading file: ${err instanceof Error ? err.message : String(err)})`,
+          content: `(error loading file: ${friendlyError(err)})`,
         });
       } finally {
         setPreviewLoading(false);

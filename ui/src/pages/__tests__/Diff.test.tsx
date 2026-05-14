@@ -229,7 +229,7 @@ describe("Diff", () => {
     render(<Diff />);
 
     await waitFor(() => {
-      expect(screen.getByText(/500/)).toBeInTheDocument();
+      expect(screen.getByText(/server error/i)).toBeInTheDocument();
     });
   });
 

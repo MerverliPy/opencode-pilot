@@ -22,6 +22,7 @@
     "test:e2e": "npm run test -w e2e",
     "test:coverage": "npm run test:coverage -w ui",
     "test:watch": "npm run test:watch -w ui",
+    "qa:exploratory": "./scripts/dogfood-qa.sh",
     "start": "npm run start -w server"
   },
   "devDependencies": {

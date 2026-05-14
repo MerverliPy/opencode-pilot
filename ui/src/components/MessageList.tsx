@@ -87,25 +87,50 @@ function TurnView({ turn }: { turn: Turn }) {
                   >
                     <div
                       style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                         fontSize: fontSizes.xs,
                         color: colors.tool,
                         marginBottom: 4,
                       }}
                     >
-                      {part.state.title ?? part.tool}
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          color:
-                            part.state.status === "completed"
-                              ? colors.success
+                      <div>
+                        {part.state.title ?? part.tool}
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            color:
+                              part.state.status === "completed"
+                                ? colors.success
                               : part.state.status === "error"
                                 ? colors.error
                                 : colors.accent,
-                        }}
-                      >
-                        {part.state.status}
-                      </span>
+                          }}
+                        >
+                          {part.state.status}
+                        </span>
+                      </div>
+                      {part.state.output && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(part.state.output ?? "").catch(() => {});
+                          }}
+                          style={{
+                            background: "none",
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: 4,
+                            color: colors.muted,
+                            fontSize: fontSizes.xs,
+                            cursor: "pointer",
+                            padding: "2px 6px",
+                            fontFamily: fonts.mono,
+                          }}
+                          title="Copy output to clipboard"
+                        >
+                          copy
+                        </button>
+                      )}
                     </div>
                     {part.state.output && (
                       <pre
@@ -126,11 +151,23 @@ function TurnView({ turn }: { turn: Turn }) {
                 return (
                   <div
                     key={part.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      navigator.clipboard.writeText(part.filename ?? "file").catch(() => {});
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        navigator.clipboard.writeText(part.filename ?? "file").catch(() => {});
+                      }
+                    }}
                     style={{
                       color: colors.accent,
                       textDecoration: "underline",
                       cursor: "pointer",
+                      display: "inline-block",
                     }}
+                    title="Copy filename to clipboard"
                   >
                     {part.filename ?? "file"}
                   </div>

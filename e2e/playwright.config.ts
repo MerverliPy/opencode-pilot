@@ -16,8 +16,8 @@ const webServer = isFullStack
         env: {
           ...process.env,
           PORT: serverPort,
-          OPENCODE_URL: process.env.OPENCODE_URL || "",
-          CORS_ORIGINS: `http://localhost:${uiPort}`,
+          OPENCODE_URL: process.env.OPENCODE_URL || "http://localhost:20128",
+          CORS_ORIGINS: `http://localhost:${uiPort},http://100.81.83.98:${uiPort}`,
         },
       },
       {

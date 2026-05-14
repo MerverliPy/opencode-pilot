@@ -29,6 +29,9 @@ ui/dist/
 .env.local
 .env.*.local
 
+# OpenCode config (per-developer, contains local URLs)
+opencode.json
+
 # OS files
 .DS_Store
 Thumbs.db

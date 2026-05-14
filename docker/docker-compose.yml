@@ -1,45 +1,92 @@
 # n9router Docker Compose
 #
-# Prerequisites:
-#   Unzip the bundled n9router source next to this file:
-#     cd pilot/
-#     unzip n9router-master.zip
+# Self-contained n9router setup — no external source zip needed.
+# n9router is installed from npm inside the Docker image.
 #
-# Then start:
-#     docker compose -f docker/docker-compose.yml up -d
+# Usage:
+#   docker compose -f docker/docker-compose.yml up -d
 #
-# n9router will be available at http://localhost:20128
-# Data is persisted in the 'n9router-data' Docker volume.
+# n9router will be available at:
+#   - http://localhost:20128 (local)
+#   - http://100.81.83.98:20128 (Tailscale)
 #
-# Optional env overrides — copy to docker/.env and fill in:
-#   NINEROUTER_PORT=20128          # host port to expose
-#   NINEROUTER_REQUIRE_API_KEY=false
-#   DEBUG=false
+# Configuration — copy docker/.env.example to docker/.env and edit:
+#   cp docker/.env.example docker/.env
+#
+# Optional profiles:
+#   docker compose --profile tunnel up -d    # Start with Cloudflare tunnel
+#   docker compose --profile full-stack up -d # Start with Pilot server too
 
 services:
   n9router:
     build:
-      context: ../n9router-master
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: n9router.Dockerfile
+      args:
+        N9ROUTER_VERSION: ${N9ROUTER_VERSION:-0.4.30}
     image: n9router:local
     container_name: n9router
     ports:
-      - "${NINEROUTER_PORT:-20128}:20128"
+      - "0.0.0.0:${N9ROUTER_PORT:-20128}:20128"
     volumes:
-      - n9router-data:/app/data
+      - n9router-data:/data
     environment:
-      - DATA_DIR=/app/data
+      - DATA_DIR=/data
       - PORT=20128
       - HOSTNAME=0.0.0.0
       - NEXT_TELEMETRY_DISABLED=1
       - DEBUG=${DEBUG:-false}
+      - N9ROUTER_REQUIRE_API_KEY=${N9ROUTER_REQUIRE_API_KEY:-false}
+      - N9ROUTER_API_KEY=${N9ROUTER_API_KEY:-}
     restart: unless-stopped
+    networks:
+      - pilot-net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:20128/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  # Optional: Cloudflare tunnel for public access
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: n9router-tunnel
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      n9router:
+        condition: service_healthy
+    networks:
+      - pilot-net
+    restart: unless-stopped
+
+  # Optional: Pilot server for full-stack testing
+  pilot:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: pilot
+    profiles: ["full-stack"]
+    ports:
+      - "0.0.0.0:${PILOT_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - OPENCODE_URL=http://n9router:20128
+      - CORS_ORIGINS=http://localhost:5173,http://100.81.83.98:5173
+    depends_on:
+      n9router:
+        condition: service_healthy
+    networks:
+      - pilot-net
+    restart: unless-stopped
+
+networks:
+  pilot-net:
+    driver: bridge
 
 volumes:
   n9router-data:

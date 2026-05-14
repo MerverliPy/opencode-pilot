@@ -55,6 +55,14 @@ export default tseslint.config(
     },
   },
 
+  // Logger service — intentional console usage
+  {
+    files: ["ui/src/services/logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
   // Server workspace — Node.js TypeScript
   {
     files: ["server/src/**/*.ts"],

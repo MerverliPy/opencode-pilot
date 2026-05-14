@@ -86,7 +86,8 @@ export function Files() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100%",
+          flex: 1,
+          minHeight: 0,
           color: colors.muted,
           fontFamily: fonts.mono,
           fontSize: fontSizes.md,
@@ -101,7 +102,8 @@ export function Files() {
     <div
       style={{
         display: "flex",
-        height: "100%",
+        flex: 1,
+        minHeight: 0,
         overflow: "hidden",
       }}
     >

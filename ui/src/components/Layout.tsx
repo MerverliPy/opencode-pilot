@@ -215,8 +215,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div
           style={{
             flex: 1,
-            overflow: "auto",
+            overflow: "hidden",
             minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           {children}

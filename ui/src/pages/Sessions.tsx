@@ -68,7 +68,8 @@ export function Sessions() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100%",
+          flex: 1,
+          minHeight: 0,
           color: colors.muted,
           fontFamily: fonts.mono,
           fontSize: fontSizes.md,
@@ -80,7 +81,7 @@ export function Sessions() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: 16, maxWidth: 800, margin: "0 auto", flex: 1, minHeight: 0, overflow: "auto" }}>
       <div
         style={{
           display: "flex",

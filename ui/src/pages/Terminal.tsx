@@ -219,7 +219,8 @@ export function Terminal() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100%",
+          flex: 1,
+          minHeight: 0,
           color: colors.muted,
           fontFamily: fonts.mono,
           fontSize: fontSizes.md,
@@ -235,7 +236,8 @@ export function Terminal() {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        flex: 1,
+        minHeight: 0,
         backgroundColor: colors.bg,
         overflow: "hidden",
       }}

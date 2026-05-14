@@ -11,6 +11,7 @@ import { ROUTES } from "../../utils/routes";
 // maxDiffPixelRatio controlled globally via playwright.config.ts expect.toHaveScreenshot
 
 test.describe("Regression — settings page states", () => {
+  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
   test("settings page — empty state (no servers configured)", async ({
     page,
     settingsPage,
@@ -46,6 +47,7 @@ test.describe("Regression — settings page states", () => {
 });
 
 test.describe("Regression — terminal page", () => {
+  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
   test("terminal page — empty state", async ({ page }) => {
     await page.goto(ROUTES.TERMINAL);
     await page.waitForLoadState("domcontentloaded");
@@ -59,6 +61,7 @@ test.describe("Regression — terminal page", () => {
 });
 
 test.describe("Regression — chat page", () => {
+  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
   test("chat page — with prompt input", async ({ page, pilotPage }) => {
     await pilotPage.gotoChat();
     await expect(pilotPage.promptInput).toBeVisible();
@@ -70,6 +73,7 @@ test.describe("Regression — chat page", () => {
 });
 
 test.describe("Regression — responsive viewports", () => {
+  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
   test("chat page — mobile viewport (375×812)", async ({
     page,
     pilotPage,

@@ -14,6 +14,9 @@ let _seq = 0;
 function serialize(extra: unknown): string | undefined {
   if (extra === undefined || extra === null) return undefined;
   if (typeof extra === "string") return extra;
+  if (extra instanceof Error) {
+    return JSON.stringify({ message: extra.message, stack: extra.stack?.split("\n").slice(0, 3).join("\n") }, null, 2);
+  }
   try {
     return JSON.stringify(extra, null, 2);
   } catch {

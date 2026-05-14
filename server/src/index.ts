@@ -177,15 +177,15 @@ export function startServer(
   password?: string,
 ): void {
   setupProxy(openCodeUrl, username, password);
-  setupStatic();
+  setupGit();
+  setupMemory();
   setupPush({
     vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
     vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
     vapidSubject: process.env.VAPID_SUBJECT,
   });
   setupTunnel(port);
-  setupGit();
-  setupMemory();
+  setupStatic();
   const httpServer = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`✈  Pilot server listening on http://localhost:${info.port}`);
     if (openCodeUrl) {

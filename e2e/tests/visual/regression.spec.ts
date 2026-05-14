@@ -47,12 +47,24 @@ test.describe("Regression — settings page states", () => {
 });
 
 test.describe("Regression — terminal page", () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      localStorage.setItem("pilot.servers", JSON.stringify([{
+        id: "e2e-test-server",
+        name: "E2E Test",
+        url: window.location.origin,
+      }]));
+      localStorage.setItem("pilot.activeServer", "e2e-test-server");
+    });
+  });
   test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
   test("terminal page — empty state", async ({ page }) => {
     await page.goto(ROUTES.TERMINAL);
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
     // Wait for the page to finish rendering (terminal or fallback)
-    await expect(page.getByTestId("main-content")).toBeVisible();
+    await expect(page.getByTestId("main-content")).toBeVisible({ timeout: 15000 });
 
     await expect(page).toHaveScreenshot({
       fullPage: true,

@@ -42,7 +42,7 @@ export default defineConfig({
       "/api": proxyTarget,
       "/event": proxyTarget,
       "/git": proxyTarget,
-      "/terminal": {
+      "/terminal/ws": {
         target: proxyTarget,
         ws: true,
       },

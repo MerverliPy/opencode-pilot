@@ -92,6 +92,6 @@ test.describe("Settings — tunnel controls", () => {
     await expect(page.getByTestId("main-content")).toBeVisible();
 
     // Tunnel section should be visible
-    await expect(page.getByText(/tunnel/i)).toBeVisible();
+    await expect(page.getByText(/tunnel/i).first()).toBeVisible();
   });
 });

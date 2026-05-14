@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const rootDir = resolve(__dirname, '..');
 const isFullStack = !!process.env.E2E_FULL_STACK;
 const isCI = !!process.env.CI;
 
@@ -9,7 +15,7 @@ const uiPort = "5173";
 const webServer = isFullStack
   ? [
       {
-        command: `npx tsx server/src/cli.ts --port ${serverPort}`,
+        command: `node ${resolve(__dirname, '../server/node_modules/.bin/tsx')} ${resolve(__dirname, '../server/src/cli.ts')} --port ${serverPort}`,
         port: Number(serverPort),
         reuseExistingServer: !isCI,
         timeout: 30_000,
@@ -21,7 +27,7 @@ const webServer = isFullStack
         },
       },
       {
-        command: `npm run dev:ui -w ui`,
+        command: `npm --prefix ${rootDir} run dev:ui`,
         url: `http://localhost:${uiPort}`,
         reuseExistingServer: !isCI,
         timeout: 120_000,
@@ -34,7 +40,7 @@ const webServer = isFullStack
   : isCI
     ? undefined
     : {
-        command: "npm run dev:ui -w ui",
+        command: `npm --prefix ${rootDir} run dev:ui`,
         url: `http://localhost:${uiPort}`,
         reuseExistingServer: true,
         timeout: 120_000,

@@ -18,6 +18,19 @@ import { test, expect } from "../../fixtures/pilot.fixture";
 test.describe("Terminal — WebSocket", () => {
   test.skip(() => !process.env.E2E_FULL_STACK, "Requires E2E_FULL_STACK=1");
 
+  // Configure a server in localStorage so Terminal component renders xterm
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      localStorage.setItem("pilot.servers", JSON.stringify([{
+        id: "e2e-test-server",
+        name: "E2E Test",
+        url: window.location.origin,
+      }]));
+      localStorage.setItem("pilot.activeServer", "e2e-test-server");
+    });
+  });
+
   test("connects to terminal WebSocket and receives session ID", async ({
     page,
   }) => {
@@ -74,50 +87,43 @@ test.describe("Terminal — WebSocket", () => {
     await page.waitForLoadState("domcontentloaded");
     await expect(page.getByTestId("terminal-container")).toBeVisible();
 
-    // Connect via WebSocket, send a command, verify output
+    // Connect via WebSocket, send a command, resolve when output received
     const result = await page.evaluate(() => {
       return new Promise<{ output: string; connected: boolean }>((resolve) => {
         const output: string[] = [];
         const ws = new WebSocket(
           `ws://localhost:${window.location.port}/terminal/ws`,
         );
-        const timeout = setTimeout(() => {
+        const safetyTimeout = setTimeout(() => {
           ws.close();
-          resolve({ output: output.join(""), connected: false });
+          resolve({ output: output.join(""), connected: output.length > 0 });
         }, 10000);
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data as string);
             if (data.type === "session") {
-              // Send a simple command
               ws.send("echo hello-pilot-test\n");
             }
           } catch {
-            // Raw PTY output
             output.push(event.data as string);
+            if (output.join("").includes("hello-pilot-test")) {
+              clearTimeout(safetyTimeout);
+              ws.close();
+              resolve({ output: output.join(""), connected: true });
+            }
           }
         };
 
         ws.onerror = () => {
-          clearTimeout(timeout);
+          clearTimeout(safetyTimeout);
           resolve({ output: output.join(""), connected: false });
         };
-
-        // Wait for output containing our test string
-        setTimeout(() => {
-          clearTimeout(timeout);
-          ws.close();
-          resolve({ output: output.join(""), connected: true });
-        }, 5000);
       });
     });
 
-    // If connected, we should have received some output
-    if (result.connected) {
-      // The output should contain our echo command result
-      expect(result.output.length).toBeGreaterThan(0);
-    }
+    expect(result.output).toContain("hello-pilot-test");
+    expect(result.connected).toBe(true);
   });
 
   test("terminal page renders xterm container", async ({ page }) => {

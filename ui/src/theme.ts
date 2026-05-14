@@ -14,7 +14,7 @@ export const colors = {
 
   // Text
   text: "#e8e8e8",
-  muted: "#808080",
+  muted: "#878787",
   mutedAlt: "#606060",
 
   // Accents

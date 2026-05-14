@@ -151,6 +151,7 @@ export function Diff() {
       const d = await fetchJson<GitFileDiff[]>("/git/diff");
       setDiffs(d);
     } catch (err) {
+      setError(friendlyError(err));
       log.error("diff", "diff failed", err);
     } finally {
       setLoadingDiff(false);

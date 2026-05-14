@@ -26,6 +26,13 @@ import { createMemoryRouter } from "./memory/memoryRouter.js";
 
 const app = new Hono();
 
+// ─── Global error handler ──────────────────────────────────────────────────────
+app.onError((err, c) => {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error("[server] unhandled error:", message);
+  return c.json({ error: "Internal Server Error", detail: message }, 500);
+});
+
 // ─── Body size limit (P9) ──────────────────────────────────────────────────────
 const bodyLimitMb = parseInt(process.env.BODY_LIMIT_SIZE ?? "10", 10);
 app.use(
@@ -116,7 +123,15 @@ export function setupTunnel(localPort: number) {
 
 // ─── Terminal WebSocket bridge (M4) ────────────────────────────────────────────
 // Terminal sessions API — WebSocket connections handled by attachTerminalWS()
-app.get("/terminal/sessions", (c) => c.json(listSessions()));
+app.get("/terminal/sessions", (c) => {
+  try {
+    return c.json(listSessions());
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[terminal] sessions error:", message);
+    return c.json({ error: "Failed to list sessions", detail: message }, 500);
+  }
+});
 
 // ─── Git routes (M4) ──────────────────────────────────────────────────────────
 export function setupGit(cwd?: string) {

@@ -1,7 +1,7 @@
 ---
 description: "Read-only subagent for fast repository discovery. Returns concise maps of relevant files, symbols, scripts, and existing patterns."
 mode: subagent
-model: n9router/deepseek/deepseek-chat
+model: n9router/ds/deepseek-chat
 temperature: 0.0
 hidden: false
 color: info

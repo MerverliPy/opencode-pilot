@@ -30,7 +30,9 @@ export function Settings() {
   }, [hydrated, hydrate]);
 
   const startAdd = () => {
-    setEditing({ id: crypto.randomUUID(), name: "", url: "" });
+    let id: string;
+    try { id = crypto.randomUUID(); } catch { id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`; }
+    setEditing({ id, name: "", url: "" });
     setForm({ name: "", url: "", username: "", password: "" });
   };
 

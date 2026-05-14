@@ -241,6 +241,220 @@ Memory is the most complex feature but the UI is minimal. These items complete i
 
 ---
 
+## Part 9: Agent Opening Sequence
+
+When an agent begins work on any enhancement, it should open files in the following order to build context efficiently. This sequence follows the data flow from types → UI → store → service → server, minimizing redundant reads while maximizing understanding.
+
+### Universal Opening Sequence (Every Task)
+
+| Step | File | Why |
+|------|------|-----|
+| 1 | `IMPLEMENTATION_PLAN.md` | Understand task priority, requirements, and dependencies |
+| 2 | `shared/src/types.ts` | All API contracts and data shapes live here — the single source of truth |
+| 3 | `DESIGN.md` | Architecture diagrams and UI wireframes for the feature |
+| 4 | `TASKS.md` | Current active work area and completion status |
+
+After these four, the agent should follow the **tier-specific sequence** below.
+
+### Tier 2 — Feature Completeness (P12–P18)
+
+#### P12: Rich Markdown Rendering
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/components/MessageList.tsx` | Current plain-text rendering — the primary file to modify |
+| 6 | `ui/src/pages/Chat.tsx` | Parent page that renders MessageList |
+| 7 | `shared/src/types.ts` → `TextPart`, `ReasoningPart` | Understand what content types need rendering |
+| 8 | `ui/package.json` | Check current deps; will need `react-markdown`, `remark-gfm`, syntax highlighter |
+
+#### P13: Cost + Token Display
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `shared/src/types.ts` → `Message.cost`, `Message.tokens` | Types already exist — understand the shape |
+| 6 | `ui/src/pages/Chat.tsx` | Where cost display would be added per-message |
+| 7 | `ui/src/store/session.ts` | `upsertMessage` already stores cost/tokens data |
+| 8 | `ui/src/services/sse.ts` | SSE events carry cost data — verify it reaches the store |
+
+#### P14: Light Theme
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/theme.ts` | Current dark-only palette — needs light palette + CSS custom properties |
+| 6 | `ui/src/components/Layout.tsx` | Where theme toggle UI would live |
+| 7 | `ui/src/pages/Settings.tsx` | Where theme preference would be persisted |
+| 8 | `ui/src/store/ui.ts` | May need a `theme` state slice |
+
+#### P15: Session Title Editing
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/store/session.ts` | Already has `updateTitle` action |
+| 6 | `ui/src/store/ui.ts` | Already has `openTitleEdit` modal action |
+| 7 | `ui/src/pages/Chat.tsx` | Where the editable title UI would go |
+| 8 | `ui/src/services/api.ts` | `updateSession` method already exists for the API call |
+
+#### P16: Message Retry / Resend
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/pages/Chat.tsx` | Where retry button would appear on messages |
+| 6 | `ui/src/services/api.ts` | `promptAsync` — understand the resend API contract |
+| 7 | `ui/src/services/sse.ts` | SSE reconnection logic — understand event flow |
+| 8 | `shared/src/types.ts` → `ServerEvent` | Understand message lifecycle events |
+
+#### P17: Offline Indicator
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/services/sse.ts` | `useEventStream` — has reconnect logic, needs status exposure |
+| 6 | `ui/src/components/Layout.tsx` | Where offline banner would render |
+| 7 | `ui/src/store/server.ts` | Server connection state — may need `online`/`offline` tracking |
+
+#### P18: Push Deep Linking
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/services/push.ts` | Push subscription helpers — understand current push flow |
+| 6 | `ui/src/services/auth.ts` | Session persistence — need to navigate to stored session |
+| 7 | `ui/src/pages/Chat.tsx` | Target route for deep link (`/chat/:sessionId`) |
+| 8 | `ui/src/store/session.ts` | Session state management |
+
+### Tier 3 — Memory Plugin Completion (P19–P23)
+
+#### P19: Semantic Memory Search
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/memory/MemoryRepository.ts` | `searchMemories()` exists but is text-based — needs vector search |
+| 6 | `server/src/memory/EmbeddingRepository.ts` | Embedding storage — needs similarity search method |
+| 7 | `server/src/memory/memoryRouter.ts` | `/memory/:serverId/search` route — extend with vector search |
+| 8 | `ui/src/plugin/memory/store/memoryStore.ts` | UI store — add search state |
+| 9 | `ui/src/pages/Memory.tsx` | Search UI — add semantic search input |
+
+#### P20: Memory Timeline View
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/memory/TimelineRepository.ts` | `getTimeline()`, `getTimelineBySession()` — already implemented |
+| 6 | `server/src/memory/memoryRouter.ts` | `/memory/:serverId/timeline` route — already exists |
+| 7 | `ui/src/services/memoryApi.ts` | `getTimeline()` client method — already exists |
+| 8 | `ui/src/pages/Memory.tsx` | Where timeline view component would be added |
+
+#### P21: Memory Profile UI
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/memory/ProfileRepository.ts` | `getProfile()`, `upsertProfileEntry()` — already implemented |
+| 6 | `server/src/memory/memoryRouter.ts` | `/memory/:serverId/profile` route — already exists |
+| 7 | `ui/src/services/memoryApi.ts` | `getProfile()` client method — already exists |
+| 8 | `ui/src/pages/Memory.tsx` | Where profile visualization would be added |
+
+#### P22: Memory Export
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/memory/MemoryRepository.ts` | Need to add export endpoint (JSON download) |
+| 6 | `server/src/memory/memoryRouter.ts` | Add `/memory/:serverId/export` route |
+| 7 | `ui/src/services/memoryApi.ts` | Add `exportMemories()` client method |
+| 8 | `ui/src/pages/Memory.tsx` | Add download button |
+
+#### P23: Memory Injection Wiring Verification
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/plugin/memory/hooks/useMemoryInjection.ts` | The hook that builds memory context prefix |
+| 6 | `ui/src/pages/Chat.tsx` | Where injection is wired into prompt submission |
+| 7 | `ui/src/plugin/memory/injection/MemoryInjector.ts` | The injection lifecycle |
+| 8 | `ui/src/store/session.ts` | Verify prompt flow includes injected context |
+
+### Tier 4 — Polish & Enhancement (P24–P30)
+
+#### P24: Image Rendering
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `shared/src/types.ts` → `FilePart` | Understand image part type |
+| 6 | `ui/src/components/MessageList.tsx` | Where image renderer would be added |
+
+#### P25: Session Tags / Folders
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `shared/src/types.ts` → `Session` | May need schema extension for tags |
+| 6 | `ui/src/pages/Sessions.tsx` | Where tag/folder UI would live |
+| 7 | `ui/src/services/api.ts` | May need new API methods |
+
+#### P26: Structured Logging
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/index.ts` | Contains `console.log`/`console.error` calls to replace |
+| 6 | `server/src/terminal.ts` | Contains `console.log` calls |
+| 7 | `server/src/tunnel.ts` | Contains `console.log` calls |
+
+#### P27: Request Correlation IDs
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/index.ts` | Where middleware is mounted — add X-Request-ID middleware |
+
+#### P28: Health Check Enhancement
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/index.ts` | Current `/health` endpoint — expand with uptime/memory/proxy status |
+| 6 | `server/src/proxy.ts` | Check upstream connectivity status |
+
+#### P29: Version from package.json
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/index.ts:20` | Hardcoded `"0.2.0"` — replace with `import { version } from '../package.json'` |
+
+#### P30: Docker Compose
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `Dockerfile` | Current production build — understand the image |
+| 6 | `docker/docker-compose.yml` | Existing n9router compose — extend with Pilot service |
+
+### Tech Debt Opening Sequences
+
+#### D1: Chat.tsx Decomposition
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `ui/src/pages/Chat.tsx` | The 355-line file to decompose |
+| 6 | `ui/src/components/` | Existing components — understand extraction patterns |
+| 7 | `ui/src/store/session.ts` | State used by Chat — understand what sub-components need |
+
+#### D3: Schema Drift Risk
+
+| Step | File | Why |
+|------|------|-----|
+| 5 | `server/src/memory/schema.ts` | Server-side schema (source of truth) |
+| 6 | `ui/src/plugin/memory/db/schema.ts` | Client-side schema copy — identify drift |
+
+### Quick Reference: Architecture Data Flow
+
+```
+shared/src/types.ts          ← All API contracts (start here for any change)
+     ↓
+server/src/index.ts           ← Server entry, middleware, route mounting
+server/src/proxy.ts           ← API proxy to upstream OpenCode
+server/src/memory/            ← Memory plugin (7 files, SQLite-backed)
+     ↓
+ui/src/services/api.ts        ← OpencodeClient (20 methods)
+ui/src/services/sse.ts        ← EventSource hook with reconnect
+ui/src/services/memoryApi.ts  ← MemoryApi (12 methods)
+ui/src/store/                 ← 6 Zustand stores (session, server, ui, n9router, log, memory)
+ui/src/pages/Chat.tsx         ← Main UI (355 lines, needs decomposition)
+ui/src/theme.ts               ← Dark-only theme (needs light mode)
+```
+
+---
+
 ## Appendix A: File Size Audit
 
 Files exceeding the 400-line target (from coding-style.md):

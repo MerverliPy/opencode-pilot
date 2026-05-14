@@ -4,9 +4,10 @@
  * Desktop (≥768px): persistent 240px sidebar on the left.
  * Mobile (<768px): full-width content + 56px bottom tab bar.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { colors, fonts } from "../theme";
+import { useServerStore } from "../store/server";
 
 const NAV_ITEMS = [
   { path: "/", label: "Chat", icon: "💬" },
@@ -99,6 +100,13 @@ function MobileNavLink({
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const hydrated = useServerStore((s) => s.hydrated);
+  const hydrate = useServerStore((s) => s.hydrate);
+
+  useEffect(() => {
+    if (!hydrated) void hydrate();
+  }, [hydrated, hydrate]);
 
   const isActive = useCallback(
     (path: string) => {
@@ -221,6 +229,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             display: "none",
             borderTop: `1px solid ${colors.border}`,
             backgroundColor: colors.surface,
+            paddingBottom: "env(safe-area-inset-bottom)",
           }}
         >
           {NAV_ITEMS.map((item) => (
@@ -242,6 +251,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }
           .mobile-nav {
             display: flex !important;
+            padding-bottom: env(safe-area-inset-bottom);
           }
         }
       `}</style>

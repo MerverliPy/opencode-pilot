@@ -38,9 +38,39 @@ Do not embed provider credentials or dashboard passwords in config files.
 - Read-only review/discovery: scouts, reviewers, auditors.
 - High-risk MCPs remain disabled by default and are enabled only for the workflow that needs them.
 
-## Key rotation verification
+## Key rotation
 
-When rotating the user API key (the `sk-*` token in `opencode.json`), test against the **chat completions endpoint**, not `/v1/models`. The models endpoint is intentionally public (OpenAI-compatible convention) even when `N9ROUTER_REQUIRE_API_KEY=true`.
+Two places hold the actual n9router API key and must be updated together:
+
+| File | Field | Purpose |
+|------|-------|---------|
+| `docker/.env` | `N9ROUTER_API_KEY` | n9router Docker container authenticates with this |
+| `opencode.json` | `provider.n9router.options.apiKey` | OpenCode sends this as Bearer token to n9router |
+
+### Automated rotation (recommended)
+
+```bash
+./scripts/rotate-n9router-key.sh                        # generate new random key
+./scripts/rotate-n9router-key.sh "n9r_<your-key-hex>"  # use a specific key
+./scripts/rotate-n9router-key.sh --dry-run              # preview without making changes
+```
+
+The script:
+
+1. Generates a cryptographically random key (`n9r_` + 64 hex chars) or accepts one
+2. Updates `docker/.env` → `N9ROUTER_API_KEY`
+3. Updates `opencode.json` → `provider.n9router.options.apiKey`
+4. Restarts the n9router Docker container and waits for healthy
+5. Runs `scripts/verify-key-rotation.sh` to confirm the new key works and the old key is rejected
+
+### Manual rotation
+
+If running the script isn't an option, update both files by hand:
+
+1. **`docker/.env`**: set `N9ROUTER_API_KEY=<new-key>`
+2. **`opencode.json`**: set `provider.n9router.options.apiKey` to the same value
+3. Restart the container: `docker compose -f docker/docker-compose.yml up -d --no-deps n9router`
+4. Verify the new key against the **chat completions endpoint** (the models endpoint is intentionally public):
 
 ```bash
 # New key → expect HTTP 200
@@ -59,4 +89,12 @@ curl -s -w "\nHTTP:%{http_code}" http://localhost:20128/v1/chat/completions \
 curl -s -w "\nHTTP:%{http_code}" http://localhost:20128/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"ds/deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
+```
+
+Or use the verification script directly:
+
+```bash
+export NEW_KEY="n9r_..."
+export OLD_KEY="n9r_..."
+./scripts/verify-key-rotation.sh
 ```

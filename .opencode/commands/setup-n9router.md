@@ -17,3 +17,4 @@ Tasks may include:
 - Compare local `opencode.json` against `opencode.json.example` for structure.
 - Verify `provider.options` contains `baseURL` but **no** `apiKey` — secrets must stay out of committed config. Add `apiKey` only to local (gitignored) `opencode.json`.
 - Never write secrets into config files.
+- Run key rotation: refer to `scripts/rotate-n9router-key.sh` (see `n9router-workflow` skill for details).

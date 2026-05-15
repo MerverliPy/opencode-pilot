@@ -1,32 +1,42 @@
 /**
  * RTK Compressor Plugin
  *
- * Conservative port of n9router's RealToolKit (RTK) context-compression system.
- * Only activates when tool output exceeds COMPRESS_THRESHOLD bytes.
+ * Port of n9router's RealToolKit (RTK) context-compression system.
+ * Activates when tool output exceeds COMPRESS_THRESHOLD bytes.
  * Auto-detects output format and applies the appropriate filter.
  *
- * Filters ported from: open-sse/rtk/ (n9router)
- * Detection order: git-diff → git-status → grep → find → tree → ls → dedup-log → smart-truncate
+ * Filters ported from: decolua/9router rtk/
+ * Detection order:
+ *   git-diff → git-status → grep → find → tree → ls
+ *   → search-list → read-numbered → dedup-log → smart-truncate
  */
 
 import type { Plugin } from "@opencode-ai/plugin";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const COMPRESS_THRESHOLD = 2048; // bytes — skip outputs smaller than this
-const DETECT_WINDOW = 1024; // chars — peek window for format detection
-const SMART_TRUNCATE_HEAD = 120; // lines kept from top
-const SMART_TRUNCATE_TAIL = 60; // lines kept from bottom
-const SMART_TRUNCATE_MIN_LINES = 250; // only kick in above this
+const COMPRESS_THRESHOLD = 500;       // bytes — skip outputs smaller than this
+const RAW_CAP = 10 * 1024 * 1024;    // 10 MiB — skip blobs too large to be useful
+const DETECT_WINDOW = 1024;           // chars — peek window for format detection
+const SMART_TRUNCATE_HEAD = 120;      // lines kept from top
+const SMART_TRUNCATE_TAIL = 60;       // lines kept from bottom
+const SMART_TRUNCATE_MIN_LINES = 250; // smart-truncate minimum line threshold
 const GIT_DIFF_HUNK_MAX_LINES = 100; // lines per git-diff hunk
-const GIT_DIFF_CONTEXT_KEEP = 3; // context lines around changes
-const GREP_PER_FILE_MAX = 10; // max matches shown per file
-const FIND_PER_DIR_MAX = 10; // max paths per directory
-const TREE_MAX_LINES = 200; // max tree output lines
-const LS_EXT_SUMMARY_TOP = 5; // top-N extensions shown in ls summary
-const DEDUP_LINE_MAX = 2000; // dedup-log truncation cap
+const GIT_DIFF_CONTEXT_KEEP = 3;     // context lines kept around changes
+const GREP_PER_FILE_MAX = 10;         // max matches shown per file
+const FIND_PER_DIR_MAX = 10;          // max paths per directory
+const FIND_TOTAL_DIR_MAX = 20;        // max total paths shown
+const TREE_MAX_LINES = 200;           // max tree output lines
+const LS_EXT_SUMMARY_TOP = 5;         // top-N extensions shown in ls summary
+const DEDUP_LINE_MAX = 2000;          // dedup-log truncation cap
+const STATUS_MAX_FILES = 10;          // max staged/unstaged files shown
+const STATUS_MAX_UNTRACKED = 10;      // max untracked files shown
+const SEARCH_LIST_MAX = 50;           // max files shown in search-list output
 
-// ─── Auto-detect ─────────────────────────────────────────────────────────────
+// Suppress unused-variable warning for GIT_DIFF_CONTEXT_KEEP (parity constant)
+void GIT_DIFF_CONTEXT_KEEP;
+
+// ─── Regexes ─────────────────────────────────────────────────────────────────
 
 const RE_GIT_DIFF = /^diff --git /m;
 const RE_GIT_DIFF_HUNK = /^@@ /m;
@@ -36,6 +46,10 @@ const RE_PORCELAIN = /^[ MADRCU?!][ MADRCU?!] \S/m;
 const RE_TREE_GLYPH = /[├└]──|│  /;
 const RE_LS_ROW = /^[-dlbcps][rwx-]{9}/m;
 const RE_LS_TOTAL = /^total \d+$/m;
+const RE_SEARCH_LIST = /^Result of search in '.+' \(total \d+ files?\):/m;
+const RE_LINE_NUMBERED = /^\s*\d+\|/;
+
+// ─── Auto-detect ─────────────────────────────────────────────────────────────
 
 type FilterFn = (text: string) => string;
 
@@ -48,18 +62,32 @@ function autoDetectFilter(text: string): FilterFn | null {
   if (RE_GIT_STATUS.test(head) || isMostlyPorcelain(head))
     return filterGitStatus;
 
-  const lines = head.split("\n");
-  const nonEmpty = lines.filter((l) => l.trim().length > 0);
-  const first5 = nonEmpty.slice(0, 5);
+  const headLines = head.split("\n");
+  const headNonEmpty = headLines.filter((l) => l.trim().length > 0);
+  const first5 = headNonEmpty.slice(0, 5);
 
   if (first5.some(isGrepLine)) return filterGrep;
-  if (nonEmpty.length >= 3 && nonEmpty.every(isPathLike)) return filterFind;
+  if (headNonEmpty.length >= 3 && headNonEmpty.every(isPathLike))
+    return filterFind;
   if (RE_TREE_GLYPH.test(head)) return filterTree;
   if (RE_LS_TOTAL.test(head) || countMatches(head, RE_LS_ROW) >= 3)
     return filterLs;
 
+  // Check against full text for less-common formats
+  if (RE_SEARCH_LIST.test(text)) return filterSearchList;
+
   const allLines = text.split("\n");
-  if (allLines.length >= SMART_TRUNCATE_MIN_LINES) return filterDedupLog;
+  const allNonEmpty = allLines.filter((l) => l.trim().length > 0);
+
+  // Cursor-style line-numbered file reads (N|content)
+  if (
+    allNonEmpty.length >= SMART_TRUNCATE_MIN_LINES &&
+    allNonEmpty.slice(0, 10).every((l) => RE_LINE_NUMBERED.test(l))
+  )
+    return filterReadNumbered;
+
+  // Dedup fires for any output with 5+ non-empty lines (matches upstream 9router behavior)
+  if (allNonEmpty.length >= 5) return filterDedupLog;
 
   return null;
 }
@@ -95,7 +123,7 @@ function countMatches(text: string, re: RegExp): number {
   return (text.match(g) || []).length;
 }
 
-// ─── Filters ──────────────────────────────────────────────────────────────────
+// ─── Filters ─────────────────────────────────────────────────────────────────
 
 /** Trim git-diff hunks that exceed GIT_DIFF_HUNK_MAX_LINES lines */
 function filterGitDiff(text: string): string {
@@ -111,7 +139,6 @@ function filterGitDiff(text: string): string {
       line.startsWith("---") ||
       line.startsWith("+++")
     ) {
-      // flush any pending skip notice
       if (hunkSkipped > 0) {
         out.push(`... [${hunkSkipped} lines omitted] ...`);
         hunkSkipped = 0;
@@ -146,7 +173,7 @@ function filterGitDiff(text: string): string {
   return out.join("\n");
 }
 
-/** Summarise git-status porcelain output */
+/** Summarise git-status output, capping staged/unstaged/untracked lists */
 function filterGitStatus(text: string): string {
   const lines = text.split("\n");
   const staged: string[] = [];
@@ -167,14 +194,27 @@ function filterGitStatus(text: string): string {
     }
   }
 
+  const capList = (arr: string[], max: number, label: string): string[] => {
+    if (arr.length <= max) return arr;
+    return [
+      ...arr.slice(0, max),
+      `  ... [${arr.length - max} more ${label} files]`,
+    ];
+  };
+
   const parts: string[] = [];
   if (other.length) parts.push(other.join("\n"));
-  if (staged.length)
-    parts.push(`Staged (${staged.length}):\n${staged.join("\n")}`);
-  if (unstaged.length)
-    parts.push(`Unstaged (${unstaged.length}):\n${unstaged.join("\n")}`);
-  if (untracked.length)
-    parts.push(`Untracked (${untracked.length}):\n${untracked.join("\n")}`);
+  const stagedCapped = capList(staged, STATUS_MAX_FILES, "staged");
+  const unstagedCapped = capList(unstaged, STATUS_MAX_FILES, "unstaged");
+  const untrackedCapped = capList(untracked, STATUS_MAX_UNTRACKED, "untracked");
+  if (stagedCapped.length)
+    parts.push(`Staged (${staged.length}):\n${stagedCapped.join("\n")}`);
+  if (unstagedCapped.length)
+    parts.push(`Unstaged (${unstaged.length}):\n${unstagedCapped.join("\n")}`);
+  if (untrackedCapped.length)
+    parts.push(
+      `Untracked (${untracked.length}):\n${untrackedCapped.join("\n")}`,
+    );
   return parts.join("\n\n");
 }
 
@@ -218,13 +258,16 @@ function filterGrep(text: string): string {
   return out.join("\n");
 }
 
-/** Cap find output paths */
+/** Cap find/glob output to FIND_TOTAL_DIR_MAX total paths */
 function filterFind(text: string): string {
   const lines = text.split("\n").filter((l) => l.trim());
-  if (lines.length <= FIND_PER_DIR_MAX * 2) return text;
-  const kept = lines.slice(0, FIND_PER_DIR_MAX);
+  if (lines.length <= FIND_TOTAL_DIR_MAX) return text;
+  const kept = lines.slice(0, FIND_TOTAL_DIR_MAX);
   const skipped = lines.length - kept.length;
-  return kept.join("\n") + `\n... [${skipped} paths omitted] ...`;
+  return (
+    kept.join("\n") +
+    `\n... [${skipped} paths omitted (>${FIND_PER_DIR_MAX}/dir, ${FIND_TOTAL_DIR_MAX} total max)] ...`
+  );
 }
 
 /** Cap tree output lines */
@@ -242,7 +285,6 @@ function filterLs(text: string): string {
   const rows = lines.filter((l) => /^[-dlbcps][rwx-]{9}/.test(l));
   if (rows.length === 0) return text;
 
-  // Count by extension
   const extCount: Map<string, number> = new Map();
   let dirs = 0;
   for (const row of rows) {
@@ -276,15 +318,43 @@ function filterLs(text: string): string {
     .join("\n");
 }
 
-/** Deduplicate repetitive log lines + cap total */
+/** Cap Cursor-style "Result of search in '...' (total N files):" output */
+function filterSearchList(text: string): string {
+  const lines = text.split("\n");
+  const headerIdx = lines.findIndex((l) => RE_SEARCH_LIST.test(l));
+  if (headerIdx === -1) return text;
+
+  const header = lines.slice(0, headerIdx + 1);
+  const results = lines.slice(headerIdx + 1).filter((l) => l.trim());
+  if (results.length <= SEARCH_LIST_MAX) return text;
+
+  const kept = results.slice(0, SEARCH_LIST_MAX);
+  const skipped = results.length - SEARCH_LIST_MAX;
+  return [
+    ...header,
+    ...kept,
+    `... [${skipped} files omitted] ...`,
+  ].join("\n");
+}
+
+/** Strip line numbers from Cursor-style N|content reads, then dedup */
+function filterReadNumbered(text: string): string {
+  const lines = text.split("\n");
+  const stripped = lines.map((l) => {
+    const m = l.match(/^\s*\d+\|(.*)/);
+    return m ? m[1] : l;
+  });
+  return filterDedupLog(stripped.join("\n"));
+}
+
+/** Deduplicate repetitive log lines + cap total (no minimum line guard) */
 function filterDedupLog(text: string): string {
   const lines = text.split("\n");
-  if (lines.length <= SMART_TRUNCATE_MIN_LINES) return text;
-
   const seen: Map<string, number> = new Map();
   const out: string[] = [];
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const key = line.trim();
     const count = (seen.get(key) || 0) + 1;
     seen.set(key, count);
@@ -294,7 +364,7 @@ function filterDedupLog(text: string): string {
       out.push(`  [line repeated, further duplicates suppressed]`);
     }
     if (out.length >= DEDUP_LINE_MAX) {
-      const remaining = lines.length - lines.indexOf(line) - 1;
+      const remaining = lines.length - i - 1;
       if (remaining > 0) out.push(`... [${remaining} lines omitted] ...`);
       break;
     }
@@ -315,6 +385,21 @@ function filterSmartTruncate(text: string): string {
   );
 }
 
+// ─── Filter name lookup ───────────────────────────────────────────────────────
+
+const FILTER_NAMES = new Map<FilterFn, string>([
+  [filterGitDiff, "git-diff"],
+  [filterGitStatus, "git-status"],
+  [filterGrep, "grep"],
+  [filterFind, "find"],
+  [filterTree, "tree"],
+  [filterLs, "ls"],
+  [filterSearchList, "search-list"],
+  [filterReadNumbered, "read-numbered"],
+  [filterDedupLog, "dedup-log"],
+  [filterSmartTruncate, "smart-truncate"],
+]);
+
 // ─── Plugin ───────────────────────────────────────────────────────────────────
 
 export const RtkCompressorPlugin: Plugin = async ({ $ }) => {
@@ -325,6 +410,7 @@ export const RtkCompressorPlugin: Plugin = async ({ $ }) => {
         (output as any)?.output ?? (output as any)?.content ?? output;
       if (typeof raw !== "string") return;
       if (raw.length < COMPRESS_THRESHOLD) return;
+      if (raw.length > RAW_CAP) return; // skip blobs too large to be useful
 
       const filter = autoDetectFilter(raw) ?? filterSmartTruncate;
       const compressed = filter(raw);
@@ -333,22 +419,7 @@ export const RtkCompressorPlugin: Plugin = async ({ $ }) => {
       if (compressed.length >= raw.length) return;
 
       const saved = raw.length - compressed.length;
-      const filterName =
-        filter === filterGitDiff
-          ? "git-diff"
-          : filter === filterGitStatus
-            ? "git-status"
-            : filter === filterGrep
-              ? "grep"
-              : filter === filterFind
-                ? "find"
-                : filter === filterTree
-                  ? "tree"
-                  : filter === filterLs
-                    ? "ls"
-                    : filter === filterDedupLog
-                      ? "dedup-log"
-                      : "smart-truncate";
+      const filterName = FILTER_NAMES.get(filter) ?? "unknown";
 
       const annotated = `${compressed}\n\n[RTK: ${filterName} ${raw.length}→${compressed.length} bytes (-${saved})]`;
 

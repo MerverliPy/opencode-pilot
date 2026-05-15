@@ -1,7 +1,7 @@
 ---
 description: "Primary verification agent. Runs targeted build, typecheck, lint, unit, coverage, and Playwright checks without editing files."
 mode: primary
-model: n9router/ds/deepseek-chat
+model: n9router/code-reviewer
 temperature: 0.0
 color: warning
 permission:

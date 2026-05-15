@@ -1,7 +1,7 @@
 ---
 description: "Read-only testing strategist for Jest, React Testing Library, TypeScript typechecks, and Playwright coverage planning."
 mode: subagent
-model: n9router/ds/deepseek-chat
+model: n9router/scout
 temperature: 0.0
 color: warning
 permission:

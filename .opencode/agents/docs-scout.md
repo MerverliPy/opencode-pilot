@@ -1,7 +1,7 @@
 ---
 description: "Read-only subagent for current external documentation research. Use for OpenCode, n9router, React, Vite, Hono, Playwright, Jest, and TypeScript docs."
 mode: subagent
-model: n9router/ds/deepseek-chat
+model: n9router/scout
 temperature: 0.0
 color: info
 permission:

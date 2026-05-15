@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "types.ts",
+    "config.ts",
+    "collector/**/*.ts",
+    "detectors/**/*.ts",
+    "plugins/**/*.ts",
+    "runners/**/*.ts",
+    "scenarios/**/*.ts",
+    "reporters/**/*.ts",
+    "__tests__/**/*.ts"
+  ]
+}

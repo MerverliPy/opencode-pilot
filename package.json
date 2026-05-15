@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "benchtest",
+    "e2e",
     "server",
-    "ui",
     "shared",
-    "e2e"
+    "ui"
   ],
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w ui",
@@ -24,7 +25,10 @@
     "test:coverage": "npm run test:coverage -w ui",
     "test:watch": "npm run test:watch -w ui",
     "qa:exploratory": "./scripts/dogfood-qa.sh",
-    "start": "npm run start -w server"
+    "start": "npm run start -w server",
+    "benchtest": "node benchtest-run.mjs --scenario all",
+    "benchtest:quick": "node benchtest-run.mjs --scenario all --quick",
+    "benchtest:report": "echo \"HTML reports in benchtest-out-*/\""
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^19.0.0",

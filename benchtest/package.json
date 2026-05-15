@@ -1,0 +1,16 @@
+{
+  "name": "benchtest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'No unit tests yet' && exit 0"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.14.41"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  }
+}

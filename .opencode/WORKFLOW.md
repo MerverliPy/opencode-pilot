@@ -43,4 +43,4 @@ Skills are intentionally limited to Pilot-relevant guidance and should be loaded
 
 ## MCP posture
 
-`sequential-thinking` is enabled for low-risk planning support. High-risk/context-heavy MCPs (`github`, `memory`, `filesystem`, `chrome-devtools`) are disabled by default and should be enabled only for a specific workflow.
+`sequential-thinking`, `github`, and `chrome-devtools` are enabled. `memory` and `filesystem` are disabled by default and should be enabled only for a specific workflow.

@@ -30,3 +30,4 @@ Choose the cheapest verification that proves the change:
 - Validate and normalize inputs at boundaries.
 - Use parameterized SQLite queries.
 - Never log credentials, bearer tokens, cookies, API keys, provider responses with secrets, or full request bodies unless explicitly required for a controlled debug task.
+- Never commit API keys, tokens, or secrets in `opencode.json` or any config file. Add secrets only to local (gitignored) copies.

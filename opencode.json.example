@@ -1,7 +1,7 @@
 {
-  "_comment": "Copy this file to opencode.json and update the baseURL to your n9router instance. Options: http://localhost:20128/v1 (local Docker), http://localhost:20128/v1 (Tailscale), or any n9router URL.",
+  "_comment": "Copy this file to opencode.json. Set baseURL to your n9router instance. Do NOT commit apiKey — add it only to local opencode.json (gitignored). Options: http://localhost:20128/v1 (local Docker) or any n9router URL.",
   "$schema": "https://opencode.ai/config.json",
-  "model": "n9router/opencode/deepseek-v4-flash-free",
+  "model": "n9router/cx/gpt-5.4",
   "default_agent": "orchestrator",
   "instructions": [
     "AGENTS.md",
@@ -104,6 +104,12 @@
         "baseURL": "http://localhost:20128/v1"
       },
       "models": {
+        "cx/gpt-5.4": {
+          "name": "GPT 5.4 (via Codex/ChatGPT Plus)"
+        },
+        "cx/gpt-5.3-codex": {
+          "name": "GPT 5.3 Codex (via Codex/ChatGPT Plus)"
+        },
         "ds/deepseek-v4-flash": {
           "name": "DeepSeek V4 Flash"
         },
@@ -113,11 +119,20 @@
         "ds/deepseek-reasoner": {
           "name": "DeepSeek Reasoner"
         },
-        "opencode/deepseek-v4-flash-free": {
-          "name": "DeepSeek V4 Flash (FREE via Zen)"
+        "build-fixer": {
+          "name": "Build Fixer"
+        },
+        "scout": {
+          "name": "Scout"
+        },
+        "docs-updater": {
+          "name": "Docs Updater"
+        },
+        "e2e-runner": {
+          "name": "E2E Runner"
         }
       }
     }
   },
-  "small_model": "n9router/opencode/deepseek-v4-flash-free"
+  "small_model": "n9router/scout"
 }

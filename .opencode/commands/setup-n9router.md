@@ -14,4 +14,6 @@ Tasks may include:
 - Provide setup commands or dashboard checklist.
 - Validate model list with local curl commands when the user confirms n9router is running.
 
-Never write secrets into config files.
+- Compare local `opencode.json` against `opencode.json.example` for structure.
+- Verify `provider.options` contains `baseURL` but **no** `apiKey` — secrets must stay out of committed config. Add `apiKey` only to local (gitignored) `opencode.json`.
+- Never write secrets into config files.

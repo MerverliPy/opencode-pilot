@@ -75,7 +75,7 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
     }
 
     try {
-      const upstream = await fetch(url, { method, headers, body });
+      const upstream = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(30_000) });
 
       // For SSE streams, pipe the response directly
       const contentType = upstream.headers.get("content-type") ?? "";
@@ -83,7 +83,7 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
       upstream.headers.forEach((value, key) => {
         // Skip hop-by-hop headers
         if (
-          !["transfer-encoding", "connection", "keep-alive"].includes(
+          !["transfer-encoding", "connection", "keep-alive", "te", "trailer", "proxy-authenticate", "proxy-authorization", "upgrade"].includes(
             key.toLowerCase(),
           )
         ) {

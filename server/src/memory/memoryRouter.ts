@@ -153,7 +153,7 @@ router.patch("/:serverId/:id", async (c) => {
   }
   const patch = (await c.req.json()) as Parameters<typeof updateMemory>[1];
   updateMemory(id, patch);
-  return c.json(getMemoryById(id));
+  return c.json(existing);
 });
 
 // ── Delete all (must be registered BEFORE /:id to avoid "all" matching as :id) ─

@@ -57,7 +57,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
         es?.close();
         es = null;
         if (stopped) return;
-        backoff = Math.min(backoff * 2, 15_000);
+        backoff = Math.min(backoff * 2 + Math.random() * 500, 15_000);
         log.warn("sse", `disconnected — reconnecting in ${backoff}ms`);
         setTimeout(connect, backoff);
       };

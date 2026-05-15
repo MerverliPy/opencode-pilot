@@ -99,11 +99,11 @@ export function insertMemory(
 
 export function getMemoriesByServer(
   serverId: string,
-  opts: { includeArchived?: boolean; limit?: number } = {},
+  opts: { includeArchived?: boolean; limit?: number } = { limit: 200 },
 ): Memory[] {
   const db = getMemoryDb();
   const archived = opts.includeArchived ? "" : "AND is_archived = 0";
-  const limit = opts.limit ? `LIMIT ${opts.limit}` : "";
+  const limit = `LIMIT ${opts.limit ?? -1}`;
   const rows = db
     .prepare(
       `SELECT * FROM memories WHERE server_id = @server_id ${archived}

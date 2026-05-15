@@ -49,7 +49,7 @@ export function createPtySession(): string {
   // Broadcast pty output to all connected clients
   proc.onData((data: string) => {
     for (const ws of session.clients) {
-      if (ws.readyState === ws.OPEN) {
+      if (ws.readyState === ws.OPEN && ws.bufferedAmount < 65536) {
         ws.send(data);
       }
     }

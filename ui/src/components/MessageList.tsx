@@ -3,7 +3,7 @@
  *
  * Auto-scrolls to the bottom when new content arrives.
  */
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { Message } from "@pilot-shared/types";
 import type { Turn } from "../store/session";
 import { colors, fonts, fontSizes } from "../theme";
@@ -49,7 +49,7 @@ function MessageCostFooter({ message }: { message: Message }) {
   );
 }
 
-function TurnView({ turn }: { turn: Turn }) {
+const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
   const isUser = turn.message.role === "user";
   return (
     <div
@@ -225,7 +225,7 @@ function TurnView({ turn }: { turn: Turn }) {
       {!isUser && <MessageCostFooter message={turn.message} />}
     </div>
   );
-}
+});
 
 export function MessageList({ turns }: { turns: Turn[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);

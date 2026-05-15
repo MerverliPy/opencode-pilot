@@ -5,7 +5,8 @@
  */
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { MarkdownContent, markdownComponents } from "../MarkdownContent";
+import { MarkdownContent } from "../MarkdownContent";
+import { markdownComponents } from "../markdownComponents";
 
 type Renderer = (props: Record<string, unknown>) => React.JSX.Element;
 

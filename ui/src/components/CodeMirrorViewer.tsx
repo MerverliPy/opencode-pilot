@@ -32,7 +32,7 @@ interface CodeMirrorViewerProps {
  * Determine the CodeMirror language extension from a filename.
  * Exported for unit testing.
  */
-export function getLanguageExtension(filename: string): Extension {
+function getLanguageExtension(filename: string): Extension {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   switch (ext) {
     case "ts":
@@ -103,7 +103,6 @@ function buildExtensions(filename: string): Extension[] {
         ? "light"
         : "dark"
       : "dark";
-  const palette = getResolvedColors(theme);
   const extensions: Extension[] = [
     lineNumbers(),
     highlightActiveLine(),

@@ -3,6 +3,7 @@ description: "Read-only security auditor for Pilot web/API code. Checks secrets,
 mode: subagent
 temperature: 0.0
 color: error
+model: n9router/ds/deepseek-reasoner
 permission:
   read: allow
   list: allow

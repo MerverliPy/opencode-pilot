@@ -1,7 +1,7 @@
 ---
 description: "Read-only performance reviewer for React rendering, SSE/WebSocket flows, SQLite queries, terminal streaming, and bundle/build cost."
 mode: subagent
-model: n9router/code-reviewer
+model: n9router/cx/gpt-5.4
 temperature: 0.0
 color: warning
 permission:

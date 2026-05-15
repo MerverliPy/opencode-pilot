@@ -257,4 +257,28 @@ describe("Diff", () => {
       );
     });
   });
+
+  it("renders theme-aware diff2html override styles", async () => {
+    mockedUseServerStore.mockReturnValue({
+      id: "s1",
+      url: "http://localhost:3000",
+      name: "Local",
+    });
+    setupFetch();
+
+    const { container } = render(<Diff />);
+
+    await waitFor(() => {
+      expect(screen.getByText("main")).toBeInTheDocument();
+    });
+
+    const styleTag = Array.from(container.querySelectorAll("style")).find((node) =>
+      node.textContent?.includes(".diff2html-wrapper .d2h-wrapper"),
+    );
+
+    expect(styleTag?.textContent).toContain(".d2h-code-side-line");
+    expect(styleTag?.textContent).toContain("color-mix");
+    expect(styleTag?.textContent).toContain("var(--pilot-success)");
+    expect(styleTag?.textContent).toContain("var(--pilot-error)");
+  });
 });

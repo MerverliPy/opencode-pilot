@@ -1,7 +1,7 @@
 /**
  * MarkdownContent: renders text with full Markdown + GFM + syntax highlighting.
  *
- * Wraps react-markdown with the project's dark theme styling.
+ * Wraps react-markdown with system-aware theme styling.
  */
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
@@ -9,10 +9,8 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { colors, fonts, fontSizes } from "../theme";
 
-// highlight.js dark theme for code blocks
-import "highlight.js/styles/atom-one-dark.css";
 
-const components: Components = {
+export const markdownComponents: Components = {
   h1: ({ children, ...props }) => (
     <h1 style={{ fontSize: fontSizes.lg, fontWeight: 700, margin: "12px 0 6px", color: colors.text, fontFamily: fonts.sans }} {...props}>{children}</h1>
   ),
@@ -171,7 +169,7 @@ export function MarkdownContent({ text }: { text: string }) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeHighlight]}
-      components={components}
+      components={markdownComponents}
     >
       {text}
     </ReactMarkdown>

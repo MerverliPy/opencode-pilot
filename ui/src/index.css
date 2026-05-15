@@ -1,0 +1,126 @@
+:root {
+  color-scheme: dark light;
+  --pilot-bg: #0d0d0d;
+  --pilot-surface: #1a1a1a;
+  --pilot-surface-alt: #222222;
+  --pilot-text: #e8e8e8;
+  --pilot-muted: #878787;
+  --pilot-muted-alt: #606060;
+  --pilot-accent: #4fc3f7;
+  --pilot-accent-text: #041319;
+  --pilot-info: #64b5f6;
+  --pilot-success: #81c784;
+  --pilot-warning: #ffb74d;
+  --pilot-error: #e57373;
+  --pilot-tool: #ce93d8;
+  --pilot-border: #333333;
+  --pilot-border-subtle: #2a2a2a;
+  --pilot-foreground: #e8e8e8;
+  --pilot-selection-background: rgba(79, 195, 247, 0.3);
+  --pilot-error-tint: rgba(229, 115, 115, 0.1);
+  --pilot-success-tint: rgba(129, 199, 132, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --pilot-bg: #f7f7f8;
+    --pilot-surface: #ffffff;
+    --pilot-surface-alt: #f1f3f5;
+    --pilot-text: #111827;
+    --pilot-muted: #6b7280;
+    --pilot-muted-alt: #9ca3af;
+    --pilot-accent: #0ea5e9;
+    --pilot-accent-text: #ffffff;
+    --pilot-info: #2563eb;
+    --pilot-success: #15803d;
+    --pilot-warning: #b45309;
+    --pilot-error: #dc2626;
+    --pilot-tool: #9333ea;
+    --pilot-border: #d1d5db;
+    --pilot-border-subtle: #e5e7eb;
+    --pilot-foreground: #111827;
+    --pilot-selection-background: rgba(14, 165, 233, 0.18);
+    --pilot-error-tint: rgba(220, 38, 38, 0.08);
+    --pilot-success-tint: rgba(21, 128, 61, 0.08);
+  }
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+html,
+body {
+  background: var(--pilot-bg);
+  color: var(--pilot-text);
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+
+.hljs {
+  display: block;
+  background: transparent;
+  color: var(--pilot-text);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--pilot-muted);
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+  color: var(--pilot-tool);
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-name,
+.hljs-type,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: var(--pilot-success);
+}
+
+.hljs-number,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr,
+.hljs-attr,
+.hljs-regexp,
+.hljs-doctag {
+  color: var(--pilot-warning);
+}
+
+.hljs-function,
+.hljs-class .hljs-title,
+.hljs-built_in,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-code {
+  color: var(--pilot-accent);
+}
+
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-tag,
+.hljs-subst,
+.hljs-deletion {
+  color: var(--pilot-error);
+}

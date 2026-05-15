@@ -9,7 +9,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { useServerStore } from "../store/server";
-import { colors, fonts, fontSizes } from "../theme";
+import { colors, fonts, fontSizes, getResolvedColors } from "../theme";
 
 interface TermTab {
   id: string;
@@ -29,16 +29,21 @@ function buildWsUrl(serverUrl: string, sessionId?: string): string {
   return sessionId ? `${base}?id=${sessionId}` : base;
 }
 
+function terminalTheme() {
+  const palette = getResolvedColors();
+  return {
+    background: palette.bg,
+    foreground: palette.text,
+    cursor: palette.accent,
+    selectionBackground: palette.selectionBackground,
+  };
+}
+
 function createTab(id: string, label: string): Omit<TermTab, "containerRef"> {
   const term = new XTerm({
     fontFamily: fonts.mono,
     fontSize: 13,
-    theme: {
-      background: colors.bg,
-      foreground: colors.text,
-      cursor: colors.accent,
-      selectionBackground: "rgba(79,195,247,0.3)",
-    },
+    theme: terminalTheme(),
     cursorBlink: true,
     scrollback: 5000,
     convertEol: true,
@@ -198,6 +203,21 @@ export function Terminal() {
       setTimeout(() => tab.fitAddon.fit(), 10);
     }
   }, [activeTabId]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const handleThemeChange = () => {
+      const theme = terminalTheme();
+      for (const tab of tabsRef.current) {
+        tab.term.options.theme = theme;
+      }
+    };
+
+    media.addEventListener("change", handleThemeChange);
+    return () => media.removeEventListener("change", handleThemeChange);
+  }, []);
 
   // Open first tab on mount
   useEffect(() => {

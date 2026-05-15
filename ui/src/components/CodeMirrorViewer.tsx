@@ -21,6 +21,7 @@ import { html } from "@codemirror/lang-html";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { Extension } from "@codemirror/state";
+import { getResolvedColors } from "../theme";
 
 interface CodeMirrorViewerProps {
   content: string;
@@ -65,6 +66,61 @@ export function getLanguageExtension(filename: string): Extension {
   }
 }
 
+function buildEditorTheme() {
+  const palette = getResolvedColors();
+  return EditorView.theme({
+    "&": {
+      height: "100%",
+      fontSize: "13px",
+      backgroundColor: palette.surface,
+      color: palette.text,
+    },
+    ".cm-scroller": { overflow: "auto", fontFamily: "inherit" },
+    ".cm-gutters": {
+      backgroundColor: palette.surfaceAlt,
+      color: palette.muted,
+      borderRight: `1px solid ${palette.border}`,
+    },
+    ".cm-activeLine": {
+      backgroundColor: palette.selectionBackground,
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: palette.selectionBackground,
+    },
+    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
+      backgroundColor: palette.selectionBackground,
+    },
+    ".cm-content": {
+      caretColor: palette.accent,
+    },
+  });
+}
+
+function buildExtensions(filename: string): Extension[] {
+  const theme =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark"
+      : "dark";
+  const palette = getResolvedColors(theme);
+  const extensions: Extension[] = [
+    lineNumbers(),
+    highlightActiveLine(),
+    highlightSpecialChars(),
+    drawSelection(),
+    getLanguageExtension(filename),
+    EditorState.readOnly.of(true),
+    buildEditorTheme(),
+  ];
+
+  if (theme === "dark") {
+    extensions.splice(5, 0, oneDark);
+  }
+
+  return extensions;
+}
+
 export function CodeMirrorViewer({ content, filename }: CodeMirrorViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -76,19 +132,7 @@ export function CodeMirrorViewer({ content, filename }: CodeMirrorViewerProps) {
 
     const state = EditorState.create({
       doc: content,
-      extensions: [
-        lineNumbers(),
-        highlightActiveLine(),
-        highlightSpecialChars(),
-        drawSelection(),
-        getLanguageExtension(filename),
-        oneDark,
-        EditorState.readOnly.of(true),
-        EditorView.theme({
-          "&": { height: "100%", fontSize: "13px" },
-          ".cm-scroller": { overflow: "auto", fontFamily: "inherit" },
-        }),
-      ],
+      extensions: buildExtensions(filename),
     });
 
     const view = new EditorView({ state, parent: container });
@@ -122,19 +166,7 @@ export function CodeMirrorViewer({ content, filename }: CodeMirrorViewerProps) {
 
     const state = EditorState.create({
       doc: view.state.doc.toString(),
-      extensions: [
-        lineNumbers(),
-        highlightActiveLine(),
-        highlightSpecialChars(),
-        drawSelection(),
-        getLanguageExtension(filename),
-        oneDark,
-        EditorState.readOnly.of(true),
-        EditorView.theme({
-          "&": { height: "100%", fontSize: "13px" },
-          ".cm-scroller": { overflow: "auto", fontFamily: "inherit" },
-        }),
-      ],
+      extensions: buildExtensions(filename),
     });
     view.setState(state);
   }, [filename]);

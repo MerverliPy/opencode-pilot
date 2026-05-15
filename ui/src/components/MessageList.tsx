@@ -81,7 +81,7 @@ function TurnView({ turn }: { turn: Turn }) {
           padding: "10px 14px",
           borderRadius: 10,
           backgroundColor: isUser ? colors.accent : colors.surface,
-          color: isUser ? "#000" : colors.text,
+          color: isUser ? colors.accentText : colors.text,
           fontFamily: fonts.sans,
           fontSize: fontSizes.sm,
           lineHeight: 1.5,

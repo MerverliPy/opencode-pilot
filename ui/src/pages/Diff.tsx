@@ -317,7 +317,7 @@ export function Diff() {
         <div
           style={{
             padding: "8px 20px",
-            backgroundColor: "rgba(229,115,115,0.1)",
+            backgroundColor: colors.errorTint,
             borderBottom: `1px solid ${colors.error}`,
             color: colors.error,
             fontFamily: fonts.mono,
@@ -371,7 +371,7 @@ export function Diff() {
               backgroundColor: colors.accent,
               border: "none",
               borderRadius: 4,
-              color: colors.bg,
+              color: colors.accentText,
               fontFamily: fonts.sans,
               fontSize: fontSizes.sm,
               fontWeight: 600,
@@ -390,7 +390,7 @@ export function Diff() {
         <div
           style={{
             padding: "8px 20px",
-            backgroundColor: "rgba(129,199,132,0.1)",
+            backgroundColor: colors.successTint,
             borderBottom: `1px solid ${colors.success}`,
             color: colors.success,
             fontFamily: fonts.mono,
@@ -478,14 +478,24 @@ export function Diff() {
 
       {/* diff2html dark-theme overrides */}
       <style>{`
-        .diff2html-wrapper .d2h-wrapper { font-family: ${fonts.mono}; font-size: 12px; }
-        .diff2html-wrapper .d2h-file-header { background: ${colors.surface}; border-color: ${colors.border}; color: ${colors.text}; }
-        .diff2html-wrapper .d2h-code-linenumber { background: ${colors.surface}; border-color: ${colors.border}; color: ${colors.muted}; }
-        .diff2html-wrapper .d2h-code-line { background: ${colors.bg}; color: ${colors.text}; }
-        .diff2html-wrapper .d2h-ins { background: rgba(129,199,132,0.12); }
-        .diff2html-wrapper .d2h-del { background: rgba(229,115,115,0.12); }
-        .diff2html-wrapper .d2h-ins ins { background: rgba(129,199,132,0.35); }
-        .diff2html-wrapper .d2h-del del { background: rgba(229,115,115,0.35); }
+        .diff2html-wrapper .d2h-wrapper { font-family: ${fonts.mono}; font-size: 12px; color: ${colors.text}; }
+        .diff2html-wrapper .d2h-file-header,
+        .diff2html-wrapper .d2h-file-name,
+        .diff2html-wrapper .d2h-file-stats,
+        .diff2html-wrapper .d2h-info { background: ${colors.surface}; border-color: ${colors.border}; color: ${colors.text}; }
+        .diff2html-wrapper .d2h-code-linenumber,
+        .diff2html-wrapper .d2h-code-side-linenumber,
+        .diff2html-wrapper .d2h-code-side-emptyplaceholder { background: ${colors.surface}; border-color: ${colors.border}; color: ${colors.muted}; }
+        .diff2html-wrapper .d2h-code-line,
+        .diff2html-wrapper .d2h-code-side-line,
+        .diff2html-wrapper .d2h-code-line-ctn,
+        .diff2html-wrapper .d2h-tag { background: ${colors.bg}; color: ${colors.text}; }
+        .diff2html-wrapper .d2h-ins { background: color-mix(in srgb, ${colors.success} 12%, transparent); }
+        .diff2html-wrapper .d2h-del { background: color-mix(in srgb, ${colors.error} 12%, transparent); }
+        .diff2html-wrapper .d2h-ins ins,
+        .diff2html-wrapper .d2h-ins.d2h-change { background: color-mix(in srgb, ${colors.success} 28%, transparent); }
+        .diff2html-wrapper .d2h-del del,
+        .diff2html-wrapper .d2h-del.d2h-change { background: color-mix(in srgb, ${colors.error} 28%, transparent); }
         .diff2html-wrapper table { width: 100%; border-collapse: collapse; }
         .diff2html-wrapper td { border-color: ${colors.borderSubtle}; }
       `}</style>

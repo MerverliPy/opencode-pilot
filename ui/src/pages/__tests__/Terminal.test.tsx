@@ -7,6 +7,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 // Mock xterm.js before importing Terminal
+const matchMediaListeners: Array<() => void> = [];
+
 const mockTermInstance = {
   loadAddon: jest.fn(),
   open: jest.fn(),
@@ -15,6 +17,7 @@ const mockTermInstance = {
   dispose: jest.fn(),
   cols: 80,
   rows: 24,
+  options: {},
 };
 
 const mockFitAddon = {
@@ -56,8 +59,25 @@ const mockedUseServerStore = useServerStore as unknown as jest.Mock;
 describe("Terminal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    matchMediaListeners.length = 0;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: false,
+        addEventListener: jest.fn((event, listener) => {
+          if (event === "change") matchMediaListeners.push(listener);
+        }),
+        removeEventListener: jest.fn((event, listener) => {
+          if (event === "change") {
+            const index = matchMediaListeners.indexOf(listener);
+            if (index >= 0) matchMediaListeners.splice(index, 1);
+          }
+        }),
+      })),
+    });
     mockTermInstance.loadAddon.mockClear();
     mockFitAddon.fit.mockClear();
+    mockTermInstance.options = {};
   });
 
   it("shows 'no server configured' when no active server", () => {
@@ -89,5 +109,26 @@ describe("Terminal", () => {
     expect(
       container.querySelector("[aria-label='New terminal tab']"),
     ).toBeInTheDocument();
+  });
+
+  it("updates open terminal theme when system theme changes", () => {
+    mockedUseServerStore.mockReturnValue({
+      id: "s1",
+      url: "http://localhost:3000",
+      name: "Local",
+    });
+
+    render(<Terminal />);
+
+    expect(matchMediaListeners).toHaveLength(1);
+    matchMediaListeners[0]();
+
+    expect((mockTermInstance.options as { theme?: unknown }).theme).toEqual(
+      expect.objectContaining({
+        background: expect.any(String),
+        foreground: expect.any(String),
+        cursor: expect.any(String),
+      }),
+    );
   });
 });

@@ -52,8 +52,10 @@ jest.mock("@codemirror/lang-html", () => ({
 jest.mock("@codemirror/lang-markdown", () => ({
   markdown: jest.fn().mockReturnValue([]),
 }));
-jest.mock("@codemirror/theme-one-dark", () => ({ oneDark: [] }));
+const mockOneDark = ["oneDarkTheme"];
+jest.mock("@codemirror/theme-one-dark", () => ({ oneDark: mockOneDark }));
 
+import { EditorState } from "@codemirror/state";
 import { CodeMirrorViewer, getLanguageExtension } from "../CodeMirrorViewer";
 
 describe("getLanguageExtension", () => {
@@ -142,5 +144,41 @@ describe("CodeMirrorViewer", () => {
       <CodeMirrorViewer content="" filename="empty.txt" />,
     );
     expect(getByTestId("codemirror-viewer")).toBeInTheDocument();
+  });
+
+  it("includes oneDark extension when system theme is dark", () => {
+    (EditorState.create as jest.Mock).mockClear();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: false,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    });
+
+    render(<CodeMirrorViewer content="const x = 1;" filename="test.ts" />);
+
+    const create = EditorState.create as jest.Mock;
+    const extensions = create.mock.calls[0][0].extensions as unknown[];
+    expect(extensions).toContain(mockOneDark);
+  });
+
+  it("omits oneDark extension when system theme is light", () => {
+    (EditorState.create as jest.Mock).mockClear();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: true,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    });
+
+    render(<CodeMirrorViewer content="const x = 1;" filename="test.ts" />);
+
+    const create = EditorState.create as jest.Mock;
+    const extensions = create.mock.calls[0][0].extensions as unknown[];
+    expect(extensions).not.toContain(mockOneDark);
   });
 });

@@ -55,6 +55,9 @@ Requires `CLOUDFLARE_TUNNEL_TOKEN` set in `docker/.env`.
 # Start n9router first (step 1), then:
 npm run dev:server      # Hono server on :3000
 npm run dev:ui          # Vite UI on :5173 (separate terminal)
+
+# Optional: set a bearer token to protect sensitive server routes
+export PILOT_AUTH_TOKEN="your-secret"      # blank = auth disabled
 ```
 
 The server reads `OPENCODE_URL` from `.env`. Default for Docker n9router:
@@ -194,4 +197,5 @@ tail -f /tmp/pilot-server.log                            # Server logs
 | `OPENCODE_URL` not working | Verify n9router is healthy: `curl localhost:20128/api/health` |
 | CORS errors in browser | Add your origin to `CORS_ORIGINS` in `.env` |
 | Port conflict when running n9router natively + Docker | Stop native: `pkill -f n9router` or use `N9ROUTER_PORT=20129` |
+| 401 Unauthorized on protected routes | Set `PILOT_AUTH_TOKEN` in `.env` and send `Authorization: Bearer <token>` header with requests. If auth should be disabled, leave `PILOT_AUTH_TOKEN` unset. |
 | Screenshot tests fail in CI | Baselines generated on dev machine — use `--update-snapshots` to re-generate |

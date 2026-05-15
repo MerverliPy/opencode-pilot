@@ -236,6 +236,42 @@ describe("createProxy", () => {
     expect(calledUrl).toBe("http://upstream:4096/search?q=hello&page=1");
   });
 
+
+  it("does not forward Pilot auth token upstream", async () => {
+    let sentAuth: string | undefined;
+    jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (url, init?: RequestInit) => {
+        const headers = init?.headers as Record<string, string>;
+        sentAuth = headers?.authorization;
+        return new Response("ok", { status: 200 });
+      });
+
+    const headers = new Map<string, string>();
+    headers.set("authorization", "Bearer pilot-token");
+
+    await execHandler(
+      { upstreamUrl: fakeUpstream, pilotAuthToken: "pilot-token" },
+      mockContext({
+        req: {
+          path: "/api/test",
+          method: "GET",
+          query: () => ({}),
+          raw: {
+            headers: {
+              get: (k: string) => headers.get(k) ?? null,
+              forEach: (cb: (v: string, k: string) => void) =>
+                headers.forEach((v, k) => cb(v, k)),
+            },
+          },
+          blob: async () => new Blob(),
+        },
+      }),
+    );
+
+    expect(sentAuth).toBeUndefined();
+  });
+
   it("does not inject auth when client sends Authorization", async () => {
     let sentAuth: string | undefined;
     jest

@@ -11,6 +11,7 @@ export type ProxyConfig = {
   upstreamUrl: string;
   username?: string;
   password?: string;
+  pilotAuthToken?: string | null;
 };
 
 /** Build the upstream request URL from the incoming Hono context. */
@@ -41,6 +42,13 @@ function copyHeaders(
   for (const key of allow) {
     const value = incoming.get(key);
     if (value) headers[key] = value;
+  }
+
+  if (
+    cfg.pilotAuthToken &&
+    headers.authorization === `Bearer ${cfg.pilotAuthToken}`
+  ) {
+    delete headers.authorization;
   }
 
   // Inject basic auth from server config if the client didn't send Authorization

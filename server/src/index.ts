@@ -13,6 +13,7 @@ import { cors } from "hono/cors";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
+import { getConfiguredAuthToken, requireBearerAuth } from "./auth.js";
 import { shouldRateLimitRequest } from "./rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -76,11 +77,38 @@ app.use(
   cors({
     origin: corsOrigins,
     credentials: true,
+    allowHeaders: ["Authorization", "Content-Type"],
   }),
 );
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (c) => c.json({ healthy: true, version: "0.2.0" }));
+
+const authMiddleware = requireBearerAuth();
+
+function protectRoute(path: string) {
+  app.use(path, authMiddleware);
+}
+
+protectRoute("/terminal/*");
+protectRoute("/git/*");
+protectRoute("/tunnel/*");
+protectRoute("/api/*");
+protectRoute("/event");
+protectRoute("/session");
+protectRoute("/session/*");
+protectRoute("/file");
+protectRoute("/file/*");
+protectRoute("/find");
+protectRoute("/find/*");
+protectRoute("/config/*");
+protectRoute("/agent");
+protectRoute("/agent/*");
+protectRoute("/command");
+protectRoute("/command/*");
+protectRoute("/global/*");
+protectRoute("/push/*");
+protectRoute("/memory/*");
 
 // ─── OpenCode proxy (M2: full proxy implementation) ──────────────────────────────
 export function setupProxy(
@@ -93,6 +121,7 @@ export function setupProxy(
     upstreamUrl: openCodeUrl,
     username,
     password,
+    pilotAuthToken: getConfiguredAuthToken(),
   });
   app.all("/api/*", proxy);
   app.all("/event", proxy); // SSE events endpoint
@@ -209,5 +238,5 @@ export function startServer(
     }
   });
   // Attach terminal WebSocket bridge to the same HTTP server
-  attachTerminalWS(httpServer as import("node:http").Server);
+  attachTerminalWS(httpServer as import("node:http").Server, getConfiguredAuthToken());
 }

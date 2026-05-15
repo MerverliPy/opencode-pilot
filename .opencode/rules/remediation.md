@@ -8,10 +8,11 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 
 ### Critical
 
-- [ ] **Terminal WS no auth** (`server/src/terminal.ts`) — any client connects to any session ID. No ownership check on WS upgrade.
-- [ ] **Git routes no auth** (`server/src/git.ts`) — `POST /git/commit`, push, status. Any client executes git operations on server filesystem.
-- [ ] **Tunnel routes no auth** (`server/src/tunnel.ts`) — tunnel creation/management unauthenticated. Machine-control surface.
-- [ ] **Proxy routes no auth** (`server/src/proxy.ts`) — proxy acts as unauthenticated capability escalator to configured upstream; server injects auth if client sends none.
+- [x] **Terminal WS no auth** — resolved: WS upgrade gated by bearer token in server/src/terminal.ts
+- [x] **Git routes no auth** — resolved: all /git/* routes protected in server/src/index.ts
+- [x] **Tunnel routes no auth** — resolved: all /tunnel/* routes protected in server/src/index.ts
+- [x] **Proxy routes no auth** — resolved: all proxy-mounted routes protected; Pilot token stripped before upstream forward in server/src/proxy.ts
+Also protected: /push/* and /memory/* routes.
 - [ ] **Static file path traversal** (`server/src/index.ts`) — serving static files from filesystem root may expose config, .env, DB.
 - [ ] **Browser secret persistence** (`ui/src/services/auth.ts`, related stores) — tokens/credentials persist in browser storage. Exposed to XSS.
 - [ ] **SSE auth inconsistency** — UI `ui/src/services/sse.ts` uses naked `EventSource` without auth headers; auth story inconsistent and likely broken for protected servers.
@@ -48,7 +49,7 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 
 | Rank | Theme | Impact | Effort | Why now | Primary files |
 |------|-------|--------|--------|---------|---------------|
-| 1 | Auth on terminal/git/tunnel/proxy routes | Critical | 3h | Unauthenticated machine control — RCE equivalent. Fix before any feature work. | `server/src/terminal.ts`, `server/src/git.ts`, `server/src/tunnel.ts`, `server/src/proxy.ts` |
+| 1 | Auth on terminal/git/tunnel/proxy routes | ✅ RESOLVED | 3h | Implemented via env-driven bearer token (PILOT_AUTH_TOKEN). Auth covers terminal WS + HTTP, git, tunnel, proxy, push, memory routes. | `server/src/auth.ts`, `server/src/index.ts`, `server/src/terminal.ts`, `server/src/proxy.ts` |
 | 2 | Static file traversal protection | Critical | 1h | Path traversal exposes env, DB, config. | `server/src/index.ts` |
 | 3 | Browser secret storage hardening | Critical | 2h | XSS -> token exfiltration. Move to httpOnly cookies or encrypted session store. | `ui/src/services/auth.ts`, auth stores |
 | 4 | SSE auth middleware audit | Critical | 1h | Auth story inconsistent and should be audited — UI EventSource omits auth headers. | SSE route registration |
@@ -71,10 +72,10 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 
 | File | Fix |
 |------|-----|
-| `server/src/terminal.ts` | Add session ownership token or auth check on WS upgrade. Validate `sessionId` exists and belongs to connecting user before attaching PTY. |
-| `server/src/git.ts` | Authenticate all routes. Validate `cwd` is a git repo before commit/push. Reject non-git directories. |
-| `server/src/tunnel.ts` | Auth on tunnel create/destroy/list. Scope tunnels to authenticated user. |
-| `server/src/proxy.ts` | Auth on proxy requests. Proxy acts as unauthenticated capability escalator to configured upstream; server injects auth if client sends none. |
+| `server/src/auth.ts` | **NEW** — Bearer token auth module. Exports `requireBearerAuth()` middleware, `isAuthorizedNodeRequest()` for WS upgrade, `isAuthEnabled()`, `getConfiguredAuthToken()`. |
+| `server/src/index.ts` | ✅ Auth middleware mounted on all sensitive route paths via `protectRoute()`. Also protects `/push/*` and `/memory/*`. CORS updated to allow `Authorization` header. |
+| `server/src/terminal.ts` | ✅ WS upgrade handler rejects unauthorized connections with HTTP 401 before upgrade. Accepts `authToken` parameter. |
+| `server/src/proxy.ts` | ✅ `copyHeaders()` strips local Pilot bearer token before upstream fetch. `ProxyConfig` accepts optional `pilotAuthToken`. |
 | `server/src/index.ts` | Fix static file serving to restrict to known directory. Add rate limiter TTL cleanup (`lru-cache` or periodic eviction). |
 | `server/src/push.ts` | Remove `broadcastPushNotification()` and `getAllPushSubscriptions()` if zero callers confirmed. Or wire into SSE event handler. |
 | `server/src/memory/memoryRouter.ts` | Add `serverId` length/format validation on all param-based routes. Deduplicate JSDoc. |

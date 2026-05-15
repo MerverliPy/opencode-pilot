@@ -59,7 +59,7 @@ The Pilot server is the single backend process. It:
 
 - Proxies all OpenCode API calls (avoids CORS, centralizes auth)
 - Serves the compiled Vite frontend as static files
-- Manages httpOnly session cookies (replaces Expo SecureStore / Keychain)
+- Enforces bearer token authentication on all sensitive routes (PILOT_AUTH_TOKEN env var; disabled when unset)
 - Bridges xterm.js ↔ node-pty over WebSocket for terminal access
 - Relays SSE `session.idle` events to Web Push (background notifications)
 - Runs the memory plugin: extraction, injection, semantic search, SQLite storage
@@ -107,7 +107,7 @@ pilot/
 │   ├── src/
 │   │   ├── index.ts         # Entry point, route wiring
 │   │   ├── proxy.ts         # OpenCode API proxy
-│   │   ├── auth.ts          # Session cookie auth
+│   │   ├── auth.ts          # Bearer token auth (env-driven PILOT_AUTH_TOKEN)
 │   │   ├── terminal.ts      # node-pty WebSocket bridge
 │   │   ├── push.ts          # Web Push relay
 │   │   ├── tunnel.ts        # Cloudflare tunnel manager

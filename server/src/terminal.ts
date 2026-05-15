@@ -15,6 +15,7 @@
 import * as pty from "node-pty";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { IncomingMessage, Server } from "node:http";
+import { isAuthorizedNodeRequest } from "./auth.js";
 import { randomUUID } from "node:crypto";
 
 interface PtySession {
@@ -95,12 +96,27 @@ export function killSession(id: string): boolean {
  * Handles connections to `/terminal/ws?id=<sessionId>`.
  * If no session ID is provided, a new PTY session is created.
  */
-export function attachTerminalWS(server: Server): void {
+export function attachTerminalWS(
+  server: Server,
+  authToken?: string | null,
+): void {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (req: IncomingMessage, socket, head) => {
     const url = new URL(req.url ?? "", `http://${req.headers.host}`);
     if (!url.pathname.startsWith("/terminal/ws")) {
+      socket.destroy();
+      return;
+    }
+
+    if (!isAuthorizedNodeRequest(req, authToken ?? null)) {
+      socket.write(
+        "HTTP/1.1 401 Unauthorized\r\n" +
+          "Content-Type: application/json\r\n" +
+          "WWW-Authenticate: Bearer\r\n" +
+          "Connection: close\r\n\r\n" +
+          JSON.stringify({ error: "Unauthorized" }),
+      );
       socket.destroy();
       return;
     }

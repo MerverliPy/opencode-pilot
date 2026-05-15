@@ -77,6 +77,14 @@ npm start
 
 The Hono server starts on `http://localhost:3000`, serving the UI and proxying all API calls to OpenCode.
 
+To protect sensitive routes (terminal, git, proxy, tunnel, push, memory), set the `PILOT_AUTH_TOKEN` environment variable:
+
+```bash
+PILOT_AUTH_TOKEN="your-secret-token" npm start
+```
+
+When set, clients must include `Authorization: Bearer your-secret-token` on all requests to protected routes. The `/health` endpoint and static frontend remain public.
+
 ### 3. Open the app
 
 Navigate to `http://localhost:3000` in any browser. On first launch, enter your OpenCode server URL (e.g. `http://192.168.1.x:4096`).
@@ -107,6 +115,7 @@ This starts a Cloudflare Quick Tunnel and prints a QR code. Scan it from any dev
 | `VAPID_SUBJECT` | (auto)      | Web Push contact (mailto: or URL)               |
 | `VAPID_PUBLIC`  | (generated) | VAPID public key for Web Push                   |
 | `VAPID_PRIVATE` | (generated) | VAPID private key for Web Push                  |
+| `PILOT_AUTH_TOKEN` | (none) | Bearer token for route auth. If set, all sensitive routes require `Authorization: Bearer <token>`. If unset, auth is disabled. |
 
 All variables are optional. Set them in a `.env` file at the project root or pass them inline.
 
@@ -184,7 +193,7 @@ pilot/
 │   └── src/
 │       ├── index.ts     # App entry, routing
 │       ├── proxy.ts     # OpenCode HTTP/SSE proxy (or n9router)
-│       ├── auth.ts      # Session auth (httpOnly cookies)
+│       ├── auth.ts      # Bearer token auth (env-driven PILOT_AUTH_TOKEN)
 │       ├── push.ts      # Web Push relay
 │       ├── tunnel.ts    # Cloudflare tunnel + QR
 │       ├── memory/      # Memory plugin (extraction, injection, SQLite)

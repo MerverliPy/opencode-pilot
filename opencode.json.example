@@ -1,7 +1,7 @@
 {
   "_comment": "Copy this file to opencode.json. Set baseURL to your n9router instance. Do NOT commit apiKey — add it only to local opencode.json (gitignored). Options: http://localhost:20128/v1 (local Docker) or any n9router URL.",
   "$schema": "https://opencode.ai/config.json",
-  "model": "n9router/cx/gpt-5.4",
+  "model": "n9router/ds/deepseek-v4-flash",
   "default_agent": "orchestrator",
   "instructions": [
     "AGENTS.md",
@@ -104,12 +104,6 @@
         "baseURL": "http://localhost:20128/v1"
       },
       "models": {
-        "cx/gpt-5.4": {
-          "name": "GPT 5.4 (via Codex/ChatGPT Plus)"
-        },
-        "cx/gpt-5.3-codex": {
-          "name": "GPT 5.3 Codex (via Codex/ChatGPT Plus)"
-        },
         "ds/deepseek-v4-flash": {
           "name": "DeepSeek V4 Flash"
         },

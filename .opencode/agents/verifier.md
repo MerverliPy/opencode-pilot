@@ -1,7 +1,7 @@
 ---
 description: "Primary verification agent. Runs targeted build, typecheck, lint, unit, coverage, and Playwright checks without editing files."
 mode: primary
-model: n9router/cx/gpt-5.4
+model: n9router/ds/deepseek-v4-flash
 temperature: 0.0
 color: warning
 permission:

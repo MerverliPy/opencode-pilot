@@ -14,6 +14,7 @@
 # Files updated:
 #   docker/.env            ← N9ROUTER_API_KEY
 #   opencode.json          ← provider.n9router.options.apiKey
+#   /data/db.json (in container)  ← apiKeys[0].key (persisted key store)
 
 set -euo pipefail
 
@@ -166,6 +167,43 @@ print(data.get('provider', {}).get('n9router', {}).get('options', {}).get('apiKe
   else
     fail "opencode.json NOT updated (got: ${VERIFIED:0:20}...)"
   fi
+fi
+
+# ─── Step 3.5: Patch persisted API key in /data/db.json ──────────────────
+echo "3.5. Patching persisted API key in database..."
+if [ "$DRY_RUN" = true ]; then
+  info "[DRY RUN] Would patch apiKeys[0] in /data/db.json"
+elif docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^n9router$'; then
+  docker exec -e NEW_KEY="$NEW_KEY" n9router node -e '
+const fs = require("fs");
+const p = "/data/db.json";
+const data = JSON.parse(fs.readFileSync(p, "utf8"));
+if (Array.isArray(data.apiKeys) && data.apiKeys.length > 0 && data.apiKeys[0] && typeof data.apiKeys[0] === "object") {
+  data.apiKeys[0].key = process.env.NEW_KEY;
+  fs.writeFileSync(p, JSON.stringify(data, null, 2) + "\n");
+  process.stdout.write("Patched\n");
+} else {
+  process.stdout.write("SKIP: no apiKeys entry found\n");
+}
+' 2>&1
+
+  VERIFIED=$(docker exec -e NEW_KEY="$NEW_KEY" n9router node -e '
+const fs = require("fs");
+const data = JSON.parse(fs.readFileSync("/data/db.json", "utf8"));
+if (Array.isArray(data.apiKeys) && data.apiKeys[0] && typeof data.apiKeys[0] === "object") {
+  process.stdout.write(data.apiKeys[0].key === process.env.NEW_KEY ? "OK" : "MISMATCH");
+} else {
+  process.stdout.write("NOKEY");
+}
+' 2>/dev/null || echo "ERROR")
+
+  if [ "$VERIFIED" = "OK" ]; then
+    pass "Persisted API key updated"
+  else
+    fail "Persisted API key NOT updated (got: ${VERIFIED:0:20}...)"
+  fi
+else
+  info "n9router container not running — skipping DB patch"
 fi
 
 # ─── Step 4: Restart n9router Docker container ────────────────────────

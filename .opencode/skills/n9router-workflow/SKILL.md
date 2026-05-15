@@ -40,12 +40,12 @@ Do not embed provider credentials or dashboard passwords in config files.
 
 ## Key rotation
 
-Two places hold the actual n9router API key and must be updated together:
+`docker/.env` holds server/container key. Local gitignored `opencode.json` may hold matching client key for OpenCode requests and must never be committed:
 
 | File | Field | Purpose |
 |------|-------|---------|
-| `docker/.env` | `N9ROUTER_API_KEY` | n9router Docker container authenticates with this |
-| `opencode.json` | `provider.n9router.options.apiKey` | OpenCode sends this as Bearer token to n9router |
+| `docker/.env` | `N9ROUTER_API_KEY` | n9router Docker container authenticates with this server key |
+| `opencode.json` | `provider.n9router.options.apiKey` | Local gitignored OpenCode client may send matching Bearer token to n9router; never commit this file with real key |
 
 ### Automated rotation (recommended)
 
@@ -59,16 +59,16 @@ The script:
 
 1. Generates a cryptographically random key (`n9r_` + 64 hex chars) or accepts one
 2. Updates `docker/.env` → `N9ROUTER_API_KEY`
-3. Updates `opencode.json` → `provider.n9router.options.apiKey`
+3. Updates local gitignored `opencode.json` → `provider.n9router.options.apiKey` when present for matching OpenCode requests
 4. Restarts the n9router Docker container and waits for healthy
 5. Runs `scripts/verify-key-rotation.sh` to confirm the new key works and the old key is rejected
 
 ### Manual rotation
 
-If running the script isn't an option, update both files by hand:
+If running the script isn't an option, rotate server key and update local client key only if needed:
 
 1. **`docker/.env`**: set `N9ROUTER_API_KEY=<new-key>`
-2. **`opencode.json`**: set `provider.n9router.options.apiKey` to the same value
+2. **Local gitignored `opencode.json`**: if OpenCode sends direct requests through n9router, set `provider.n9router.options.apiKey` to matching value; never commit file with real key
 3. Restart the container: `docker compose -f docker/docker-compose.yml up -d --no-deps n9router`
 4. Verify the new key against the **chat completions endpoint** (the models endpoint is intentionally public):
 

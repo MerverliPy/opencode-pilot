@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/pilot.fixture";
 
 /**
  * Interactive UI behavior E2E tests for the Pilot PWA.
@@ -243,3 +243,110 @@ test.describe("Interactive elements — sidebar navigation", () => {
 
 // NOTE: Clipboard tests require a running server with real message content.
 // See Phase 2 for full-stack E2E clipboard tests.
+
+
+test.describe.configure({ mode: "serial" });
+
+test.describe("Session title rename — full-stack", () => {
+  test.skip(() => !process.env.E2E_FULL_STACK, "Requires E2E_FULL_STACK=1");
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "pilot.servers",
+        JSON.stringify([
+          {
+            id: "e2e-test-server",
+            name: "E2E Test",
+            url: window.location.origin,
+          },
+        ]),
+      );
+      localStorage.setItem("pilot.activeServer", "e2e-test-server");
+    });
+  });
+
+  test("renames session title and persists after reload", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+    await expect(page.getByTestId("session-bar")).toContainText("new session");
+
+    await page.getByTestId("session-title-edit").click();
+    const titleInput = page.getByTestId("session-title-input");
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("  Renamed session  ");
+    await titleInput.press("Enter");
+
+    await expect(titleInput).not.toBeVisible();
+    await expect(page.getByTestId("session-bar")).toContainText("Renamed session");
+
+    await page.reload();
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("session-bar")).toContainText("Renamed session");
+  });
+
+  test("failed rename keeps edit mode open and shows error", async ({ page }) => {
+    let sessionId: string | null = null;
+
+    await page.route("**/session/*", async (route) => {
+      const request = route.request();
+      if (request.method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+
+      const url = new URL(request.url());
+      const patchSessionId = url.pathname.split("/").pop();
+      if (!sessionId || patchSessionId !== sessionId) {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 500,
+        contentType: "text/plain",
+        body: "rename failed",
+      });
+    });
+
+    page.on("response", async (response) => {
+      if (response.request().method() !== "POST") return;
+      if (!response.url().endsWith("/session")) return;
+      const body = (await response.json()) as { id?: string };
+      sessionId = body.id ?? null;
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+    await expect(page.getByTestId("session-bar")).toContainText("new session");
+
+    await page.getByTestId("session-title-edit").click();
+    const titleInput = page.getByTestId("session-title-input");
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("Broken rename");
+    await titleInput.press("Enter");
+
+    await expect(titleInput).toBeVisible();
+    await expect(titleInput).toHaveValue("Broken rename");
+    await expect(page.getByText("Server error: rename failed")).toBeVisible();
+  });
+
+  test("escape cancels rename without saving", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+    await expect(page.getByTestId("session-bar")).toContainText("new session");
+
+    await page.getByTestId("session-title-edit").click();
+    const titleInput = page.getByTestId("session-title-input");
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("Cancelled title");
+    await titleInput.press("Escape");
+
+    await expect(titleInput).not.toBeVisible();
+    await expect(page.getByTestId("session-bar")).toContainText("new session");
+  });
+});

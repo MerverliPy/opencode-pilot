@@ -4,7 +4,14 @@
  * Manages session lifecycle, SSE streaming, message rendering,
  * prompt input, and permission cards.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FocusEvent,
+  type KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useParams } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { useSessionStore } from "../store/session";
@@ -46,6 +53,10 @@ export function Chat() {
 
   const newlyCreatedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   // ── Memory hooks ──────────────────────────────────────────────────────────────
   useMemoryExtraction({
@@ -183,6 +194,78 @@ export function Chat() {
     };
   }, [resetSession]);
 
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setTitleDraft(session?.title ?? "");
+    }
+  }, [isEditingTitle, session?.title]);
+
+  const startTitleEdit = () => {
+    if (!session) return;
+    setTitleDraft(session.title);
+    setTitleError(null);
+    setIsEditingTitle(true);
+  };
+
+  const cancelTitleEdit = () => {
+    setTitleDraft(session?.title ?? "");
+    setTitleError(null);
+    setIsEditingTitle(false);
+    setIsSavingTitle(false);
+  };
+
+  const saveTitle = async () => {
+    if (!client || !session || isSavingTitle) return;
+
+    const nextTitle = titleDraft.trim();
+    if (!nextTitle) {
+      cancelTitleEdit();
+      return;
+    }
+
+    if (nextTitle === session.title.trim()) {
+      setTitleDraft(nextTitle);
+      setTitleError(null);
+      setIsEditingTitle(false);
+      return;
+    }
+
+    setIsSavingTitle(true);
+    setTitleError(null);
+    try {
+      const updatedSession = await client.updateSession(session.id, { title: nextTitle });
+      setSession(updatedSession);
+      setTitleDraft(updatedSession.title);
+      setIsEditingTitle(false);
+    } catch (err) {
+      setTitleError(friendlyError(err));
+      log.error("chat", "session title update failed", err);
+    } finally {
+      setIsSavingTitle(false);
+    }
+  };
+
+  const handleTitleKeyDown = async (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await saveTitle();
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelTitleEdit();
+    }
+  };
+
+  const handleTitleBlur = async (event: FocusEvent<HTMLInputElement>) => {
+    const nextFocus = event.relatedTarget;
+    if (nextFocus instanceof HTMLElement && nextFocus.dataset.titleAction === "true") {
+      return;
+    }
+
+    await saveTitle();
+  };
+
   // ── Prompt submit ─────────────────────────────────────────────────────────────
   const handleSubmit = async (text: string) => {
     if (!client || !session) return;
@@ -275,15 +358,140 @@ export function Chat() {
       >
         <div
           style={{
-            fontFamily: fonts.mono,
-            fontSize: 14,
-            color: colors.text,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            minWidth: 0,
+            flex: 1,
           }}
         >
-          {session?.title ?? "new session"}
+          {isEditingTitle ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                minWidth: 0,
+              }}
+            >
+              <input
+                aria-label="Session title"
+                data-testid="session-title-input"
+                value={titleDraft}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  void handleTitleKeyDown(event);
+                }}
+                onBlur={(event) => {
+                  void handleTitleBlur(event);
+                }}
+                disabled={isSavingTitle}
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 14,
+                  color: colors.text,
+                  backgroundColor: colors.bg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 6,
+                  padding: "6px 8px",
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              />
+              <button
+                type="button"
+                data-title-action="true"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  void saveTitle();
+                }}
+                disabled={isSavingTitle}
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 12,
+                  color: colors.text,
+                  backgroundColor: colors.bg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 6,
+                  padding: "6px 8px",
+                  cursor: isSavingTitle ? "default" : "pointer",
+                }}
+              >
+                save
+              </button>
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={cancelTitleEdit}
+                disabled={isSavingTitle}
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 12,
+                  color: colors.muted,
+                  backgroundColor: "transparent",
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 6,
+                  padding: "6px 8px",
+                  cursor: isSavingTitle ? "default" : "pointer",
+                }}
+              >
+                cancel
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 14,
+                  color: colors.text,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {session?.title ?? "new session"}
+              </div>
+              <button
+                type="button"
+                aria-label="Edit session title"
+                data-testid="session-title-edit"
+                onClick={startTitleEdit}
+                disabled={!session}
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 12,
+                  color: colors.muted,
+                  backgroundColor: "transparent",
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  cursor: session ? "pointer" : "default",
+                  flexShrink: 0,
+                }}
+              >
+                edit
+              </button>
+            </div>
+          )}
+          {titleError && (
+            <div
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: 11,
+                color: colors.error,
+              }}
+            >
+              {titleError}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span

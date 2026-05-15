@@ -9,8 +9,8 @@ const rootDir = resolve(__dirname, '..');
 const isFullStack = !!process.env.E2E_FULL_STACK;
 const isCI = !!process.env.CI;
 
-const serverPort = process.env.PORT || "3000";
-const uiPort = "5173";
+const serverPort = process.env.PORT || "43001";
+const uiPort = process.env.E2E_UI_PORT || "43173";
 
 const webServer = isFullStack
   ? [
@@ -27,20 +27,21 @@ const webServer = isFullStack
         },
       },
       {
-        command: `npm --prefix ${rootDir} run dev:ui`,
+        command: `npm --prefix ${rootDir} run dev:ui -- -- --port ${uiPort}`,
         url: `http://localhost:${uiPort}`,
         reuseExistingServer: !isCI,
         timeout: 120_000,
         env: {
           ...process.env,
           PROXY_TARGET: `http://localhost:${serverPort}`,
+          PORT: uiPort,
         },
       },
     ]
   : isCI
     ? undefined
     : {
-        command: `npm --prefix ${rootDir} run dev:ui`,
+        command: `npm --prefix ${rootDir} run dev:ui -- -- --port ${uiPort}`,
         url: `http://localhost:${uiPort}`,
         reuseExistingServer: true,
         timeout: 120_000,

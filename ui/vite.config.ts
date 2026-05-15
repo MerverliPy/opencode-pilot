@@ -41,6 +41,10 @@ export default defineConfig({
     proxy: {
       "/api": proxyTarget,
       "/event": proxyTarget,
+      "/session": {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
       "/git": proxyTarget,
       "/terminal/ws": {
         target: proxyTarget,

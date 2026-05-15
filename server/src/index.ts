@@ -96,6 +96,7 @@ export function setupProxy(
   });
   app.all("/api/*", proxy);
   app.all("/event", proxy); // SSE events endpoint
+  app.all("/session", proxy); // direct session create/list endpoints
   app.all("/session/*", proxy); // direct session endpoints
   app.all("/file", proxy); // file listing
   app.all("/file/*", proxy); // file operations

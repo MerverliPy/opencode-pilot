@@ -199,3 +199,54 @@ tail -f /tmp/pilot-server.log                            # Server logs
 | Port conflict when running n9router natively + Docker | Stop native: `pkill -f n9router` or use `N9ROUTER_PORT=20129` |
 | 401 Unauthorized on protected routes | Set `PILOT_AUTH_TOKEN` in `.env` and send `Authorization: Bearer <token>` header with requests. If auth should be disabled, leave `PILOT_AUTH_TOKEN` unset. |
 | Screenshot tests fail in CI | Baselines generated on dev machine — use `--update-snapshots` to re-generate |
+
+---
+
+## 9. Admin & Recovery
+
+### Admin Dashboard
+
+n9router has a web admin dashboard for managing providers, API keys, usage, and settings.
+
+```
+URL:      http://localhost:20128/dashboard
+         http://100.81.83.98:20128/dashboard (Tailscale)
+```
+
+The dashboard is password-protected (`N9ROUTER_REQUIRE_API_KEY=true` in docker-compose.yml).
+
+### Reset Admin Password
+
+If the dashboard password is lost, reset it with:
+
+```bash
+./scripts/reset-n9router-password.sh          # prompts for password
+./scripts/reset-n9router-password.sh <new>   # non-interactive
+```
+
+The script: generates a bcrypt hash → writes it into the container →
+restarts n9router → verifies the new password works via the login API.
+
+### Verify Key Rotation
+
+After rotating the user API key in `opencode.json`, verify both old and new keys:
+
+```bash
+./scripts/verify-key-rotation.sh                         # uses env vars
+./scripts/verify-key-rotation.sh <url> <new_key> <old_key>
+```
+
+Tests: new key → 200, old key → 401, no auth → 401.
+
+### Manual Fallback (if scripts fail)
+
+If the container is unreachable, the data is in a Docker named volume:
+
+```bash
+# Read current db.json
+docker exec n9router cat /data/db.json > ~/db.backup.json
+
+# Edit locally, then copy back
+docker cp ~/db.backup.json n9router:/data/db.json
+docker restart n9router
+```

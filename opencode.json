@@ -122,7 +122,7 @@
           "name": "Claude Sonnet 4 (via GitHub)"
         },
         "orchestrator": {
-          "name": "Orchestrator → cx/gpt-5.5"
+          "name": "cx/gpt-5.5"
         },
         "implementer": {
           "name": "Implementer → cx/gpt-5.3-codex"

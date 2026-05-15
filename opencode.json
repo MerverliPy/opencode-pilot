@@ -100,7 +100,8 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "N9Router",
       "options": {
-        "baseURL": "http://100.81.83.98:20128/v1"
+        "baseURL": "http://100.81.83.98:20128/v1",
+        "apiKey": "sk-3e07281517c594ed-heuars-afb1717a"
       },
       "models": {
         "ds/deepseek-v4-flash": {
@@ -121,11 +122,20 @@
         "gh/claude-sonnet-4": {
           "name": "Claude Sonnet 4 (via GitHub)"
         },
+        "gh/claude-sonnet-4.6": {
+          "name": "Claude Sonnet 4.6 (via GitHub)"
+        },
+        "gh/gpt-5.4": {
+          "name": "GPT 5.4 (via GitHub)"
+        },
+        "gh/gpt-5.3-codex": {
+          "name": "GPT 5.3 Codex (via GitHub)"
+        },
         "orchestrator": {
-          "name": "cx/gpt-5.5"
+          "name": "Orchestrator → gh/gpt-5.4"
         },
         "implementer": {
-          "name": "Implementer → cx/gpt-5.3-codex"
+          "name": "Implementer → gh/gpt-5.3-codex"
         },
         "build-fixer": {
           "name": "Build Fixer → ds/deepseek-v4-flash"
@@ -134,16 +144,25 @@
           "name": "Scout → ds/deepseek-v4-flash"
         },
         "code-reviewer": {
-          "name": "Code Reviewer → gh/claude-sonnet-4.6"
+          "name": "Reviewer → gh/claude-sonnet-4.6"
         },
         "docs-updater": {
-          "name": "Docs Updater → oc/qwen3.6-plus-free"
+          "name": "Docs → ds/deepseek-v4-flash"
         },
         "security-auditor": {
-          "name": "Security Auditor → gh/claude-sonnet-4.6"
+          "name": "Security → gh/claude-sonnet-4.6"
         },
         "e2e-runner": {
-          "name": "E2E Runner → oc/deepseek-v4-flash-free"
+          "name": "E2E → ds/deepseek-v4-flash"
+        },
+        "planner": {
+          "name": "Planner → gh/gpt-5.4"
+        },
+        "architect": {
+          "name": "Architect → gh/gpt-5.4"
+        },
+        "designer": {
+          "name": "Designer → gh/claude-sonnet-4.6"
         }
       }
     }

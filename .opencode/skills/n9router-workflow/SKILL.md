@@ -37,3 +37,26 @@ Do not embed provider credentials or dashboard passwords in config files.
 - Trusted edits: `implementer`, `maintainer`, `build-fixer`, `e2e-runner`, `docs-updater`.
 - Read-only review/discovery: scouts, reviewers, auditors.
 - High-risk MCPs remain disabled by default and are enabled only for the workflow that needs them.
+
+## Key rotation verification
+
+When rotating the user API key (the `sk-*` token in `opencode.json`), test against the **chat completions endpoint**, not `/v1/models`. The models endpoint is intentionally public (OpenAI-compatible convention) even when `N9ROUTER_REQUIRE_API_KEY=true`.
+
+```bash
+# New key → expect HTTP 200
+curl -s -w "\nHTTP:%{http_code}" http://localhost:20128/v1/chat/completions \
+  -H "Authorization: Bearer $NEW_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ds/deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
+
+# Old/revoked key → expect HTTP 401 with "Invalid API key"
+curl -s -w "\nHTTP:%{http_code}" http://localhost:20128/v1/chat/completions \
+  -H "Authorization: Bearer $OLD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ds/deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
+
+# No auth → expect HTTP 401 with "Missing API key"
+curl -s -w "\nHTTP:%{http_code}" http://localhost:20128/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ds/deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
+```

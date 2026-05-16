@@ -94,6 +94,8 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
       if (contentType.includes("text/event-stream")) {
         responseHeaders["cache-control"] = "no-cache";
         responseHeaders["connection"] = "keep-alive";
+        responseHeaders["x-accel-buffering"] = "no";   // nginx anti-buffering
+        responseHeaders["content-encoding"] = "identity";  // prevent compression buffering
       }
 
       const status = upstream.status as StatusCode;

@@ -48,6 +48,8 @@ export default defineConfig({
         bypass: (req) => req.url === "/sessions" || req.url?.startsWith("/sessions/") ? req.url : undefined,
       },
       "/git": proxyTarget,
+      "/push": proxyTarget,
+      "/tunnel": proxyTarget,
       "/terminal/ws": {
         target: proxyTarget,
         ws: true,

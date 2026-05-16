@@ -83,7 +83,7 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
       upstream.headers.forEach((value, key) => {
         // Skip hop-by-hop headers
         if (
-          !["transfer-encoding", "connection", "keep-alive", "te", "trailer", "proxy-authenticate", "proxy-authorization", "upgrade"].includes(
+          !["transfer-encoding", "connection", "keep-alive", "te", "trailer", "proxy-authenticate", "proxy-authorization", "upgrade", "content-encoding", "content-length"].includes(
             key.toLowerCase(),
           )
         ) {

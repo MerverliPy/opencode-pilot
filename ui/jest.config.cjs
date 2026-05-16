@@ -13,6 +13,8 @@ module.exports = {
     "^react-markdown$": "<rootDir>/__mocks__/react-markdown.tsx",
     "^remark-gfm$": "<rootDir>/__mocks__/remark-gfm.cjs",
     "^rehype-highlight$": "<rootDir>/__mocks__/rehype-highlight.cjs",
+    "^msw$": "<rootDir>/__mocks__/msw.ts",
+    "^msw/node$": "<rootDir>/__mocks__/msw-node.ts",
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.cjs"],
   testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],

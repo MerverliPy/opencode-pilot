@@ -3,6 +3,8 @@
  */
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 // Mock diff2html before importing Diff
 jest.mock("diff2html", () => ({
@@ -34,40 +36,15 @@ const mockDiffs = [
   },
 ];
 
-function setupFetch({
-  status = mockStatus,
-  diffs = mockDiffs,
-  commitResult = { success: true, hash: "abc1234" },
-}: {
-  status?: typeof mockStatus;
-  diffs?: typeof mockDiffs;
-  commitResult?: { success: boolean; hash: string };
-} = {}) {
-  global.fetch = jest.fn().mockImplementation((url: string) => {
-    if (url === "/git/status") {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(status),
-      });
-    }
-    if (url === "/git/diff") {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(diffs),
-      });
-    }
-    if (url === "/git/commit") {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(commitResult),
-      });
-    }
-    return Promise.resolve({
-      ok: false,
-      text: () => Promise.resolve("not found"),
-    });
-  }) as jest.Mock;
-}
+const server = setupServer(
+  http.get("*/git/status", () => HttpResponse.json(mockStatus)),
+  http.get("*/git/diff", () => HttpResponse.json(mockDiffs)),
+  http.post("*/git/commit", () => HttpResponse.json({ success: true, hash: "abc1234" })),
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe("Diff", () => {
   beforeEach(() => {
@@ -86,7 +63,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -101,7 +77,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -116,7 +91,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -132,7 +106,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -149,7 +122,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -170,16 +142,18 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch({
-      status: {
-        branch: "main",
-        modified: [],
-        added: [],
-        deleted: [],
-        untracked: [],
-      },
-      diffs: [],
-    });
+    server.use(
+      http.get("*/git/status", () =>
+        HttpResponse.json({
+          branch: "main",
+          modified: [],
+          added: [],
+          deleted: [],
+          untracked: [],
+        }),
+      ),
+      http.get("*/git/diff", () => HttpResponse.json([])),
+    );
 
     render(<Diff />);
 
@@ -194,7 +168,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     render(<Diff />);
 
@@ -219,12 +192,11 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve("Internal Server Error"),
-    }) as jest.Mock;
+    server.use(
+      http.get("*/git/status", () =>
+        new HttpResponse("Internal Server Error", { status: 500 }),
+      ),
+    );
 
     render(<Diff />);
 
@@ -239,7 +211,14 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
+
+    let requestCount = 0;
+    server.use(
+      http.get("*/git/status", () => {
+        requestCount++;
+        return HttpResponse.json(mockStatus);
+      }),
+    );
 
     render(<Diff />);
 
@@ -247,14 +226,11 @@ describe("Diff", () => {
       expect(screen.getByText("main")).toBeInTheDocument();
     });
 
-    const callCountBefore = (global.fetch as jest.Mock).mock.calls.length;
+    const callCountBefore = requestCount;
     fireEvent.click(screen.getByText("refresh"));
 
-    // After clicking refresh, fetch should be called again
     await waitFor(() => {
-      expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(
-        callCountBefore,
-      );
+      expect(requestCount).toBeGreaterThan(callCountBefore);
     });
   });
 
@@ -264,7 +240,6 @@ describe("Diff", () => {
       url: "http://localhost:3000",
       name: "Local",
     });
-    setupFetch();
 
     const { container } = render(<Diff />);
 

@@ -1,27 +1,29 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-const mockUseParams = jest.fn();
-const mockUseServerStore = jest.fn();
-const mockUseEventStream = jest.fn();
-const mockUseMemoryExtraction = jest.fn();
-const mockUseMemoryInjection = jest.fn();
-const mockListMessages = jest.fn();
-const mockGetSession = jest.fn();
-const mockCreateSession = jest.fn();
-const mockUpdateSession = jest.fn();
-const mockPromptAsync = jest.fn();
-const mockRespondPermission = jest.fn();
-const mockSetSession = jest.fn();
-const mockSetStatus = jest.fn();
-const mockHydrateTurns = jest.fn();
-const mockUpsertMessage = jest.fn();
-const mockUpsertPart = jest.fn();
-const mockRemoveMessage = jest.fn();
-const mockRemovePart = jest.fn();
-const mockPushPermission = jest.fn();
-const mockResolvePermission = jest.fn();
-const mockReset = jest.fn();
+import {
+  mockUseParams,
+  mockUseServerStore,
+  mockUseEventStream,
+  mockUseMemoryExtraction,
+  mockUseMemoryInjection,
+  mockListMessages,
+  mockGetSession,
+  mockCreateSession,
+  mockUpdateSession,
+  mockPromptAsync,
+  mockRespondPermission,
+  mockSetSession,
+  mockSetStatus,
+  mockHydrateTurns,
+  mockUpsertMessage,
+  mockUpsertPart,
+  mockRemoveMessage,
+  mockRemovePart,
+  mockPushPermission,
+  mockResolvePermission,
+  mockReset,
+} from "./helpers/chatMocks";
 
 let mockSession = {
   id: "session-1",

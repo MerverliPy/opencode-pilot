@@ -14,11 +14,11 @@ created:      2026-05-15
 last_updated: 2026-05-15
 total_phases: 9
 total_tasks:  50
-completed:    8
+completed:    14
 in_progress:  0
 blocked:      0
-completion:   16%
-overall_status: 🔄 Phase 0 ✅, Phase 1 next
+completion:   28%
+overall_status: ✅ Phase 0, ✅ Phase 1, Phase 2 next
 ```
 
 ---
@@ -28,7 +28,7 @@ overall_status: 🔄 Phase 0 ✅, Phase 1 next
 | Phase | Total | ✅ Done | 🔄 In Progress | 🚫 Blocked | % |
 |-------|-------|---------|----------------|------------|---|
 | **P0: Quick Wins** | 8 | 8 | 0 | 0 | 100% |
-| **P1: Server Unit Tests** | 6 | 0 | 0 | 0 | 0% |
+| **P1: Server Unit Tests** | 6 | 6 | 0 | 0 | 100% |
 | **P2: Server Integration** | 2 | 0 | 0 | 0 | 0% |
 | **P3: Security Expansion** | 6 | 0 | 0 | 0 | 0% |
 | **P4: UI Unit Tests** | 8 | 0 | 0 | 0 | 0% |
@@ -36,7 +36,7 @@ overall_status: 🔄 Phase 0 ✅, Phase 1 next
 | **P6: E2E Expansion** | 8 | 0 | 0 | 0 | 0% |
 | **P7: Benchtest Real Data** | 4 | 0 | 0 | 0 | 0% |
 | **P8: Long-term Optimizations** | 6 | 0 | 0 | 0 | 0% |
-| **Total** | **50** | **8** | **0** | **0** | **0%** |
+| **Total** | **50** | **14** | **0** | **0** | **28%** |
 
 ---
 
@@ -44,7 +44,7 @@ overall_status: 🔄 Phase 0 ✅, Phase 1 next
 
 | Agent Role | Model/Provider | Phases Worked | Dates |
 |------------|----------------|---------------|-------|
-| _(first agent — assign yourself)_ | | | |
+| Orchestrator | n9router/ds/deepseek-v4-flash | P1 | 2026-05-15 |
 
 ---
 
@@ -113,9 +113,9 @@ All follow `MemoryRepository.test.ts` pattern: `process.env.PILOT_DB_PATH = ":me
 
 | # | Task | Test File | Tests | Effort | Status | Assignee | Notes |
 |---|------|-----------|-------|--------|--------|----------|-------|
-| 1.1 | EmbeddingRepository tests | `memory/__tests__/EmbeddingRepository.test.ts` | 6 | 20min | ⏳ | — | insert, getByModel, getByMemoryAndModel, delete, upsert, FK constraint |
-| 1.2 | ProfileRepository tests | `memory/__tests__/ProfileRepository.test.ts` | 6 | 20min | ⏳ | — | get empty, upsert create, upsert update, get sorted, delete, clear |
-| 1.3 | TimelineRepository tests | `memory/__tests__/TimelineRepository.test.ts` | 6 | 20min | ⏳ | — | insert, getTimeline DESC, limit/offset, getBySession, clear, empty |
+| 1.1 | EmbeddingRepository tests | `memory/__tests__/EmbeddingRepository.test.ts` | 6 | 20min | ✅ | — | insert, getByModel, getByMemoryAndModel, delete, upsert, FK constraint |
+| 1.2 | ProfileRepository tests | `memory/__tests__/ProfileRepository.test.ts` | 6 | 20min | ✅ | — | get empty, upsert create, upsert update, get sorted, delete, clear |
+| 1.3 | TimelineRepository tests | `memory/__tests__/TimelineRepository.test.ts` | 6 | 20min | ✅ | — | insert, getTimeline DESC, limit/offset, getBySession, clear, empty |
 
 #### Batch 1b: DB, Push, CLI (~1.5h)
 
@@ -128,12 +128,12 @@ All follow `MemoryRepository.test.ts` pattern: `process.env.PILOT_DB_PATH = ":me
 #### Phase 1 Sign-off
 
 ```yaml
-signed_by:   _
-model:       _
-date:        _
-verification: "npm run typecheck -w server && npm run test -w server && npm run test:coverage -w server"
-difficulties: _
-decisions:   _
+signed_by:   Orchestrator
+model:       n9router/ds/deepseek-v4-flash
+date:        2026-05-15
+verification: "typecheck pass, 139/139 tests pass, coverage: EmbeddingRepo 100%, ProfileRepo 100%, TimelineRepo 100%, db.ts 100%, push.ts 83.7%, cli.ts 80.9%"
+difficulties: "Embedding FK needed memory row first; db.test.ts data leaked between tests (added beforeEach cleanup); cli.ts import.meta.url broke ts-jest (used lazy dynamic import)"
+decisions:   "Exported parseArgs from cli.ts for testability; guarded module-level execution with process.argv[1] check"
 ```
 
 ---

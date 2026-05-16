@@ -8,9 +8,9 @@
  *   PORT            - Server port (default: 3000)
  *   OPENCODE_URL    - Upstream OpenCode server URL
  */
-import { startServer } from "./index.js";
+import type { startServer as StartServerFn } from "./index.js";
 
-function parseArgs(argv: string[]): { port: number; openCodeUrl?: string } {
+export function parseArgs(argv: string[]): { port: number; openCodeUrl?: string } {
   let port = parseInt(process.env.PORT ?? "3000", 10);
   let openCodeUrl = process.env.OPENCODE_URL;
 
@@ -45,5 +45,8 @@ Environment variables:
   return { port, openCodeUrl };
 }
 
-const { port, openCodeUrl } = parseArgs(process.argv);
-startServer(port, openCodeUrl);
+// Guard: only run when executed directly, not when imported for testing
+if (process.argv[1]?.includes('cli.')) {
+  const { port, openCodeUrl } = parseArgs(process.argv);
+  import("./index.js").then(({ startServer }) => startServer(port, openCodeUrl));
+}

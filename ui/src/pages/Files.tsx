@@ -4,7 +4,7 @@
  * Left pane: directory tree (click to navigate, click file to preview).
  * Right pane: read-only CodeMirror viewer for the selected file.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
 import type { FileNode } from "@pilot-shared/types";
@@ -28,6 +28,8 @@ export function Files() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SelectedFile | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [treeWidth, setTreeWidth] = useState(280);
+  const dragging = useRef(false);
 
   useEffect(() => {
     if (!client) {
@@ -80,6 +82,25 @@ export function Files() {
     [server?.id, server?.url],
   );
 
+  // Resize drag listeners
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      setTreeWidth((w) =>
+        Math.max(120, Math.min(w + e.movementX, Math.min(600, window.innerWidth * 0.6))),
+      );
+    };
+    const onUp = () => {
+      dragging.current = false;
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
   if (!server) {
     return (
       <div
@@ -107,19 +128,17 @@ export function Files() {
         flex: 1,
         minHeight: 0,
         overflow: "hidden",
+        userSelect: dragging.current ? "none" : undefined,
       }}
     >
       {/* Left pane: file tree */}
       <div
         data-testid="file-tree"
         style={{
-          width: 280,
-          minWidth: 180,
-          maxWidth: 400,
+          width: treeWidth,
           flexShrink: 0,
           display: "flex",
           flexDirection: "column",
-          borderRight: `1px solid ${colors.border}`,
           overflow: "hidden",
         }}
       >
@@ -298,6 +317,21 @@ export function Files() {
           )}
         </div>
       </div>
+
+      {/* Resize handle */}
+      <div
+        style={{
+          width: 6,
+          cursor: "col-resize",
+          backgroundColor: "transparent",
+          flexShrink: 0,
+          borderLeft: `1px solid ${colors.border}`,
+        }}
+        onMouseDown={(e) => {
+          dragging.current = true;
+          e.preventDefault();
+        }}
+      />
 
       {/* Right pane: CodeMirror preview */}
       <div

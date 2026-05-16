@@ -85,13 +85,13 @@ export function Sessions() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 800, margin: "0 auto", flex: 1, minHeight: 0, overflow: "auto" }}>
+    <div style={{ padding: "8px 12px", maxWidth: "100%", margin: "0 auto", flex: 1, minHeight: 0, overflow: "auto" }}>
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 20,
+          marginBottom: 12,
         }}
       >
         <h1
@@ -178,10 +178,10 @@ export function Sessions() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "12px 14px",
+                padding: "6px 10px",
                 backgroundColor: colors.surface,
                 border: `1px solid ${colors.border}`,
-                borderRadius: 8,
+                borderRadius: 6,
               }}
             >
               <Link
@@ -196,7 +196,7 @@ export function Sessions() {
                 <div
                   style={{
                     fontFamily: fonts.mono,
-                    fontSize: fontSizes.sm,
+                    fontSize: fontSizes.xs,
                     color: colors.text,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -210,7 +210,7 @@ export function Sessions() {
                     fontFamily: fonts.mono,
                     fontSize: fontSizes.xs,
                     color: colors.muted,
-                    marginTop: 2,
+                    marginTop: 1,
                   }}
                 >
                   {new Date(sess.time.created).toLocaleString()}
@@ -224,11 +224,11 @@ export function Sessions() {
                   border: `1px solid ${colors.error}`,
                   color: colors.error,
                   borderRadius: 4,
-                  padding: "4px 10px",
+                  padding: "2px 6px",
                   fontFamily: fonts.mono,
                   fontSize: fontSizes.xs,
                   cursor: "pointer",
-                  marginLeft: 12,
+                  marginLeft: 8,
                 }}
               >
                 delete

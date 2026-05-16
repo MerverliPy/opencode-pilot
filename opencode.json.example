@@ -29,6 +29,9 @@
         "-y",
         "@modelcontextprotocol/server-github"
       ],
+      "env": {
+        "GITHUB_TOKEN": "<your_github_token_here>"
+      },
       "enabled": true
     },
     "memory": {
@@ -74,6 +77,7 @@
     "edit": "ask",
     "write": "ask",
     "bash": {
+      "curl *": "ask",
       "*": "ask",
       "git status*": "allow",
       "git diff*": "allow",

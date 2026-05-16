@@ -37,3 +37,76 @@ describe("auth helpers", () => {
     expect(isAuthorizedNodeRequest(req, "other-token")).toBe(false);
   });
 });
+
+describe("auth edge cases", () => {
+  // Empty token after Bearer prefix
+  it.each(["Bearer ", "Bearer  ", "Bearer\t"])(
+    "rejects %j as empty bearer token",
+    (header) => {
+      expect(getBearerTokenFromHeader(header)).toBeNull();
+      expect(isAuthorizedHeaderValue(header, "token")).toBe(false);
+    },
+  );
+
+  // Whitespace-only token
+  it("rejects whitespace-only token", () => {
+    expect(getBearerTokenFromHeader("Bearer   ")).toBeNull();
+    expect(isAuthorizedHeaderValue("Bearer   ", "token")).toBe(false);
+  });
+
+  // Unicode in token
+  it("handles unicode in token value", () => {
+    const token = "tökèn-üñîçödé-日本語";
+    expect(getBearerTokenFromHeader(`Bearer ${token}`)).toBe(token);
+    expect(isAuthorizedHeaderValue(`Bearer ${token}`, token)).toBe(true);
+  });
+
+  // SQLi attempt in token
+  it("rejects SQL injection in token (does not match)", () => {
+    const sqli = "' OR 1=1 --";
+    expect(getBearerTokenFromHeader(`Bearer ${sqli}`)).toBe(sqli);
+    expect(isAuthorizedHeaderValue(`Bearer ${sqli}`, "admin")).toBe(false);
+    expect(isAuthorizedHeaderValue(`Bearer ${sqli}`, sqli)).toBe(true);
+  });
+
+  // Null header
+  it("returns null for null/undefined header", () => {
+    expect(getBearerTokenFromHeader(null)).toBeNull();
+    expect(getBearerTokenFromHeader(undefined)).toBeNull();
+  });
+
+  // Length extremes
+  it("accepts very long bearer token", () => {
+    const long = "a".repeat(4096);
+    expect(getBearerTokenFromHeader(`Bearer ${long}`)).toBe(long);
+    expect(isAuthorizedHeaderValue(`Bearer ${long}`, long)).toBe(true);
+  });
+
+  it("handles 1-char token", () => {
+    expect(getBearerTokenFromHeader("Bearer x")).toBe("x");
+    expect(isAuthorizedHeaderValue("Bearer x", "x")).toBe(true);
+  });
+
+  // Non-Bearer schemes
+  it.each(["Basic dXNlcjpwYXNz", "Digest realm=test", "Negotiate aaa"])(
+    "rejects non-Bearer scheme %j",
+    (header) => {
+      expect(getBearerTokenFromHeader(header)).toBeNull();
+    },
+  );
+
+  // isAuthorizedNodeRequest edge cases
+  it("handles node request with array header", () => {
+    const req = {
+      headers: { authorization: ["Bearer token-123"] },
+    } as unknown as IncomingMessage;
+    expect(isAuthorizedNodeRequest(req, "token-123")).toBe(true);
+    expect(isAuthorizedNodeRequest(req, "wrong")).toBe(false);
+  });
+
+  it("handles node request with missing header", () => {
+    const req = { headers: {} } as IncomingMessage;
+    expect(isAuthorizedNodeRequest(req, "token")).toBe(false);
+    expect(isAuthorizedNodeRequest(req, null)).toBe(true);
+  });
+});

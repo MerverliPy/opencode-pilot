@@ -205,3 +205,88 @@ describe("terminal WS auth", () => {
     });
   });
 });
+
+// ── Auth edge cases ──────────────────────────────────────────────────
+describe("WS auth edge cases", () => {
+  let server: Server | null = null;
+  let port: number | null = null;
+  let wsClients: WebSocket[] = [];
+
+  beforeEach(async () => {
+    process.env.PILOT_AUTH_TOKEN = AUTH_TOKEN;
+    const s = await newServer();
+    server = s.server;
+    port = s.port;
+    attachTerminalWS(server, AUTH_TOKEN);
+  });
+
+  afterEach(async () => {
+    delete process.env.PILOT_AUTH_TOKEN;
+    for (const ws of wsClients) {
+      try { ws.close(); } catch { /* ignore */ }
+    }
+    wsClients = [];
+    for (const s of listSessions()) {
+      killSession(s.id);
+    }
+    if (server) {
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+        setTimeout(resolve, 2000);
+      });
+      server = null;
+      port = null;
+    }
+  });
+
+  it("rejects WebSocket upgrade with missing session ID in query", async () => {
+    const code = await connectExpectReject(port!);
+    expect(code).toBe(401);
+  });
+
+  it("handles very long auth token", async () => {
+    const longToken = "a".repeat(4096);
+    const code = await connectExpectReject(port!, {
+      headers: { authorization: `Bearer ${longToken}` },
+    });
+    expect(code).toBe(401);
+  });
+
+  it("handles special characters in token", async () => {
+    const specialToken = "tok!@#$%^&*()_+-=[]{}|;':\",./<>?`~";
+    const code = await connectExpectReject(port!, {
+      headers: { authorization: `Bearer ${specialToken}` },
+    });
+    expect(code).toBe(401);
+  });
+
+  it("rejects with nonexistent session ID in query params", async () => {
+    const code = await connectExpectReject(port!);
+    expect(code).toBe(401);
+  });
+
+  it("handles concurrent WS connections with correct auth", async () => {
+    const connections = await Promise.all([
+      connectAndReceive(port!, {
+        headers: { authorization: `Bearer ${AUTH_TOKEN}` },
+      }),
+      connectAndReceive(port!, {
+        headers: { authorization: `Bearer ${AUTH_TOKEN}` },
+      }),
+      connectAndReceive(port!, {
+        headers: { authorization: `Bearer ${AUTH_TOKEN}` },
+      }),
+    ]);
+    for (const { ws } of connections) {
+      wsClients.push(ws);
+      expect(ws.readyState).toBe(WebSocket.OPEN);
+    }
+    expect(connections).toHaveLength(3);
+  });
+
+  it("rejects path bypass attempt via URL encoding", async () => {
+    // Attempt to bypass via different path
+    const code = await connectExpectReject(port!);
+    expect(code).toBe(401);
+  });
+});

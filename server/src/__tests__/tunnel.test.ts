@@ -83,3 +83,82 @@ describe("tunnel module", () => {
     });
   });
 });
+
+describe("tunnel edge cases", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    stopTunnel();
+  });
+
+  it("handles rapid start/stop cycle", () => {
+    startTunnel(3000);
+    stopTunnel();
+    startTunnel(3000);
+    expect(spawn).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws ENOENT when cloudflared not found", () => {
+    // Simulate spawn throwing ENOENT
+    (spawn as jest.Mock).mockImplementationOnce(() => {
+      const err = new Error("spawn cloudflared ENOENT");
+      (err as NodeJS.ErrnoException).code = "ENOENT";
+      throw err;
+    });
+
+    // startTunnel does not catch spawn errors
+    expect(() => startTunnel(3000)).toThrow(/ENOENT/);
+  });
+
+  it("handles tunnel process exit with non-zero code", () => {
+    startTunnel(3000);
+    // Capture the exit handler
+    const exitHandler = (mockOn.mock.calls as [string, unknown][]).find(
+      ([event]) => event === "exit",
+    );
+    if (exitHandler) {
+      const [, cb] = exitHandler;
+      (cb as (code: number) => void)(1);
+    }
+
+    const status = getTunnelStatus();
+    expect(status.active).toBe(false);
+    expect(status.error).toContain("code 1");
+  });
+
+  it("handles non-URL output on stdout", () => {
+    startTunnel(3000);
+    const dataHandler = (mockStdout.on.mock.calls as [string, unknown][]).find(
+      ([event]) => event === "data",
+    );
+    if (dataHandler) {
+      const [, cb] = dataHandler;
+      (cb as (data: Buffer) => void)(Buffer.from("some random log line\n"));
+    }
+
+    const status = getTunnelStatus();
+    // URL should remain null since output didn't contain a tunnel URL
+    expect(status.url).toBeNull();
+  });
+
+  it("double-start is idempotent", () => {
+    startTunnel(3000);
+    startTunnel(3000);
+    startTunnel(3000);
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it("tunnel error event sets error state", () => {
+    startTunnel(3000);
+    const errorHandler = (mockOn.mock.calls as [string, unknown][]).find(
+      ([event]) => event === "error",
+    );
+    if (errorHandler) {
+      const [, cb] = errorHandler;
+      (cb as (err: Error) => void)(new Error("connection refused"));
+    }
+
+    const status = getTunnelStatus();
+    expect(status.active).toBe(false);
+    expect(status.error).toBe("connection refused");
+  });
+});

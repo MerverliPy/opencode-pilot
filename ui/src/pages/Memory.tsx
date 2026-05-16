@@ -134,6 +134,7 @@ export function Memory() {
     >
       {/* Header */}
       <div
+        data-testid="memory-header"
         style={{
           padding: "12px 16px",
           borderBottom: `1px solid ${colors.border}`,
@@ -156,6 +157,7 @@ export function Memory() {
             Memory
           </span>
           <span
+            data-testid="memory-count"
             style={{
               fontFamily: fonts.mono,
               fontSize: fontSizes.xs,
@@ -169,6 +171,7 @@ export function Memory() {
           </span>
           {isExtracting && (
             <span
+              data-testid="memory-extracting"
               style={{
                 fontFamily: fonts.mono,
                 fontSize: fontSizes.xs,
@@ -182,7 +185,9 @@ export function Memory() {
 
         {/* Search */}
         <input
+          data-testid="memory-search"
           type="search"
+          aria-label="Search memories"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="search memories…"
@@ -207,6 +212,7 @@ export function Memory() {
       {/* Error */}
       {error && (
         <div
+          data-testid="memory-error"
           style={{
             padding: "8px 16px",
             color: colors.error,
@@ -220,9 +226,10 @@ export function Memory() {
       )}
 
       {/* Memory list */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div data-testid="memory-list" style={{ flex: 1, overflowY: "auto" }}>
         {isSearching ? (
           <div
+            data-testid="memory-searching"
             style={{
               padding: 24,
               color: colors.muted,
@@ -234,8 +241,9 @@ export function Memory() {
             searching…
           </div>
         ) : displayed.length === 0 ? (
-          <EmptyState
-            message={
+          <div data-testid="memory-list-empty">
+            <EmptyState
+              message={
               searchQuery
                 ? `no memories matching "${searchQuery}"`
                 : filter !== "all"
@@ -243,6 +251,7 @@ export function Memory() {
                   : undefined
             }
           />
+          </div>
         ) : (
           displayed.map((m) => (
             <MemoryCard

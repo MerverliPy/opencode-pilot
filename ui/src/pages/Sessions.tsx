@@ -67,6 +67,7 @@ export function Sessions() {
   if (!server) {
     return (
       <div
+        data-testid="sessions-no-server"
         style={{
           display: "flex",
           alignItems: "center",
@@ -94,6 +95,7 @@ export function Sessions() {
         }}
       >
         <h1
+          data-testid="sessions-heading"
           style={{
             fontFamily: fonts.sans,
             fontSize: fontSizes.lg,
@@ -104,6 +106,7 @@ export function Sessions() {
           Sessions
         </h1>
         <button
+          data-testid="new-session-button"
           onClick={handleCreate}
           style={{
             backgroundColor: colors.accent,
@@ -122,6 +125,7 @@ export function Sessions() {
 
       {error && (
         <div
+          data-testid="sessions-error"
           role="alert"
           style={{
             padding: "8px 12px",
@@ -140,6 +144,7 @@ export function Sessions() {
 
       {loading ? (
         <div
+          data-testid="sessions-loading"
           style={{
             color: colors.muted,
             fontFamily: fonts.mono,
@@ -152,6 +157,7 @@ export function Sessions() {
         </div>
       ) : sessions.length === 0 ? (
         <div
+          data-testid="sessions-empty"
           style={{
             color: colors.muted,
             fontFamily: fonts.mono,
@@ -163,10 +169,11 @@ export function Sessions() {
           no sessions yet
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div data-testid="session-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sessions.map((sess) => (
             <div
               key={sess.id}
+              data-testid={`session-row-${sess.id}`}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -210,6 +217,7 @@ export function Sessions() {
                 </div>
               </Link>
               <button
+                data-testid={`delete-session-${sess.id}`}
                 onClick={() => void handleDelete(sess.id)}
                 style={{
                   backgroundColor: "transparent",

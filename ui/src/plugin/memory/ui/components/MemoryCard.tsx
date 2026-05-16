@@ -32,6 +32,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
 
   return (
     <div
+      data-testid="memory-card"
       style={{
         borderBottom: `1px solid ${colors.borderSubtle}`,
         padding: "12px 16px",
@@ -48,6 +49,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
         }}
       >
         <span
+          data-testid="memory-category"
           style={{
             border: `1px solid ${catColor}`,
             borderRadius: 3,
@@ -72,6 +74,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
           </span>
         )}
         <span
+          data-testid="memory-confidence"
           style={{
             color: colors.mutedAlt,
             fontFamily: fonts.mono,
@@ -85,6 +88,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
 
       {/* Content */}
       <div
+        data-testid="memory-content"
         style={{
           color: colors.foreground,
           fontFamily: fonts.mono,
@@ -126,6 +130,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
       {/* Action row */}
       <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
         <button
+          data-testid="memory-pin"
           onClick={() => onPin(memory.id, !memory.isPinned)}
           style={{
             background: "none",
@@ -140,6 +145,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
           {memory.isPinned ? "unpin" : "pin"}
         </button>
         <button
+          data-testid="memory-archive"
           onClick={() => onArchive(memory.id)}
           style={{
             background: "none",
@@ -154,6 +160,7 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
           archive
         </button>
         <button
+          data-testid="memory-delete"
           onClick={() => onDelete(memory.id)}
           style={{
             background: "none",

@@ -188,7 +188,7 @@ export function Diff() {
 
   if (!server) {
     return (
-      <div
+      <div data-testid="diff-no-server"
         style={{
           display: "flex",
           alignItems: "center",
@@ -222,7 +222,7 @@ export function Diff() {
       }}
     >
       {/* Header */}
-      <div
+      <div data-testid="diff-header"
         style={{
           padding: "12px 20px",
           borderBottom: `1px solid ${colors.border}`,
@@ -234,7 +234,7 @@ export function Diff() {
           flexWrap: "wrap",
         }}
       >
-        <h1
+        <h1 data-testid="diff-heading"
           style={{
             fontFamily: fonts.sans,
             fontSize: fontSizes.md,
@@ -247,7 +247,7 @@ export function Diff() {
 
         {status && (
           <>
-            <span
+            <span data-testid="diff-branch"
               style={{
                 fontFamily: fonts.mono,
                 fontSize: fontSizes.sm,
@@ -280,7 +280,7 @@ export function Diff() {
         )}
 
         {loadingStatus && (
-          <span
+          <span data-testid="diff-refreshing"
             style={{
               fontFamily: fonts.mono,
               fontSize: fontSizes.xs,
@@ -291,7 +291,7 @@ export function Diff() {
           </span>
         )}
 
-        <button
+        <button data-testid="diff-refresh-button"
           onClick={() => {
             void refresh();
             void loadDiffs();
@@ -314,7 +314,7 @@ export function Diff() {
 
       {/* Error */}
       {error && (
-        <div
+        <div data-testid="diff-error"
           style={{
             padding: "8px 20px",
             backgroundColor: colors.errorTint,
@@ -387,7 +387,7 @@ export function Diff() {
 
       {/* Success message */}
       {commitResult && (
-        <div
+        <div data-testid="diff-success"
           style={{
             padding: "8px 20px",
             backgroundColor: colors.successTint,
@@ -403,9 +403,9 @@ export function Diff() {
       )}
 
       {/* Diff content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+      <div data-testid="diff-content" style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
         {loadingStatus && !status ? (
-          <div
+          <div data-testid="diff-loading"
             style={{
               color: colors.muted,
               fontFamily: fonts.mono,
@@ -417,7 +417,7 @@ export function Diff() {
             loading…
           </div>
         ) : totalChanged === 0 && !loadingStatus ? (
-          <div
+          <div data-testid="diff-clean"
             style={{
               color: colors.muted,
               fontFamily: fonts.mono,
@@ -431,7 +431,7 @@ export function Diff() {
         ) : (
           <>
             {loadingDiff && diffs.length === 0 && (
-              <div
+              <div data-testid="diff-loading-diffs"
                 style={{
                   color: colors.muted,
                   fontFamily: fonts.mono,

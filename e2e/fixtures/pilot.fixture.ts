@@ -1,5 +1,8 @@
 import { test as base, expect } from "@playwright/test";
 import { ChatPage } from "../pages/ChatPage";
+import { FilesPage } from "../pages/FilesPage";
+import { MemoryPage } from "../pages/MemoryPage";
+import { SessionsPage } from "../pages/SessionsPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TerminalPage } from "../pages/TerminalPage";
 import { Navigation } from "../pages/Navigation";
@@ -96,6 +99,9 @@ type PageObjectFixtures = {
   pilotPage: ChatPage;
   settingsPage: SettingsPage;
   terminalPage: TerminalPage;
+  memoryPage: MemoryPage;
+  sessionsPage: SessionsPage;
+  filesPage: FilesPage;
   navigation: Navigation;
 };
 
@@ -113,6 +119,21 @@ const pageObjectFixture = apiRequestsFixture.extend<PageObjectFixtures>({
   terminalPage: async ({ page }, use) => {
     const terminalPage = new TerminalPage(page);
     await use(terminalPage);
+  },
+
+  memoryPage: async ({ page }, use) => {
+    const memoryPage = new MemoryPage(page);
+    await use(memoryPage);
+  },
+
+  sessionsPage: async ({ page }, use) => {
+    const sessionsPage = new SessionsPage(page);
+    await use(sessionsPage);
+  },
+
+  filesPage: async ({ page }, use) => {
+    const filesPage = new FilesPage(page);
+    await use(filesPage);
   },
 
   navigation: async ({ page }, use) => {
@@ -159,6 +180,9 @@ const viewportFixture = pageObjectFixture.extend<ViewportFixtures>({
  * - **pilotPage**: `ChatPage` instance for the chat UI
  * - **settingsPage**: `SettingsPage` instance for the settings UI
  * - **terminalPage**: `TerminalPage` instance for the terminal UI
+ * - **memoryPage**: `MemoryPage` instance for the memory UI
+ * - **sessionsPage**: `SessionsPage` instance for the sessions UI
+ * - **filesPage**: `FilesPage` instance for the files UI
  * - **navigation**: `Navigation` instance for sidebar/nav interactions
  * - **getConsoleErrors**: Returns console errors collected during the test
  * - **getApiRequests**: Returns API requests (to `/api/*`) collected during the test

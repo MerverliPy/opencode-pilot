@@ -23,6 +23,7 @@ type Props = {
 export function CategoryFilter({ value, onChange }: Props) {
   return (
     <div
+      data-testid="category-filter"
       style={{
         borderBottom: `1px solid ${colors.border}`,
         display: "flex",
@@ -36,6 +37,7 @@ export function CategoryFilter({ value, onChange }: Props) {
         return (
           <button
             key={tab.value}
+            data-testid={`filter-tab-${tab.value}`}
             onClick={() => onChange(tab.value)}
             style={{
               background: "none",

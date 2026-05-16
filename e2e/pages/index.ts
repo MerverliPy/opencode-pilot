@@ -1,5 +1,9 @@
 export { BasePage } from "./BasePage";
 export { ChatPage } from "./ChatPage";
+export { DiffPage } from "./DiffPage";
+export { FilesPage } from "./FilesPage";
+export { MemoryPage } from "./MemoryPage";
+export { SessionsPage } from "./SessionsPage";
 export { SettingsPage } from "./SettingsPage";
 export { TerminalPage } from "./TerminalPage";
 export { Navigation, Routes } from "./Navigation";

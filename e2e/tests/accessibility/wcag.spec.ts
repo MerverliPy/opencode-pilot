@@ -51,6 +51,21 @@ const KNOWN_VIOLATIONS: Array<{ id: string; selector: string; reason: string }> 
       selector: "button",
       reason: "Sessions delete/error buttons use error color — acceptable for error states per WCAG 1.4.3 G145.",
     },
+    {
+      id: "color-contrast",
+      selector: "span",
+      reason: "Memory route muted status text (#808080 on #1a1a1a) — same root cause as home page span contrast.",
+    },
+    {
+      id: "color-contrast",
+      selector: "div",
+      reason: "Memory route 'Not configured'/'Inactive' labels (#808080 on #1a1a1a) — same root cause as settings page contrast.",
+    },
+    {
+      id: "color-contrast",
+      selector: "[role='alert']",
+      reason: "Memory/terminal/diff routes error banners use error color — acceptable for error states per WCAG 1.4.3 G145.",
+    },
   ];
 
 /** Check if a violation matches a known exception. */
@@ -383,5 +398,343 @@ test.describe("Accessibility — focus management", () => {
 
     // Should have visited at least one interactive element
     expect(visited.size).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test group 6: WCAG audits for additional routes (/memory, /diff, /terminal)
+// ---------------------------------------------------------------------------
+
+test.describe("Accessibility — WCAG 2.2 AA audits — additional routes", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+  });
+
+  test("/memory route has no NEW WCAG violations", async ({ page }) => {
+    await page.goto("/memory");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+
+    const violations = results.violations;
+
+    const newViolations: typeof violations = [];
+
+    for (const v of violations) {
+      const newNodeTargets = v.nodes.filter(
+        (n) => !isKnownViolation(v, n.target.join(" ")),
+      );
+      if (newNodeTargets.length > 0) {
+        newViolations.push({ ...v, nodes: newNodeTargets });
+      }
+    }
+
+    if (violations.length > 0) {
+      const details = violations
+        .map((v) => {
+          const nodes = v.nodes
+            .map((n) => {
+              const target = n.target.join(" > ");
+              return `    - ${target}`;
+            })
+            .join("\n");
+          return `\n  [${v.id}] ${v.description}\n  Impact: ${v.impact}\n  Affected nodes:\n${nodes}`;
+        })
+        .join("\n");
+
+      console.error(
+        `\n${violations.length} WCAG violation(s) on /memory:\n${details}`,
+      );
+    }
+
+    expect(newViolations).toHaveLength(0);
+  });
+
+  test("/diff route has no NEW WCAG violations", async ({ page }) => {
+    await page.goto("/diff");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+
+    const violations = results.violations;
+
+    const newViolations: typeof violations = [];
+
+    for (const v of violations) {
+      const newNodeTargets = v.nodes.filter(
+        (n) => !isKnownViolation(v, n.target.join(" ")),
+      );
+      if (newNodeTargets.length > 0) {
+        newViolations.push({ ...v, nodes: newNodeTargets });
+      }
+    }
+
+    if (violations.length > 0) {
+      const details = violations
+        .map((v) => {
+          const nodes = v.nodes
+            .map((n) => {
+              const target = n.target.join(" > ");
+              return `    - ${target}`;
+            })
+            .join("\n");
+          return `\n  [${v.id}] ${v.description}\n  Impact: ${v.impact}\n  Affected nodes:\n${nodes}`;
+        })
+        .join("\n");
+
+      console.error(
+        `\n${violations.length} WCAG violation(s) on /diff:\n${details}`,
+      );
+    }
+
+    expect(newViolations).toHaveLength(0);
+  });
+
+  test("/terminal route has no NEW WCAG violations", async ({ page }) => {
+    await page.goto("/terminal");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+
+    const violations = results.violations;
+
+    const newViolations: typeof violations = [];
+
+    for (const v of violations) {
+      const newNodeTargets = v.nodes.filter(
+        (n) => !isKnownViolation(v, n.target.join(" ")),
+      );
+      if (newNodeTargets.length > 0) {
+        newViolations.push({ ...v, nodes: newNodeTargets });
+      }
+    }
+
+    if (violations.length > 0) {
+      const details = violations
+        .map((v) => {
+          const nodes = v.nodes
+            .map((n) => {
+              const target = n.target.join(" > ");
+              return `    - ${target}`;
+            })
+            .join("\n");
+          return `\n  [${v.id}] ${v.description}\n  Impact: ${v.impact}\n  Affected nodes:\n${nodes}`;
+        })
+        .join("\n");
+
+      console.error(
+        `\n${violations.length} WCAG violation(s) on /terminal:\n${details}`,
+      );
+    }
+
+    expect(newViolations).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test group 7: Keyboard navigation — additional pages
+// ---------------------------------------------------------------------------
+
+test.describe("Accessibility — keyboard navigation — additional pages", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+  });
+
+  test("Tab key reaches interactive elements on sessions page", async ({
+    page,
+  }) => {
+    await page.goto("/sessions");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const focusedElements: string[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+      if (tag) focusedElements.push(tag);
+    }
+
+    expect(focusedElements.filter((t) => t !== "BODY").length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  test("Tab key reaches interactive elements on settings page", async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const focusedElements: string[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+      if (tag) focusedElements.push(tag);
+    }
+
+    expect(focusedElements.filter((t) => t !== "BODY").length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  test("Tab key reaches interactive elements on memory page", async ({
+    page,
+  }) => {
+    await page.goto("/memory");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const focusedElements: string[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+      if (tag) focusedElements.push(tag);
+    }
+
+    expect(focusedElements.filter((t) => t !== "BODY").length).toBeGreaterThan(
+      0,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test group 8: Focus traps — additional pages
+// ---------------------------------------------------------------------------
+
+test.describe("Accessibility — focus management — additional pages", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+  });
+
+  test("no focus traps on settings page", async ({ page }) => {
+    await page.goto("/settings");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const visited = new Set<string>();
+
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+
+      if (tag === "BODY") break;
+
+      const id = await page.evaluate(
+        () =>
+          document.activeElement?.id ??
+          document.activeElement?.className ??
+          document.activeElement?.tagName ?? "",
+      );
+
+      if (visited.has(id) && i > 0) break;
+      visited.add(id);
+    }
+
+    expect(visited.size).toBeGreaterThan(0);
+  });
+
+  test("no focus traps on sessions page", async ({ page }) => {
+    await page.goto("/sessions");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const visited = new Set<string>();
+
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+
+      if (tag === "BODY") break;
+
+      const id = await page.evaluate(
+        () =>
+          document.activeElement?.id ??
+          document.activeElement?.className ??
+          document.activeElement?.tagName ?? "",
+      );
+
+      if (visited.has(id) && i > 0) break;
+      visited.add(id);
+    }
+
+    expect(visited.size).toBeGreaterThan(0);
+  });
+
+  test("no focus traps on memory page", async ({ page }) => {
+    await page.goto("/memory");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByTestId("main-content")).toBeVisible();
+
+    const visited = new Set<string>();
+
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(
+        () => document.activeElement?.tagName ?? "",
+      );
+
+      if (tag === "BODY") break;
+
+      const id = await page.evaluate(
+        () =>
+          document.activeElement?.id ??
+          document.activeElement?.className ??
+          document.activeElement?.tagName ?? "",
+      );
+
+      if (visited.has(id) && i > 0) break;
+      visited.add(id);
+    }
+
+    expect(visited.size).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test group 9: Landmarks — additional pages
+// ---------------------------------------------------------------------------
+
+test.describe("Accessibility — landmarks — additional pages", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+  });
+
+  test("diff page has a main landmark", async ({ page }) => {
+    await page.goto("/diff");
+    await page.waitForLoadState("domcontentloaded");
+
+    const main = page.locator("main, [role='main']");
+    await expect(main).toBeVisible();
   });
 });

@@ -83,6 +83,7 @@ export function Files() {
   if (!server) {
     return (
       <div
+        data-testid="file-no-server"
         style={{
           display: "flex",
           alignItems: "center",
@@ -110,6 +111,7 @@ export function Files() {
     >
       {/* Left pane: file tree */}
       <div
+        data-testid="file-tree"
         style={{
           width: 280,
           minWidth: 180,
@@ -144,6 +146,7 @@ export function Files() {
             Files
           </h1>
           <span
+            data-testid="file-current-path"
             style={{
               fontFamily: fonts.mono,
               fontSize: fontSizes.xs,
@@ -159,6 +162,7 @@ export function Files() {
           </span>
           {path && (
             <button
+              data-testid="file-up-button"
               onClick={() => {
                 const parent = path.substring(0, path.lastIndexOf("/"));
                 setPath(parent);
@@ -183,6 +187,7 @@ export function Files() {
         {/* Error */}
         {error && (
           <div
+            data-testid="file-error"
             style={{
               padding: "8px 12px",
               backgroundColor: "rgba(229,115,115,0.1)",
@@ -202,6 +207,7 @@ export function Files() {
         <div style={{ flex: 1, overflowY: "auto" }}>
           {loading ? (
             <div
+              data-testid="file-loading"
               style={{
                 color: colors.muted,
                 fontFamily: fonts.mono,
@@ -220,6 +226,7 @@ export function Files() {
                 return (
                   <button
                     key={f.path}
+                    data-testid={`file-item-${f.name}`}
                     onClick={() => {
                       if (f.type === "directory") {
                         setPath(f.path);
@@ -275,6 +282,7 @@ export function Files() {
               })}
               {files.length === 0 && (
                 <div
+                  data-testid="file-empty-directory"
                   style={{
                     padding: 20,
                     textAlign: "center",
@@ -293,6 +301,7 @@ export function Files() {
 
       {/* Right pane: CodeMirror preview */}
       <div
+        data-testid="file-preview"
         style={{
           flex: 1,
           display: "flex",
@@ -305,6 +314,7 @@ export function Files() {
           <>
             {/* Preview header */}
             <div
+              data-testid="file-preview-header"
               style={{
                 padding: "8px 16px",
                 borderBottom: `1px solid ${colors.border}`,
@@ -318,8 +328,9 @@ export function Files() {
               }}
             >
               <span>📄</span>
-              <span style={{ color: colors.text }}>{selected.name}</span>
+              <span data-testid="file-preview-name" style={{ color: colors.text }}>{selected.name}</span>
               <span
+                data-testid="file-preview-path"
                 style={{
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -341,6 +352,7 @@ export function Files() {
           </>
         ) : (
           <div
+            data-testid="file-preview-empty"
             style={{
               display: "flex",
               alignItems: "center",

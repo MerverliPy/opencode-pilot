@@ -65,6 +65,7 @@ export function Settings() {
   return (
     <div style={{ padding: 16, maxWidth: 600, margin: "0 auto", flex: 1, minHeight: 0, overflow: "auto" }}>
       <h1
+        data-testid="settings-heading"
         style={{
           fontFamily: fonts.sans,
           fontSize: fontSizes.lg,
@@ -89,6 +90,7 @@ export function Settings() {
 
         {servers.length === 0 ? (
           <div
+            data-testid="no-servers-message"
             style={{
               color: colors.muted,
               fontFamily: fonts.mono,
@@ -99,10 +101,11 @@ export function Settings() {
             no servers configured
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }} data-testid="server-list">
             {servers.map((s) => (
               <div
                 key={s.id}
+                data-testid={`server-row-${s.id}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -147,6 +150,7 @@ export function Settings() {
                 <div style={{ display: "flex", gap: 8 }}>
                   {s.id !== activeId && (
                     <button
+                      data-testid={`activate-server-${s.id}`}
                       onClick={() => void setActive(s.id)}
                       style={{
                         backgroundColor: colors.accent,
@@ -163,6 +167,7 @@ export function Settings() {
                     </button>
                   )}
                   <button
+                    data-testid={`edit-server-${s.id}`}
                     onClick={() => startEdit(s)}
                     style={{
                       backgroundColor: "transparent",
@@ -178,6 +183,7 @@ export function Settings() {
                     edit
                   </button>
                   <button
+                    data-testid={`remove-server-${s.id}`}
                     onClick={() => void remove(s.id)}
                     style={{
                       backgroundColor: "transparent",
@@ -354,6 +360,7 @@ export function Settings() {
                   Username (optional)
                 </span>
                 <input
+                  data-testid="server-username-input"
                   value={form.username}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, username: e.target.value }))
@@ -384,6 +391,7 @@ export function Settings() {
                   Password (optional)
                 </span>
                 <input
+                  data-testid="server-password-input"
                   type="password"
                   value={form.password}
                   onChange={(e) =>
@@ -412,6 +420,7 @@ export function Settings() {
               }}
             >
               <button
+                data-testid="modal-cancel-button"
                 onClick={cancel}
                 style={{
                   backgroundColor: "transparent",
@@ -427,6 +436,7 @@ export function Settings() {
                 cancel
               </button>
               <button
+                data-testid="modal-save-button"
                 onClick={() => void save()}
                 disabled={!form.name.trim() || !form.url.trim()}
                 style={{

@@ -11,6 +11,7 @@ type Props = {
 export function EmptyState({ message = "no memories yet" }: Props) {
   return (
     <div
+      data-testid="memory-empty-state"
       style={{
         flex: 1,
         display: "flex",

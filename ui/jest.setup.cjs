@@ -50,3 +50,10 @@ afterAll(() => {
   console.warn = originalConsole.warn;
   console.error = originalConsole.error;
 });
+
+// TextEncoder/TextDecoder polyfill for jsdom (required by react-router-dom)
+if (typeof global.TextEncoder === "undefined") {
+  const { TextEncoder, TextDecoder } = require("util");
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}

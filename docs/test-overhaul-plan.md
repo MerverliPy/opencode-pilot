@@ -14,11 +14,11 @@ created:      2026-05-15
 last_updated: 2026-05-15
 total_phases: 9
 total_tasks:  50
-completed:    14
+completed:    16
 in_progress:  0
 blocked:      0
-completion:   28%
-overall_status: ✅ Phase 0, ✅ Phase 1, Phase 2 next
+completion:   32%
+overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, Phase 3 next
 ```
 
 ---
@@ -29,14 +29,14 @@ overall_status: ✅ Phase 0, ✅ Phase 1, Phase 2 next
 |-------|-------|---------|----------------|------------|---|
 | **P0: Quick Wins** | 8 | 8 | 0 | 0 | 100% |
 | **P1: Server Unit Tests** | 6 | 6 | 0 | 0 | 100% |
-| **P2: Server Integration** | 2 | 0 | 0 | 0 | 0% |
+| **P2: Server Integration** | 2 | 2 | 0 | 0 | 100% |
 | **P3: Security Expansion** | 6 | 0 | 0 | 0 | 0% |
 | **P4: UI Unit Tests** | 8 | 0 | 0 | 0 | 0% |
 | **P5: Mock Replacement** | 2 | 0 | 0 | 0 | 0% |
 | **P6: E2E Expansion** | 8 | 0 | 0 | 0 | 0% |
 | **P7: Benchtest Real Data** | 4 | 0 | 0 | 0 | 0% |
 | **P8: Long-term Optimizations** | 6 | 0 | 0 | 0 | 0% |
-| **Total** | **50** | **14** | **0** | **0** | **28%** |
+| **Total** | **50** | **16** | **0** | **0** | **32%** |
 
 ---
 
@@ -45,6 +45,7 @@ overall_status: ✅ Phase 0, ✅ Phase 1, Phase 2 next
 | Agent Role | Model/Provider | Phases Worked | Dates |
 |------------|----------------|---------------|-------|
 | Orchestrator | n9router/ds/deepseek-v4-flash | P1 | 2026-05-15 |
+| Orchestrator | deepseek/deepseek-v4-pro | P2 | 2026-05-15 |
 
 ---
 
@@ -146,8 +147,8 @@ decisions:   "Exported parseArgs from cli.ts for testability; guarded module-lev
 
 | # | Task | Test File | Tests | Effort | Status | Assignee | Notes |
 |---|------|-----------|-------|--------|--------|----------|-------|
-| 2.1 | memoryRouter 14 route tests | `memory/__tests__/memoryRouter.test.ts` | 14 | 1.5h | ⏳ | — | GET list, GET search, GET config, PUT config, GET profile, GET timeline, GET embeddings (with/without modelId), POST insert, POST embeddings, PATCH update, DELETE single, DELETE all, DELETE embeddings |
-| 2.2 | memoryRouter 12 security edge cases | `memory/__tests__/memoryRouter.test.ts` | 12 | 1.5h | ⏳ | — | SQLi in content, serverId path traversal, mass assignment, config overwrite, invalid embedding vector, limit/offset extremes, wrong-server ownership, search wildcards, empty memoryIds, oversized content |
+| 2.1 | memoryRouter 14 route tests | `memory/__tests__/memoryRouter.test.ts` | 14 | 1.5h | ✅ | Orchestrator | 16 happy path tests covering all routes GET list, GET search, GET config, PUT config, GET profile, GET timeline, GET embeddings (with/without modelId), POST insert, POST embeddings, PATCH update, DELETE single, DELETE all, DELETE embeddings |
+| 2.2 | memoryRouter 12 security edge cases | `memory/__tests__/memoryRouter.test.ts` | 12 | 1.5h | ✅ | Orchestrator | 12 security tests: SQLi, path traversal, mass assignment, unicode, etc. SQLi in content, serverId path traversal, mass assignment, config overwrite, invalid embedding vector, limit/offset extremes, wrong-server ownership, search wildcards, empty memoryIds, oversized content |
 
 **Route test matrix:**
 - `GET /:serverId` — returns `{memories, count}` shape, excludes archived
@@ -181,12 +182,12 @@ function expectMemoryShape(m: unknown): asserts m is Memory {
 #### Phase 2 Sign-off
 
 ```yaml
-signed_by:   _
-model:       _
-date:        _
-verification: "npm run typecheck -w server && npm run test -w server"
-difficulties: _
-decisions:   _
+signed_by:   Orchestrator
+model:       deepseek/deepseek-v4-pro
+date:        2026-05-15
+verification: "typecheck all pass. server 167/167 passing (28 new). memoryRouter: 28/28."
+difficulties: "test 2.2.9 (POST no body) needed global error handler on test app to mirror production behavior. --testPathPattern renamed to --testPathPatterns in Jest 30."
+decisions:   "Added app.onError() handler in createTestApp() factory to match production error handling. Tests isolated per-server with deleteAllMemoriesByServer in beforeEach."
 ```
 
 ---

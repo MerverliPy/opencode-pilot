@@ -60,3 +60,12 @@ verification: "<cmd> (N/N passing)"
 difficulties: "<issue>"
 decisions:   "<rationale>"
 ```
+
+## Test Failure Fix Plan — Batches
+
+| Batch | Files | Fixes issue(s) | Est. lines changed |
+|-------|-------|----------------|--------------------|
+| 1 | routes.spec.ts, console.spec.ts | 4 failures (#1, #2, #3, indirectly #4/#5) | ~6 |
+| 2 | Sessions.tsx, wcag.spec.ts | 2 failures (#4, #5) | ~10 |
+| 3 | interaction.spec.ts, performance-regression.spec.ts | 2 failures (#6, #7) | ~6 |
+| 4 | benchtest/package.json, benchtest/tsconfig.json | 5 benchtest scenarios | ~6 |

@@ -100,10 +100,10 @@ async function runScenario(scenarioName) {
   const startTime = Date.now();
 
   // Import and run the WorkflowRunner
-  const { WorkflowRunner } = await import('./benchtest/runners/WorkflowRunner.js');
-  const { TerminalReporter } = await import('./benchtest/reporters/TerminalReporter.js');
-  const { JsonReporter } = await import('./benchtest/reporters/JsonReporter.js');
-  const { HtmlReporter } = await import('./benchtest/reporters/HtmlReporter.js');
+  const { WorkflowRunner } = await import('./benchtest/dist/runners/WorkflowRunner.js');
+  const { TerminalReporter } = await import('./benchtest/dist/reporters/TerminalReporter.js');
+  const { JsonReporter } = await import('./benchtest/dist/reporters/JsonReporter.js');
+  const { HtmlReporter } = await import('./benchtest/dist/reporters/HtmlReporter.js');
 
   const runner = new WorkflowRunner({
     url: URL,
@@ -135,7 +135,7 @@ async function runScenario(scenarioName) {
 
   // Regression comparison
   if (BASELINE_FILE) {
-    const { RegressionRunner } = await import('./benchtest/runners/RegressionRunner.js');
+    const { RegressionRunner } = await import('./benchtest/dist/runners/RegressionRunner.js');
     const regRunner = new RegressionRunner();
     try {
       await regRunner.loadBaseline(BASELINE_FILE);
@@ -199,7 +199,7 @@ async function main() {
   // Stress test if requested
   if (STRESS > 0) {
     hdr(`Stress Test (${STRESS} concurrent, scenario: ${scenariosToRun[0] || 'code-review'})`);
-    const { StressRunner } = await import('./benchtest/runners/StressRunner.js');
+    const { StressRunner } = await import('./benchtest/dist/runners/StressRunner.js');
     const stressRunner = new StressRunner({
       url: URL,
       apiKey: API_KEY,

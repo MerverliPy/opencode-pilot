@@ -14,6 +14,13 @@ import { test, expect } from "@playwright/test";
 const ROUTES = ["/", "/chat", "/sessions", "/files", "/settings"];
 
 test.describe("Console — error-free page loads", () => {
+  test.beforeEach(async ({ context }) => {
+    // Clear server state before each test to prevent cross-test pollution
+    await context.addInitScript(() => {
+      localStorage.removeItem("pilot.servers");
+      localStorage.removeItem("pilot.activeServer");
+    });
+  });
   for (const route of ROUTES) {
     test(`no console.error on ${route || "/"}`, async ({ page }) => {
       const errors: { type: string; text: string }[] = [];
@@ -34,6 +41,13 @@ test.describe("Console — error-free page loads", () => {
 });
 
 test.describe("Console — warning audit", () => {
+  test.beforeEach(async ({ context }) => {
+    // Clear server state before each test to prevent cross-test pollution
+    await context.addInitScript(() => {
+      localStorage.removeItem("pilot.servers");
+      localStorage.removeItem("pilot.activeServer");
+    });
+  });
   for (const route of ROUTES) {
     test(`no console.warn on ${route || "/"}`, async ({ page }) => {
       const warnings: { type: string; text: string }[] = [];

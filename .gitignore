@@ -15,6 +15,11 @@ test-report.html
 # Playwright E2E artifacts
 test-results/
 e2e/screenshots/
+e2e/playwright-report/
+
+# Benchtest output
+benchtest-out/
+benchtest/dist/
 
 # Server build output
 server/dist/

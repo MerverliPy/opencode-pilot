@@ -79,8 +79,8 @@ export const BenchtestPlugin: Plugin = async () => {
     // ── LLM call params (before request) ─────────────────────────
     'chat.params': async (input, output) => {
       const agent = input.agent || getAgent();
-      const modelID = input.model?.modelID || 'unknown';
-      const providerID = input.model?.providerID || 'unknown';
+      const modelID = (input.model as any)?.modelID || (input.model as any)?.id || 'unknown';
+      const providerID = (input.model as any)?.providerID || 'unknown';
       const callKey = `${SESSION_ID}:${agent}:${Date.now()}`;
 
       pendingModelCalls.set(callKey, {
@@ -94,8 +94,8 @@ export const BenchtestPlugin: Plugin = async () => {
         agent,
         modelID,
         providerID,
-        temperature: input.temperature,
-        maxOutputTokens: input.maxOutputTokens,
+        temperature: (input as any).temperature,
+        maxOutputTokens: (input as any).maxOutputTokens,
         callKey,
       });
     },
@@ -103,8 +103,8 @@ export const BenchtestPlugin: Plugin = async () => {
     // ── LLM response ────────────────────────────────────────────
     'chat.message': async (input, output) => {
       const agent = input.agent || getAgent();
-      const modelID = input.model?.modelID || input.model?.modelID || 'unknown';
-      const providerID = input.model?.providerID || 'unknown';
+      const modelID = (input.model as any)?.modelID || (input.model as any)?.id || 'unknown';
+      const providerID = (input.model as any)?.providerID || 'unknown';
 
       // Find matching pending call
       let matchedKey: string | null = null;
@@ -124,8 +124,8 @@ export const BenchtestPlugin: Plugin = async () => {
       let inputTokens = 0;
       let outputTokens = 0;
       let textLength = 0;
-      if (output?.parts) {
-        for (const part of output.parts) {
+      if ((output as any)?.parts) {
+        for (const part of (output as any).parts as unknown[]) {
           if (typeof part === 'string') {
             textLength += part.length;
           } else if (part && typeof part === 'object') {
@@ -157,14 +157,15 @@ export const BenchtestPlugin: Plugin = async () => {
 
     // ── Tool call (before) ───────────────────────────────────────
     'tool.execute.before': async (input, output) => {
-      const tool = input.tool || 'unknown';
-      const callID = input.callID || `${Date.now()}`;
+      const i = input as any;
+      const tool = i.tool || 'unknown';
+      const callID = i.callID || `${Date.now()}`;
       const agent = getAgent();
-      const argsSize = input.args ? JSON.stringify(input.args).length : 0;
+      const argsSize = i.args ? JSON.stringify(i.args).length : 0;
 
       pendingToolCalls.set(callID, {
         tool,
-        args: input.args,
+        args: i.args,
         startedAt: Date.now(),
         agent,
       });

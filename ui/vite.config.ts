@@ -44,6 +44,8 @@ export default defineConfig({
       "/session": {
         target: proxyTarget,
         changeOrigin: true,
+        // Don't proxy /sessions (SPA route) — only proxy /session and /session/* API calls
+        bypass: (req) => req.url === "/sessions" || req.url?.startsWith("/sessions/") ? req.url : undefined,
       },
       "/git": proxyTarget,
       "/terminal/ws": {

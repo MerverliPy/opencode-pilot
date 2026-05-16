@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "echo 'No unit tests yet' && exit 0"
   },

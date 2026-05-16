@@ -122,6 +122,7 @@ export function Sessions() {
 
       {error && (
         <div
+          role="alert"
           style={{
             padding: "8px 12px",
             backgroundColor: "rgba(229,115,115,0.1)",

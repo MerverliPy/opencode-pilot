@@ -13,6 +13,14 @@ import { test, expect } from "@playwright/test";
  */
 
 test.describe("Navigation — route rendering", () => {
+  test.beforeEach(async ({ context }) => {
+    // Clear server state before each test to prevent cross-test pollution
+    await context.addInitScript(() => {
+      localStorage.removeItem("pilot.servers");
+      localStorage.removeItem("pilot.activeServer");
+    });
+  });
+
   test("root / renders Chat page", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/$/);

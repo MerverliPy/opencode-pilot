@@ -251,6 +251,11 @@ test.describe("Session title rename — full-stack", () => {
   test.skip(() => !process.env.E2E_FULL_STACK, "Requires E2E_FULL_STACK=1");
 
   test.beforeEach(async ({ page }) => {
+    // Skip if no OpenCode upstream is configured (default 20128 won't be running)
+    if (!process.env.OPENCODE_URL || process.env.OPENCODE_URL === "http://localhost:20128") {
+      test.skip(true, "Requires OpenCode upstream at OPENCODE_URL");
+      return;
+    }
     await page.goto("/");
     await page.evaluate(() => {
       localStorage.setItem(

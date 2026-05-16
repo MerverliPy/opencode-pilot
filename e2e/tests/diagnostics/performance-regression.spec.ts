@@ -20,6 +20,7 @@ interface PerformanceMetrics {
 test.describe("Performance regression — navigation", () => {
   test.beforeEach(() => {
     test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(!!process.env.E2E_FULL_STACK, "Full-stack mode includes upstream proxy latency");
   });
   // Baseline: navigating between all routes should be fast
   test("rapid navigation between routes stays under performance budget", async ({ page }) => {

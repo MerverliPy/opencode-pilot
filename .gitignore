@@ -43,3 +43,6 @@ Thumbs.db
 *.swo
 .bench-out/
 .opencode*/package-lock.json
+
+# Local agent source-of-truth map
+.opencode/agent-sot-map.md

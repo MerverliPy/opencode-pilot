@@ -41,6 +41,8 @@ Built with React + Vite and served by a Hono Node.js server.
 │  ┌────────────┐  ┌──────────┐  ┌─────────────────────┐ │
 │  │  OpenCode  │  │  Auth    │  │  Memory Plugin      │ │
 │  │  Proxy     │  │  Session │  │  (better-sqlite3)   │ │
+│  │  N9Router  │  │          │  │                     │ │
+│  │  Chat      │  │          │  │                     │ │
 │  └────────────┘  └──────────┘  └─────────────────────┘ │
 │  ┌────────────┐  ┌──────────┐  ┌─────────────────────┐ │
 │  │  Terminal  │  │  Web     │  │  Cloudflare Tunnel  │ │
@@ -58,6 +60,7 @@ Built with React + Vite and served by a Hono Node.js server.
 The Pilot server is the single backend process. It:
 
 - Proxies all OpenCode API calls (avoids CORS, centralizes auth)
+- Provides direct `/api/chat/completions` SSE endpoint calling n9router (bypasses OpenCode agent protocol)
 - Serves the compiled Vite frontend as static files
 - Enforces bearer token authentication on all sensitive routes (PILOT_AUTH_TOKEN env var; disabled when unset)
 - Bridges xterm.js ↔ node-pty over WebSocket for terminal access
@@ -111,6 +114,7 @@ pilot/
 │   │   ├── terminal.ts      # node-pty WebSocket bridge
 │   │   ├── push.ts          # Web Push relay
 │   │   ├── tunnel.ts        # Cloudflare tunnel manager
+│   │   ├── n9routerChat.ts  # Direct n9router chat completions endpoint
 │   │   └── memory/          # Memory plugin (ported from plugin/memory/)
 │   │       ├── db.ts
 │   │       ├── extraction.ts
@@ -124,7 +128,8 @@ pilot/
 │   │   ├── main.tsx
 │   │   ├── App.tsx
 │   │   ├── pages/           # Route-level components
-│   │   │   ├── Chat.tsx
+│   │   │   ├── SimpleChat.tsx  # Direct n9router streaming chat
+│   │   │   ├── Chat.tsx        # OpenCode session-based chat
 │   │   │   ├── Sessions.tsx
 │   │   │   ├── Files.tsx
 │   │   │   ├── Terminal.tsx
@@ -132,8 +137,11 @@ pilot/
 │   │   │   ├── Memory.tsx
 │   │   │   └── Settings.tsx
 │   │   ├── components/      # Shared UI components
+│   │   │   ├── ChatMessage.tsx  # Streaming chat message bubble
 │   │   ├── store/           # Zustand stores (ported from store/)
 │   │   ├── services/        # API + SSE clients (ported from services/)
+│   │   │   ├── n9routerChat.ts # N9RouterChatClient for direct completions
+│   │   │   ├── useChatStream.ts# SSE reader lifecycle hook
 │   │   ├── hooks/
 │   │   └── theme/
 │   ├── index.html
@@ -266,7 +274,7 @@ Base size: 14px. Line height: 1.5. Fonts are defined in `ui/src/theme.ts` as CSS
 │                              │
 │                              │
 ├──────────────────────────────┤
-│  [💬]  [☰]  [📁]  [>_]  [🧠]  │
+│  [💬]  [☰]  [📁]  [>_]  [±]  [🧠]  [⚙]  │
 └──────────────────────────────┘
 ```
 

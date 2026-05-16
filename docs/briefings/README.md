@@ -1,4 +1,4 @@
-# 🎯 Briefing Card Index — Test & Performance Overhaul
+# 🎯 Briefing Card Index — Test & Performance Overhaul + Chat Rewrite
 
 > **Ultra-compact per-phase briefings.** Each card ~100-200 tokens.
 > Agent reads index → picks phase → reads card → executes.
@@ -17,6 +17,10 @@
 | P6 🌐 | [E2E Expansion](P6.md) | 8 | ~8.5h | P5 | `typecheck -w ui && typecheck -w e2e` |
 | P7 📊 | [Benchtest Real Data](P7.md) | 4 | ~2.5h | P0,P1 | `benchtest:quick` |
 | P8 🏎️ | [Long-term Opts](P8.md) | 6 | ~3d | P7 | `build && test && test:e2e` |
+| P9 🚀 | [Direct Chat Endpoint](P9.md) | 6 | ~1.5h | P8 | `typecheck -w server && test -w server` |
+| P10 💬 | [Simple Chat UI](P10.md) | 8 | ~4h | P9 | `typecheck -w ui && test -w ui` |
+| P11 🔍 | [Debug Log System](P11.md) | 6 | ~1.5h | P9 | `typecheck -w server && typecheck -w ui` |
+| P12 ✨ | [Polish & Multi-model](P12.md) | 8 | ~3h | P10,P11 | `build && test && test:e2e` |
 
 ## Dependency DAG
 
@@ -27,9 +31,12 @@ P0 (no deps)
  ├── P4
 P5 (no deps) ─── P6
 P0+P1 ─── P7 ─── P8
+                   └── P9
+                        ├── P10 ─── P12
+                        └── P11 ────┘
 ```
 
-**Parallelism allowed:** P3/P4/P5 can run in parallel with P1/P2.
+**Parallelism allowed:** P3/P4/P5 can run in parallel with P1/P2. P11 parallel with P10.
 
 ## How to Use
 

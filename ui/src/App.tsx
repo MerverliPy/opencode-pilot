@@ -9,6 +9,7 @@ import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Chat } from "./pages/Chat";
+import { SimpleChat } from "./pages/SimpleChat";
 import { Sessions } from "./pages/Sessions";
 import { Files } from "./pages/Files";
 import { Terminal } from "./pages/Terminal";
@@ -26,7 +27,7 @@ export function App() {
             path="/"
             element={
               <ErrorBoundary>
-                <Chat />
+                <SimpleChat />
               </ErrorBoundary>
             }
           />
@@ -34,12 +35,12 @@ export function App() {
             path="/chat"
             element={
               <ErrorBoundary>
-                <Chat />
+                <SimpleChat />
               </ErrorBoundary>
             }
           />
           <Route
-            path="/chat/:sessionId"
+            path="/session/:sessionId"
             element={
               <ErrorBoundary>
                 <Chat />

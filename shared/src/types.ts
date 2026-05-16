@@ -16,7 +16,7 @@ export type Session = {
   share?: { url: string };
 };
 
-export type SessionStatus = "idle" | "busy" | "error" | "aborted";
+export type SessionStatus = "idle" | "busy" | "question" | "error" | "aborted";
 
 // ─── Provider / Agent / Command ───────────────────────────────────────────────
 

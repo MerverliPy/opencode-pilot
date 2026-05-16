@@ -9,16 +9,16 @@
 
 ```yaml
 plan_name:    pilot-test-perf-overhaul-v1
-version:      1.0.0
+version:      1.1.0
 created:      2026-05-15
 last_updated: 2026-05-16
-total_phases: 9
-total_tasks:  50
-completed:    44
+total_phases: 13
+total_tasks:  78
+completed:    58
 in_progress:  0
 blocked:      0
-completion:   88%
-overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4, Phase 8 next
+completion:   74%
+overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4, ✅ Phase 5, ✅ Phase 6, ✅ Phase 7, ✅ Phase 8, ✅ Phase 9, ✅ Phase 10, ⏳ Phase 11, ⏳ Phase 12
 ```
 
 ---
@@ -36,7 +36,11 @@ overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4,
 | **P6: E2E Expansion** | 8 | 8 | 0 | 0 | 100% |
 | **P7: Benchtest Real Data** | 4 | 4 | 0 | 0 | 100% |
 | **P8: Long-term Optimizations** | 6 | 0 | 0 | 0 | 0% |
-| **Total** | **50** | **44** | **0** | **0** | **88%** |
+| **P9: Direct Chat Endpoint** | 6 | 6 | 0 | 0 | 100% |
+| **P10: Simple Chat UI** | 8 | 8 | 0 | 0 | 100% |
+| **P11: Debug Log System** | 6 | 0 | 0 | 0 | 0% |
+| **P12: Polish & Multi-model** | 8 | 0 | 0 | 0 | 0% |
+| **Total** | **78** | **58** | **0** | **0** | **74%** |
 
 ---
 
@@ -50,6 +54,8 @@ overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4,
 | Orchestrator | n9router/ds/deepseek-v4-flash | P7 | 2026-05-16 |
 | Orchestrator | deepseek/deepseek-v4-pro | P2 | 2026-05-15 |
 | Orchestrator | n9router/ds/deepseek-v4-flash | P4 | 2026-05-15 |
+| Orchestrator | n9router/ds/deepseek-v4-flash | P9 | 2026-05-16 |
+| Orchestrator | n9router/ds/deepseek-v4-flash | P10 | 2026-05-16 |
 | Orchestrator | n9router/ds/deepseek-v4-flash | P3 | 2026-05-15 |
 ---
 
@@ -65,10 +71,14 @@ P0: Quick Wins (no deps)
   │     └── P6: E2E Test Expansion (needs P5 for selectors)
   └── P7: Benchtest Real Data (needs P0, P1)
         └── P8: Long-term Opts (needs P7 data)
+              └── P9: Direct n9router Chat (needs P8)
+                    ├── P10: Simple Chat UI (needs P9)
+                    │     └── P12: Polish & Multi-model (needs P10, P11)
+                    └── P11: Debug Log System (needs P9)
 ```
 
-**Parallelism:** P3/P4/P5 can run in parallel with P1/P2.
-**Recommended order:** P0 → P1 → P2 → P3+P4+P5 in parallel → P6 → P7 → P8
+**Parallelism:** P3/P4/P5 can run in parallel with P1/P2. P11 parallel with P10.
+**Recommended order:** P0 → P1 → P2 → P3+P4+P5 in parallel → P6 → P7 → P8 → P9 → P10+P11 in parallel → P12
 
 ---
 
@@ -373,6 +383,179 @@ date:        2026-05-16
 verification: "npm run build (PASS) && npm run typecheck (4/4 workspaces PASS) && npm run test (738 tests: 522 UI + 216 server PASS) && npm run benchtest:quick (8/8 scenarios PASS)"
 difficulties: "E2E tests require full-stack with specific port config; skipped in dev env. FTS5 triggers needed correction for column count mismatch (delete-value clauses missing old.category)."
 decisions:   "FTS5 replaces LIKE %q% scan for searchMemories, content-sync triggers keep index in sync. SSE backpressure uses TransformStream pipe with default highWaterMark=1. Auto-scroll guard uses scroll position ref with 100px threshold. Embedding IN and Timeline getBySession now bounded (100/500 limits)."
+```
+
+### Phase 9: Direct n9router Chat Endpoint 🚀
+
+**Goal:** Add `POST /api/chat/completions` to Pilot server that calls n9router `/v1/chat/completions` directly, bypassing OpenCode session agent protocol. Gives clean streaming chat without agent orchestration.
+
+**Dependencies:** P8 (existing optimizations).
+
+**Verification:** `npm run typecheck -w server && npm run test -w server`
+
+**Architecture:**
+```
+Client → Pilot Server POST /api/chat/completions
+  → n9router POST /v1/chat/completions (stream: true)
+  → SSE stream back to Client
+```
+
+| # | Task | File | Change | ⏱ | Status | Notes |
+|---|------|------|--------|----|--------|-------|
+| 9.1 | Create `n9routerChat.ts` server module | `server/src/n9routerChat.ts` (NEW) | Export `setupChatRouter()` — reads request body, forwards to n9router with `stream: true`, pipes SSE response | 30m | ✅ | Uses `fetch()` with `AbortSignal.timeout(60000)`. Pipes ReadableStream from n9router response directly to Hono response. |
+| 9.2 | Register chat route in `index.ts` | `server/src/index.ts` | Call `setupChatRouter()` in `startServer()`, pass n9router URL + API key from env | 10m | ✅ | Import + call alongside other `setup*()` calls |
+| 9.3 | Export `setupChatRouter()` with env wiring | `server/src/n9routerChat.ts` | Read `N9ROUTER_URL` and `N9ROUTER_API_KEY` from env. Create Hono route `POST /api/chat/completions`. | 15m | ✅ | Default `N9ROUTER_URL=http://localhost:20128/v1` |
+| 9.4 | Add env docs to CLI | `server/src/cli.ts` | Document `N9ROUTER_URL` and `N9ROUTER_API_KEY` in help text | 5m | ✅ | Add to `--help` output |
+| 9.5 | Add n9router error handling | `server/src/n9routerChat.ts` | Catch fetch errors. Map 401/402/429/503 to structured JSON errors | 15m | ✅ | `{error: {code, message, detail}}` |
+| 9.6 | Request logging | `server/src/n9routerChat.ts` | Log: model, token counts, latency. Prefix `[n9router-chat]` | 10m | ✅ | Never log message content or API keys |
+
+**API Contract:**
+```
+POST /api/chat/completions
+Authorization: Bearer <pilot-auth-token>
+Content-Type: application/json
+{ "messages": [...], "model": "ds/deepseek-v4-flash", "stream": true }
+
+Success (200, SSE stream):
+  data: {"choices":[{"delta":{"content":"Hello"},"index":0}]}
+  data: [DONE]
+
+Error:
+  {"error": {"code": "unauthorized", "message": "Invalid API key"}}
+```
+
+#### Phase 9 Sign-off
+```yaml
+signed_by:   <role>
+model:       n9router/ds/deepseek-v4-flash
+date:        YYYY-MM-DD
+verification: "typecheck -w server pass, test -w server pass"
+difficulties: "<any issues>"
+decisions:   "<key decisions>"
+```
+
+
+---
+
+### Phase 10: Simple Chat UI Component 💬
+
+**Goal:** Clean streaming chat UI using direct n9router completions. Model name as sender. No reasoning bleed. Input always available.
+
+**Dependencies:** P9 (server endpoint exists).
+
+**Verification:** `npm run typecheck -w ui && npm run test -w ui`
+
+| # | Task | File | Change | ⏱ | Status | Notes |
+|---|------|------|--------|----|--------|-------|
+| 10.1 | Create `N9RouterChatClient` | `ui/src/services/n9routerChat.ts` (NEW) | Class with `chatCompletion()` — POST to Pilot `/api/chat/completions`, return SSE reader | 30m | ✅ | Reuses n9router URL+key from `useN9RouterStore`. Uses AbortController for cancellation. |
+| 10.2 | Create `SimpleChat.tsx` page | `ui/src/pages/SimpleChat.tsx` (NEW) | Full chat UI: bubbles, streaming append, typing indicator, model name header, error handling | 1.5h | ✅ | State: `messages[]`, `streaming`, `error`. On submit: add user msg → call chatCompletion → read SSE deltas |
+| 10.3 | Create `ChatMessage.tsx` component | `ui/src/components/ChatMessage.tsx` (NEW) | Message bubble: avatar, sender name, content, timestamp. User right, assistant left. | 20m | ✅ | Props: `message: ChatMessage`. Sender: "You" or model name |
+| 10.4 | Add SimpleChat route | `ui/src/App.tsx` | Route `/chat` → `SimpleChat`. Keep `/session/:sessionId` → `Chat` | 10m | ✅ | Two chat modes on separate routes |
+| 10.5 | Update navigation | `ui/src/components/Layout.tsx` | Add "Chat" and "Session" nav items. Default = `/chat` | 20m | ✅ | Nav: Chat (💬), Sessions, Files, Memory, Diff, Terminal, Settings |
+| 10.6 | Create `useChatStream` hook | `ui/src/services/useChatStream.ts` (NEW) | SSE reader lifecycle: startStream, cancelStream, error, debug entries | 30m | ✅ | Reads SSE `data:` lines, parses JSON, extracts delta content |
+| 10.7 | Message persistence | `ui/src/pages/SimpleChat.tsx` | Save/load messages from localStorage | 20m | ✅ | Key: `pilot.chat.{id}`. Load on mount. |
+| 10.8 | Error handling | `ui/src/pages/SimpleChat.tsx` | Error banner + retry button. Use errorClassifier. Input stays enabled. | 15m | ✅ | Banner between messages and input |
+
+**ChatMessage type:**
+```typescript
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  model?: string;
+  timestamp: number;
+  finishReason?: string;
+  error?: string;
+};
+```
+
+#### Phase 10 Sign-off
+```yaml
+signed_by:   <role>
+model:       n9router/ds/deepseek-v4-flash
+date:        YYYY-MM-DD
+verification: "typecheck -w ui pass, test -w ui pass"
+difficulties: "<any issues>"
+decisions:   "<key decisions>"
+```
+
+
+---
+
+### Phase 11: Debug Log System 🔍
+
+**Goal:** Add debug logging across the chat pipeline so users can diagnose failures. Collapsible debug panel in UI.
+
+**Dependencies:** P9 (server endpoint exists).
+
+**Verification:** `npm run typecheck -w server && npm run typecheck -w ui`
+
+| # | Task | File | Change | ⏱ | Status | Notes |
+|---|------|------|--------|----|--------|-------|
+| 11.1 | Create `debugLog.ts` server middleware | `server/src/debugLog.ts` (NEW) | Log: method, path, status, latency. Optional: body logging with DEBUG=true. Never log credentials. | 20m | ⏳ | Format: `[debug] POST /api/chat/completions → 200 (1.2s)` |
+| 11.2 | Wire debug middleware | `server/src/n9routerChat.ts` | Apply debug middleware to chat completions route | 5m | ⏳ | `app.use("/api/chat/completions", debugMiddleware)` |
+| 11.3 | Create `DebugPanel.tsx` | `ui/src/components/DebugPanel.tsx` (NEW) | Collapsible panel: request log, status, latency, model, tokens. Toggle Ctrl+D. | 30m | ⏳ | Red for errors, green for success. Expandable entries. |
+| 11.4 | Create `useDebugLog` hook | `ui/src/services/useDebugLog.ts` (NEW) | Collect debug entries, clear, toggle. 100 entry FIFO limit. | 20m | ⏳ | Methods: `addEntry()`, `clear()`, `toggle()` |
+| 11.5 | Wire debug into SimpleChat | `ui/src/pages/SimpleChat.tsx` | Add DebugPanel below chat area | 10m | ⏳ | `<DebugPanel entries={debugEntries} />` |
+| 11.6 | Error classifier | `ui/src/lib/errorClassifier.ts` (NEW) | Map errors: 401=auth, 429=rate limit, 503=provider down, timeout=network | 15m | ⏳ | Export `classifyError(err): {message, detail, code}` |
+
+**Debug entry shape:**
+```typescript
+type DebugEntry = {
+  id: string;
+  type: "request" | "response" | "error" | "info";
+  timestamp: number;
+  url?: string;
+  method?: string;
+  status?: number;
+  latency?: number;
+  model?: string;
+  tokens?: { input: number; output: number };
+  message: string;
+  detail?: string;
+};
+```
+
+#### Phase 11 Sign-off
+```yaml
+signed_by:   <role>
+model:       n9router/ds/deepseek-v4-flash
+date:        YYYY-MM-DD
+verification: "typecheck -w server pass, typecheck -w ui pass"
+difficulties: "<any issues>"
+decisions:   "<key decisions>"
+```
+
+
+---
+
+### Phase 12: Polish & Multi-model ✨
+
+**Goal:** Production polish — model switching, markdown rendering, conversation management, stop generation.
+
+**Dependencies:** P10 (chat UI exists), P11 (debug system exists).
+
+**Verification:** `npm run build && npm run test && npm run test:e2e`
+
+| # | Task | File | Change | ⏱ | Status | Notes |
+|---|------|------|--------|----|--------|-------|
+| 12.1 | Model selector dropdown | `ui/src/pages/SimpleChat.tsx` | Dropdown of available models from n9router. Default = last used. | 30m | ⏳ | Fetched from `/v1/models` via existing N9RouterClient |
+| 12.2 | Fetch model list | `ui/src/services/n9routerChat.ts` | Add `availableModels()` calling n9router `/v1/models`. Cache 5min. | 15m | ⏳ | Models endpoint is public (no auth) |
+| 12.3 | Markdown rendering | `ui/src/components/ChatMessage.tsx` | Render assistant content as markdown: headings, bold, lists, code blocks, links | 30m | ⏳ | Use lightweight parser. Code blocks get `<pre><code>` + lang label |
+| 12.4 | Code block copy button | `ui/src/components/ChatMessage.tsx` | Copy icon on hover. Clipboard write. "Copied!" tooltip. | 20m | ⏳ | `navigator.clipboard.writeText()` |
+| 12.5 | Conversation list sidebar | `ui/src/pages/SimpleChat.tsx` | Past conversations: title, date, delete, switch, new. localStorage. | 30m | ⏳ | Auto-title from first user message |
+| 12.6 | Stop generation button | `ui/src/pages/SimpleChat.tsx` | Red Stop button replaces Send during streaming. Calls cancelStream(). | 15m | ⏳ | Partial response stays visible |
+| 12.7 | Responsive layout | `ui/src/pages/SimpleChat.tsx` | Mobile: full-width. Desktop: centered 800px, sidebar. Media query 768px breakpoint. | 20m | ⏳ | Sidebar toggle with hamburger on mobile |
+| 12.8 | Verify full pipeline | Various | Build, typecheck, test, manual verify: send → stream → error → model switch → debug → stop → conversation switch | 30m | ⏳ | Quick E2E test if time permits |
+
+#### Phase 12 Sign-off
+```yaml
+signed_by:   <role>
+model:       n9router/ds/deepseek-v4-flash
+date:        YYYY-MM-DD
+verification: "npm run build (PASS), typecheck all (PASS), test (all PASS)"
+difficulties: "<any issues>"
+decisions:   "<key decisions>"
 ```
 
 ---

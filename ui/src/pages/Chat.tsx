@@ -85,6 +85,14 @@ export function Chat() {
       case "session.idle":
         setStatus("idle");
         break;
+      case "session.status": {
+        const props = event.properties as {
+          sessionID: string;
+          status: { type: string };
+        };
+        setStatus(props.status.type as any);
+        break;
+      }
       case "session.error": {
         const props = event.properties as {
           sessionID: string;
@@ -305,6 +313,8 @@ export function Chat() {
         return "ready";
       case "busy":
         return "running…";
+      case "question":
+        return "question";
       case "error":
         return "error";
       case "aborted":
@@ -320,6 +330,8 @@ export function Chat() {
         return colors.success;
       case "busy":
         return colors.accent;
+      case "question":
+        return colors.warning;
       case "error":
         return colors.error;
       case "aborted":
@@ -562,7 +574,7 @@ export function Chat() {
       {/* Prompt input */}
       <PromptInput
         onSubmit={handleSubmit}
-        disabled={!client || !session || status === "busy"}
+        disabled={!client || !session || (status !== "idle" && status !== "question")}
       />
     </div>
   );

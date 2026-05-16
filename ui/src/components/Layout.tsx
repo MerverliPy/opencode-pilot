@@ -10,7 +10,7 @@ import { colors, fonts } from "../theme";
 import { useServerStore } from "../store/server";
 
 const NAV_ITEMS = [
-  { path: "/", label: "Chat", icon: "💬" },
+  { path: "/chat", label: "Chat", icon: "💬" },
   { path: "/sessions", label: "Sessions", icon: "☰" },
   { path: "/files", label: "Files", icon: "📁" },
   { path: "/terminal", label: "Terminal", icon: ">_" },
@@ -110,9 +110,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const isActive = useCallback(
     (path: string) => {
-      if (path === "/") {
+      if (path === "/chat") {
         return (
-          location.pathname === "/" || location.pathname.startsWith("/chat")
+          location.pathname === "/chat" || location.pathname === "/"
         );
       }
       return location.pathname.startsWith(path);

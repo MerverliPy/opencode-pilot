@@ -24,6 +24,7 @@ import { createTunnelRouter } from "./tunnel.js";
 import { attachTerminalWS, listSessions } from "./terminal.js";
 import { createGitRouter } from "./git.js";
 import { createMemoryRouter } from "./memory/memoryRouter.js";
+import { setupChatRouter } from "./n9routerChat.js";
 
 const app = new Hono();
 
@@ -109,6 +110,7 @@ protectRoute("/command/*");
 protectRoute("/global/*");
 protectRoute("/push/*");
 protectRoute("/memory/*");
+protectRoute("/api/chat/*");
 
 // ─── OpenCode proxy (M2: full proxy implementation) ──────────────────────────────
 export function setupProxy(
@@ -215,12 +217,18 @@ export { app };
  * @param port - Port to listen on (default: 3000)
  * @param openCodeUrl - URL of the upstream OpenCode instance
  */
+export function setupN9RouterChat() {
+  const chatRouter = setupChatRouter();
+  app.route("/", chatRouter);
+}
+
 export function startServer(
   port: number = 3000,
   openCodeUrl?: string,
   username?: string,
   password?: string,
 ): void {
+  setupN9RouterChat();
   setupProxy(openCodeUrl, username, password);
   setupGit();
   setupMemory();

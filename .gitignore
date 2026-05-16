@@ -56,3 +56,5 @@ Thumbs.db
 debugscreenshots/
 combo-edit.png
 upgrade-mobile-portal-project-cards.sh
+pilot.db-shm
+pilot.db-wal

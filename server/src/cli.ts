@@ -7,6 +7,8 @@
  * Environment variables:
  *   PORT            - Server port (default: 3000)
  *   OPENCODE_URL    - Upstream OpenCode server URL
+ *   N9ROUTER_URL    - n9router base URL (default: http://localhost:20128/v1)
+ *   N9ROUTER_API_KEY - n9router API key (optional for local deployments)
  */
 import type { startServer as StartServerFn } from "./index.js";
 
@@ -35,6 +37,8 @@ Options:
 Environment variables:
   PORT            Server port (default: 3000)
   OPENCODE_URL    Upstream OpenCode server URL
+  N9ROUTER_URL    n9router base URL (default: http://localhost:20128/v1)
+  N9ROUTER_API_KEY    n9router API key (optional for local deployments)
 `);
       process.exit(0);
     }

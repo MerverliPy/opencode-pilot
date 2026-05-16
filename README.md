@@ -8,10 +8,16 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 │  Browser (PWA)      │ ──────────────────▶ │  Pilot Hono Server   │ ───▶ │  OpenCode Server     │
 │  React + Vite       │  :5173 → :3201     │  proxy · auth · push │      │  :4096               │
 │  shadcn/ui          │ ◀────────────────── │  tunnel · memory     │      │  (opencode serve)    │
-└─────────────────────┘   events/responses  └──────────┬───────────┘      └──────────────────────┘
-                                                        │                           │
-                                               Cloudflare Tunnel         n9router AI Router
-                                                        │                  :20128 (Docker)
+└─────────────────────┘   events/responses  │  chat completions    │      └──────────────────────┘
+                                             └──────────┬───────────┘
+                                                        │                           ┌──────────────────────┐
+                                                        ├── n9router chat ────────▶ │  n9router AI Router  │
+                                                        │    POST /api/chat/        │  :20128 (Docker)     │
+                                                        │    completions (SSE)      │  /v1/chat/completions │
+                                                        │                           └──────────────────────┘
+                                                        │
+                                               Cloudflare Tunnel
+                                                        │
                                                         ▼
                                               remote access via QR
 
@@ -19,7 +25,12 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 ┌─────────────────────┐     HTTP + SSE      ┌──────────────────────┐      ┌──────────────────────┐
 │  Browser (PWA)      │ ──────────────────▶ │  Pilot Hono Server   │ ───▶ │  OpenCode Server     │
 │                     │  :3201              │  (serves UI + API)   │      │  :4096               │
-└─────────────────────┘                     └──────────────────────┘      └──────────────────────┘
+└─────────────────────┘                     │  chat completions    │      └──────────────────────┘
+                                             └──────────┬───────────┘
+                                                        │
+                                                        ├── n9router ───────────▶ n9router AI Router
+                                                        │    /api/chat/               :20128
+                                                        │    completions (SSE)
 ```
 
 ## Features
@@ -35,6 +46,7 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 - **Slash commands & @ mentions** — full command/file pickers
 - **Model & agent switching** — switch models and build/plan mode from the toolbar
 - **Remote access** — Cloudflare tunnel + QR code for connecting from any device
+- **Direct n9router chat** — streaming chat UI that bypasses OpenCode agent protocol for simple conversations
 - **Memory plugin** — server-side semantic extraction and injection across sessions
 - **Dark + light themes** — system-aware via `prefers-color-scheme`; indigo-500 accent
 
@@ -52,7 +64,7 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 | Code editor        | CodeMirror 6                                         |
 | Diff rendering     | diff2html                                            |
 | Fonts              | System font stacks via `theme.ts` (sans + monospace) |
-| Server             | Hono (proxy, auth, push, tunnel, memory)             |
+| Server             | Hono (proxy, auth, push, tunnel, memory, n9router chat) |
 | Memory storage     | better-sqlite3 (server-side)                         |
 | Remote access      | Cloudflare tunnel                                    |
 
@@ -141,6 +153,7 @@ On Tailscale, components are accessible at:
 - Pilot Server: `http://100.81.83.98:3201`
 - OpenCode Server: `http://100.81.83.98:4096`
 - n9router: `http://100.81.83.98:20128`
+- Pilot Direct Chat API: `POST http://100.81.83.98:3201/api/chat/completions`
 
 ---
 
@@ -160,6 +173,8 @@ On Tailscale, components are accessible at:
 | `CORS_ORIGINS`    | `http://localhost:5173`  | Comma-separated allowed origins                  |
 | `RATE_LIMIT_MAX`  | `100`                    | Max requests per minute                          |
 | `BODY_LIMIT_SIZE` | `10`                     | Max body size in MB                              |
+| `N9ROUTER_URL`    | `http://localhost:20128/v1`| n9router base URL for direct chat completions     |
+| `N9ROUTER_API_KEY`| (none)                   | n9router API key (optional for local deployments) |
 
 All variables are optional. Set them in a `.env` file at the project root or pass them inline.
 

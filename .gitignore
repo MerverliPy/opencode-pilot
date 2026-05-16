@@ -46,3 +46,8 @@ Thumbs.db
 
 # Local agent source-of-truth map
 .opencode/agent-sot-map.md
+
+# Debug artifacts
+debugscreenshots/
+combo-edit.png
+upgrade-mobile-portal-project-cards.sh

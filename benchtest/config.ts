@@ -69,6 +69,9 @@ export const SCENARIOS = [
   'refactor',
   'e2e-test',
   'docs-update',
+  'api-throughput',
+  'proxy-throughput',
+  'terminal-concurrency',
 ] as const;
 
 export type ScenarioName = typeof SCENARIOS[number];
@@ -80,4 +83,7 @@ export const QUICK_MODE: Record<string, Record<string, unknown>> = {
   'refactor': { depth: 'shallow' },
   'e2e-test': { pageCount: 1 },
   'docs-update': { sectionCount: 1 },
+  'api-throughput': { iterations: 5 },
+  'proxy-throughput': { iterations: 1 },
+  'terminal-concurrency': { connections: 2 },
 } as const;

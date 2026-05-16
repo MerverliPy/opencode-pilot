@@ -151,4 +151,5 @@ export interface BenchtestOptions {
   outDir: string;
   quick?: boolean;
   verbose?: boolean;
+  realHTTP?: boolean;
 }

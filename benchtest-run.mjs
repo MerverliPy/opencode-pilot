@@ -32,12 +32,15 @@ Usage:
   node benchtest-run.mjs --scenario code-review [options]
 
 Scenarios:
-  code-review   Review code files for quality issues
-  bug-fix       Diagnose and fix a failing test
-  refactor      Refactor a module with type safety
-  e2e-test      Write a Playwright E2E test
-  docs-update   Update documentation
-  all           Run all scenarios sequentially
+  code-review           Review code files for quality issues
+  bug-fix               Diagnose and fix a failing test
+  refactor              Refactor a module with type safety
+  e2e-test              Write a Playwright E2E test
+  docs-update           Update documentation
+  api-throughput        Benchmark memory CRUD API latency and throughput
+  proxy-throughput      Benchmark SSE proxy streaming latency overhead
+  terminal-concurrency  Benchmark WebSocket connection throughput
+  all                   Run all scenarios sequentially
 
 Options:
   --scenario <name>   Scenario name (default: all)
@@ -64,7 +67,7 @@ const STRESS = parseInt(getArg('--stress') || '0', 10);
 const VERBOSE = hasFlag('--verbose') || !!process.env.BENCHTEST_VERBOSE;
 const BASELINE_FILE = getArg('--baseline') || '';
 
-const SCENARIOS_LIST = ['code-review', 'bug-fix', 'refactor', 'e2e-test', 'docs-update'];
+const SCENARIOS_LIST = ['code-review', 'bug-fix', 'refactor', 'e2e-test', 'docs-update', 'api-throughput', 'proxy-throughput', 'terminal-concurrency'];
 
 // ─── ANSI helpers ────────────────────────────────────────────────
 

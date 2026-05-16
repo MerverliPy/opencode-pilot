@@ -66,7 +66,7 @@ export function getTimeline(
 export function getTimelineBySession(sessionId: string): TimelineEvent[] {
   const rows = getMemoryDb()
     .prepare(
-      "SELECT * FROM memory_timeline WHERE session_id = @session_id ORDER BY created_at ASC",
+      "SELECT * FROM memory_timeline WHERE session_id = @session_id ORDER BY created_at ASC LIMIT 500",
     )
     .all({ session_id: sessionId }) as TimelineRow[];
   return rows.map(rowToEvent);

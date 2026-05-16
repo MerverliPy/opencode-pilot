@@ -189,16 +189,25 @@ export function countMemories(serverId: string): number {
 
 export function searchMemories(serverId: string, query: string): Memory[] {
   const db = getMemoryDb();
-  const like = `%${query}%`;
+  // Sanitize query for FTS5: strip quotes, wrap words with prefix wildcards
+  const sanitized = query
+    .replace(/['"]/g, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => `"${w}"*`)
+    .join(" ");
+  if (!sanitized) return [];
+
   const rows = db
     .prepare(
-      `SELECT * FROM memories
-       WHERE server_id = @server_id AND is_archived = 0
-         AND (content LIKE @like OR tags LIKE @like OR category LIKE @like)
-       ORDER BY is_pinned DESC, updated_at DESC
+      `SELECT m.* FROM memories m
+       INNER JOIN memories_fts fts ON m.rowid = fts.rowid
+       WHERE m.server_id = @server_id AND m.is_archived = 0
+         AND memories_fts MATCH @query
+       ORDER BY m.is_pinned DESC, m.updated_at DESC
        LIMIT 100`,
     )
-    .all({ server_id: serverId, like }) as MemoryRow[];
+    .all({ server_id: serverId, query: sanitized }) as MemoryRow[];
   return rows.map(rowToMemory);
 }
 

@@ -98,7 +98,16 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
 
       const status = upstream.status as StatusCode;
       if (upstream.body) {
-        return c.newResponse(upstream.body, status, responseHeaders);
+        // Pipe through TransformStream for backpressure.
+        // Default highWaterMark of 1 naturally backpressures upstream
+        // when downstream consumer is slow, preventing OOM.
+        const transform = new TransformStream<Uint8Array, Uint8Array>();
+        upstream.body
+          .pipeTo(transform.writable)
+          .catch((err: unknown) => {
+            console.error("[proxy] stream pipe error:", err instanceof Error ? err.message : String(err));
+          });
+        return c.newResponse(transform.readable, status, responseHeaders);
       }
 
       const responseBody = await upstream.arrayBuffer();

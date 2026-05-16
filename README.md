@@ -3,22 +3,23 @@
 A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` over HTTP + SSE and delivers a full terminal-class interface in any browser.
 
 ```
-┌─────────────────────┐     HTTPS + SSE     ┌────────────────────────┐
-│  Browser (PWA)      │ ──────────────────▶ │  opencode serve        │
-│  React + Vite       │                     │  --hostname 0.0.0.0    │
-│  shadcn/ui          │ ◀────────────────── │  --port 4096           │
-└─────────┬───────────┘   events/responses  └────────────────────────┘
-          │
-          │ HTTP
-          ▼
-┌─────────────────────┐
-│  Hono server        │  proxy · auth · Web Push · tunnel · memory
-│  (pilot start)      │
-└─────────────────────┘
-          │
-          │ Cloudflare Tunnel
-          ▼
-   remote access via QR
+               Dev mode:
+┌─────────────────────┐     HTTP + SSE      ┌──────────────────────┐      ┌──────────────────────┐
+│  Browser (PWA)      │ ──────────────────▶ │  Pilot Hono Server   │ ───▶ │  OpenCode Server     │
+│  React + Vite       │  :5173 → :3201     │  proxy · auth · push │      │  :4096               │
+│  shadcn/ui          │ ◀────────────────── │  tunnel · memory     │      │  (opencode serve)    │
+└─────────────────────┘   events/responses  └──────────┬───────────┘      └──────────────────────┘
+                                                        │                           │
+                                               Cloudflare Tunnel         n9router AI Router
+                                                        │                  :20128 (Docker)
+                                                        ▼
+                                              remote access via QR
+
+               Production mode:
+┌─────────────────────┐     HTTP + SSE      ┌──────────────────────┐      ┌──────────────────────┐
+│  Browser (PWA)      │ ──────────────────▶ │  Pilot Hono Server   │ ───▶ │  OpenCode Server     │
+│                     │  :3201              │  (serves UI + API)   │      │  :4096               │
+└─────────────────────┘                     └──────────────────────┘      └──────────────────────┘
 ```
 
 ## Features
@@ -75,7 +76,7 @@ npm install
 npm start
 ```
 
-The Hono server starts on `http://localhost:3000`, serving the UI and proxying all API calls to OpenCode.
+The Hono server starts on `http://localhost:3201`, serving the built UI and proxying all API calls to OpenCode.
 
 To protect sensitive routes (terminal, git, proxy, tunnel, push, memory), set the `PILOT_AUTH_TOKEN` environment variable:
 
@@ -87,7 +88,7 @@ When set, clients must include `Authorization: Bearer your-secret-token` on all 
 
 ### 3. Open the app
 
-Navigate to `http://localhost:3000` in any browser. On first launch, enter your OpenCode server URL (e.g. `http://192.168.1.x:4096`).
+Navigate to `http://localhost:3201` in any browser. On first launch, enter your OpenCode server URL (e.g. `http://192.168.1.x:4096`).
 
 ### 4. Start chatting
 
@@ -101,21 +102,64 @@ npx pilot tunnel
 
 This starts a Cloudflare Quick Tunnel and prints a QR code. Scan it from any device to access Pilot remotely — no port forwarding or cloud account needed.
 
+### 6. Persistent server (systemd)
+
+Run Pilot as a systemd user service for auto-start on boot:
+
+```bash
+# Create the service file
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/pilot-server.service << 'EOF'
+[Unit]
+Description=Pilot Server
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/calvin/pilot
+Environment=PORT=3201
+Environment=OPENCODE_URL=http://100.81.83.98:4096
+Environment=CORS_ORIGINS=http://localhost:5173,http://localhost:3201,http://100.81.83.98:5173,http://100.81.83.98:3201
+ExecStart=/home/calvin/pilot/server/node_modules/.bin/tsx /home/calvin/pilot/server/src/cli.ts --port 3201
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+# Enable and start
+systemctl --user daemon-reload
+systemctl --user enable --now pilot-server
+
+# Check status
+systemctl --user status pilot-server
+```
+
+On Tailscale, components are accessible at:
+- Pilot UI (dev): `http://100.81.83.98:5173`
+- Pilot Server: `http://100.81.83.98:3201`
+- OpenCode Server: `http://100.81.83.98:4096`
+- n9router: `http://100.81.83.98:20128`
+
 ---
 
 ## Configuration Guide
 
 ### Environment variables
 
-| Variable        | Default     | Description                                     |
-| --------------- | ----------- | ----------------------------------------------- |
-| `PORT`          | `3000`      | HTTP port for the Pilot Hono server             |
-| `HOSTNAME`      | `0.0.0.0`   | Bind address                                    |
-| `OPENCODE_URL`  | (none)      | Default OpenCode server URL (overridable in UI) |
-| `VAPID_SUBJECT` | (auto)      | Web Push contact (mailto: or URL)               |
-| `VAPID_PUBLIC`  | (generated) | VAPID public key for Web Push                   |
-| `VAPID_PRIVATE` | (generated) | VAPID private key for Web Push                  |
-| `PILOT_AUTH_TOKEN` | (none) | Bearer token for route auth. If set, all sensitive routes require `Authorization: Bearer <token>`. If unset, auth is disabled. |
+| Variable          | Default                  | Description                                      |
+| ----------------- | ------------------------ | ------------------------------------------------ |
+| `PORT`            | `3201`                   | HTTP port for the Pilot Hono server              |
+| `HOSTNAME`        | `0.0.0.0`                | Bind address                                     |
+| `OPENCODE_URL`    | `http://:4096`           | Upstream OpenCode server URL                     |
+| `VAPID_SUBJECT`   | (auto)                   | Web Push contact (mailto: or URL)                |
+| `VAPID_PUBLIC`    | (generated)              | VAPID public key for Web Push                    |
+| `VAPID_PRIVATE`   | (generated)              | VAPID private key for Web Push                   |
+| `PILOT_AUTH_TOKEN`| (none)                   | Bearer token for route auth                      |
+| `CORS_ORIGINS`    | `http://localhost:5173`  | Comma-separated allowed origins                  |
+| `RATE_LIMIT_MAX`  | `100`                    | Max requests per minute                          |
+| `BODY_LIMIT_SIZE` | `10`                     | Max body size in MB                              |
 
 All variables are optional. Set them in a `.env` file at the project root or pass them inline.
 
@@ -132,7 +176,7 @@ npm run dev:ui
 npm run dev
 ```
 
-In dev mode, the Vite dev server proxies API calls to the Hono server on `:3000`.
+In dev mode, the Vite dev server proxies API calls to the Hono server on `:3201`.
 
 ### Available npm scripts
 
@@ -144,7 +188,7 @@ In dev mode, the Vite dev server proxies API calls to the Hono server on `:3000`
 | `npm run typecheck`  | —         | Run tsc --noEmit across all workspaces |
 | `npm run lint`       | ui        | ESLint check                           |
 | `npm test`           | ui        | Run Jest test suite                    |
-| `npm run test:e2e`   | e2e       | Run Playwright E2E tests (UI-only)      |
+| `npm run test:e2e`   | e2e       | Run Playwright E2E tests (UI-only)     |
 | `npm run test:e2e:fullstack` | e2e | Run E2E tests with Hono + Vite   |
 | `npm run test -w e2e -- <spec>` | e2e | Run single E2E spec             |
 | `npm run test -w e2e -- --debug` | e2e | Run E2E in debug mode         |
@@ -192,60 +236,53 @@ pilot/
 ├── server/              # Hono server
 │   └── src/
 │       ├── index.ts     # App entry, routing
-│       ├── proxy.ts     # OpenCode HTTP/SSE proxy (or n9router)
-│       ├── auth.ts      # Bearer token auth (env-driven PILOT_AUTH_TOKEN)
+│       ├── proxy.ts     # OpenCode HTTP/SSE proxy
+│       ├── auth.ts      # Bearer token auth
 │       ├── push.ts      # Web Push relay
-│       ├── tunnel.ts    # Cloudflare tunnel + QR
-│       ├── memory/      # Memory plugin (extraction, injection, SQLite)
-│       └── cli.ts       # `pilot start` / `pilot tunnel` CLI
-├── ui/                  # React + Vite frontend
+│       ├── tunnel.ts    # Cloudflare tunnel management
+│       ├── git.ts       # Git operations
+│       ├── terminal.ts  # PTY terminal bridge (WebSocket)
+│       ├── rateLimit.ts # Rate limiting
+│       ├── cli.ts       # CLI entry point (pilot start)
+│       ├── memory/      # Memory plugin (SQLite, embeddings)
+│       └── __tests__/   # Server test suite
+├── ui/                  # React/Vite PWA frontend
 │   └── src/
-│       ├── pages/       # Chat, Files, Diff, Memory, Settings
-│       ├── components/  # shadcn/ui + project components
-│       ├── services/    # api.ts, sse.ts, auth.ts, logger.ts
-│       ├── store/       # Zustand: server, session, ui, log
-│       └── theme/       # colors.ts, fonts.ts
-├── e2e/                  # Playwright E2E tests
-│   ├── playwright.config.ts
-│   ├── tests/            # Journey-based test directories
-│   │   ├── navigation/   # Route rendering, links, multi-page
-│   │   ├── chat/         # Chat UI, permission cards, SSE flow
-│   │   ├── settings/     # Server config, form input
-│   │   ├── terminal/     # WebSocket terminal
-│   │   ├── visual/       # Screenshots, visual regression
-│   │   ├── viewport/     # Emulation, responsive layout
-│   │   ├── diagnostics/  # Console, network, performance
-│   │   └── accessibility/# WCAG 2.2 AA audits
-│   ├── pages/            # Page Object Model (ChatPage, SettingsPage, etc.)
-│   ├── fixtures/         # Custom fixtures (console tracking, viewports)
-│   ├── utils/            # Shared routes, selectors, viewport presets
-│   ├── docs/             # Quick-start and in-depth guides
-│   └── screenshots/      # Route and element screenshots
-├── docker/               # Docker setup for n9router
-│   ├── docker-compose.yml
-│   ├── n9router.Dockerfile
-│   └── .env.example
-├── scripts/
-│   └── start.sh          # Dev startup: Pilot + Vite, defaults to n9router :20128
-├── opencode.json.example # Per-developer n9router config template
-└── shared/
-    └── types.ts         # Shared TypeScript types
+│       ├── App.tsx      # Router + layout
+│       ├── pages/       # Route pages
+│       ├── components/  # Reusable UI components
+│       ├── store/       # Zustand state stores
+│       ├── services/    # API client, SSE, auth, n9router
+│       └── __tests__/   # Jest test suite
+├── shared/src/          # Shared TypeScript types
+├── e2e/                 # Playwright E2E tests
+├── opencode-server/     # (deleted — replaced by real opencode serve)
+├── docker/              # Docker config for n9router
+├── docs/                # Documentation
+│   └── briefings/       # Phase briefing cards (P0-P8)
+└── .opencode/           # OpenCode agent/skill/command config
+    ├── agents/          # Agent definitions
+    ├── skills/          # Skill files
+    ├── commands/        # Slash commands
+    ├── plugins/         # OpenCode plugins
+    └── rules/           # Policy files
 ```
 
-## Documentation
+## Architecture Flow
 
-- **Quick Start Guide** (above) — Install, configure, and launch Pilot
-- **Configuration Guide** (above) — Environment variables, scripts, n9router setup
-- [`DESIGN.md`](DESIGN.md) — Full architecture, screen wireframes, navigation, API layer, state design, and decisions log
-- [`TASKS.md`](TASKS.md) — Task agenda
-- [`MEMORY.md`](MEMORY.md) — Memory plugin usage guide
-- [`BENCH.md`](BENCH.md) — Benchmark and audit suite documentation
-
-## Non-Goals
-
-- Running OpenCode locally on-device
-- Direct file editing (edits go through chat; OpenCode's server has no write endpoint)
-
-## License
-
-MIT
+```
+User types a message in the chat UI
+         │
+         ▼
+Pilot UI (React/Vite) ─── POST /session/:id/prompt_async ──► Pilot Server (:3201)
+         │                                                         │
+         │  SSE /event ◄────────────────────────────────────────────┘
+         │                                                         │
+         │                                                    Proxy to OpenCode (:4096)
+         │                                                         │
+         │                                                    n9router AI (:20128)
+         │                                                         │
+         │                                                    Response streamed back
+         ▼
+Message rendered in real-time via SSE events
+```

@@ -229,9 +229,24 @@ const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
 
 export function MessageList({ turns }: { turns: Turn[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      isNearBottomRef.current =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [turns]);
 
   if (turns.length === 0) {
@@ -284,7 +299,7 @@ export function MessageList({ turns }: { turns: Turn[] }) {
   }
 
   return (
-    <div style={{ padding: "16px 16px 8px" }}>
+    <div ref={scrollRef} style={{ padding: "16px 16px 8px" }}>
       {turns.map((turn) => (
         <TurnView key={turn.message.id} turn={turn} />
       ))}

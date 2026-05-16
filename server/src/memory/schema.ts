@@ -3,7 +3,7 @@
  * All DDL is defined here; memoryDb.ts runs these on first open.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_MEMORIES = `
 CREATE TABLE IF NOT EXISTS memories (
@@ -83,6 +83,34 @@ CREATE TABLE IF NOT EXISTS schema_meta (
   value TEXT NOT NULL
 )`;
 
+export const CREATE_FTS5 = `
+CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+  content,
+  tags,
+  category,
+  content='memories',
+  content_rowid='rowid'
+)`;
+
+export const CREATE_FTS5_TRIGGERS = `
+CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+  INSERT INTO memories_fts(rowid, content, tags, category)
+  VALUES (new.rowid, new.content, new.tags, new.category);
+END;
+
+CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+  INSERT INTO memories_fts(memories_fts, rowid, content, tags, category)
+  VALUES ('delete', old.rowid, old.content, old.tags, old.category);
+END;
+
+CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+  INSERT INTO memories_fts(memories_fts, rowid, content, tags, category)
+  VALUES ('delete', old.rowid, old.content, old.tags, old.category);
+  INSERT INTO memories_fts(rowid, content, tags, category)
+  VALUES (new.rowid, new.content, new.tags, new.category);
+END;
+`;
+
 export const INDEXES = [
   `CREATE INDEX IF NOT EXISTS idx_memories_server ON memories(server_id)`,
   `CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category)`,
@@ -103,6 +131,8 @@ export const ALL_MIGRATIONS: string[] = [
   CREATE_EMBEDDING_PROVIDERS,
   CREATE_MEMORY_CONFIG,
   ...INDEXES,
+  CREATE_FTS5,
+  CREATE_FTS5_TRIGGERS,
 ];
 
 // ── Domain types ──────────────────────────────────────────────────────────────

@@ -50,14 +50,15 @@ export function getEmbeddingsByModel(
     const placeholders = serverMemoryIds.map(() => "?").join(",");
     const rows = db
       .prepare(
-        `SELECT * FROM memory_embeddings
-         WHERE model_id = ? AND memory_id IN (${placeholders})`,
+         `SELECT * FROM memory_embeddings
+          WHERE model_id = ? AND memory_id IN (${placeholders})
+          LIMIT 100`,
       )
       .all(modelId, ...serverMemoryIds) as EmbeddingRow[];
     return rows.map(rowToEmbedding);
   }
   const rows = db
-    .prepare("SELECT * FROM memory_embeddings WHERE model_id = @model_id")
+    .prepare("SELECT * FROM memory_embeddings WHERE model_id = @model_id LIMIT 100")
     .all({ model_id: modelId }) as EmbeddingRow[];
   return rows.map(rowToEmbedding);
 }

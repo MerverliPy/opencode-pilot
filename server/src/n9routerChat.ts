@@ -7,6 +7,7 @@
 
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { debugLogMiddleware } from "./debugLog";
 
 const DEFAULT_N9ROUTER_URL = "http://localhost:20128/v1";
 
@@ -39,6 +40,9 @@ function logInfo(msg: string): void {
 
 export function setupChatRouter(): Hono {
   const router = new Hono();
+
+  // Apply debug logging middleware to all routes
+  router.use("*", debugLogMiddleware);
 
   router.post("/api/chat/completions", async (c: Context) => {
     const startTime = Date.now();

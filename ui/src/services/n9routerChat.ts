@@ -60,6 +60,33 @@ export class N9RouterChatClient {
   }
 }
 
+/**
+ * Fetch available model IDs from n9router /v1/models.
+ * Returns empty array on failure.
+ */
+export async function availableModels(
+  baseUrl: string,
+  _apiKey?: string,
+): Promise<string[]> {
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/v1/models`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      console.warn(`[availableModels] GET /v1/models \u2192 ${res.status}`);
+      return [];
+    }
+    const body = (await res.json()) as {
+      data?: Array<{ id: string }>;
+    };
+    return body.data?.map((m) => m.id) ?? [];
+  } catch (err) {
+    console.warn("[availableModels] fetch failed:", err);
+    return [];
+  }
+}
+
 export class N9RouterChatError extends Error {
   status: number;
   constructor(status: number, message: string) {

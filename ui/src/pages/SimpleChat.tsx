@@ -1,7 +1,7 @@
 /**
  * SimpleChat — streaming chat UI using direct n9router completions.
  *
- * No agent orchestration. Model name as sender. Input always available.
+ * Features: model selector, conversation management, debug panel, responsive layout.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,23 +10,41 @@ import { useN9RouterStore } from "../store/n9router";
 import {
   N9RouterChatClient,
   N9RouterChatError,
+  availableModels,
   type ChatMessage,
 } from "../services/n9routerChat";
 import { useChatStream } from "../services/useChatStream";
 import { ChatMessage as ChatMessageBubble } from "../components/ChatMessage";
+import { DebugPanel } from "../components/DebugPanel";
+import { classifyError } from "../lib/errorClassifier";
 import { colors, fonts, fontSizes } from "../theme";
-import { friendlyError } from "../lib/errors";
 
-const STORAGE_KEY = "pilot.simplechat.messages";
+const MSGS_KEY = "pilot.simplechat.messages";
+const CONVS_KEY = "pilot.simplechat.conversations";
+const MODEL_KEY = "pilot.simplechat.model";
 const DEFAULT_MODEL = "ds/deepseek-v4-flash";
+
+// --- Conversation types ---
+
+type Conversation = {
+  id: string;
+  title: string;
+  timestamp: number;
+};
+
+// --- Helpers ---
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function convId(): string {
+  return `conv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
 function loadMessages(): ChatMessage[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(MSGS_KEY);
     if (raw) return JSON.parse(raw) as ChatMessage[];
   } catch {
     // ignore corrupt storage
@@ -36,32 +54,94 @@ function loadMessages(): ChatMessage[] {
 
 function saveMessages(messages: ChatMessage[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    localStorage.setItem(MSGS_KEY, JSON.stringify(messages));
   } catch {
     // storage full or unavailable
   }
 }
 
+function loadConversations(): Conversation[] {
+  try {
+    const raw = localStorage.getItem(CONVS_KEY);
+    if (raw) return JSON.parse(raw) as Conversation[];
+  } catch {
+    // ignore corrupt storage
+  }
+  return [];
+}
+
+function saveConversations(convs: Conversation[]): void {
+  try {
+    localStorage.setItem(CONVS_KEY, JSON.stringify(convs));
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+function loadModel(): string {
+  try {
+    return localStorage.getItem(MODEL_KEY) ?? DEFAULT_MODEL;
+  } catch {
+    return DEFAULT_MODEL;
+  }
+}
+
+function saveModel(m: string): void {
+  try {
+    localStorage.setItem(MODEL_KEY, m);
+  } catch {
+    // ignore
+  }
+}
+
+function convTitle(messages: ChatMessage[]): string {
+  const first = messages.find((m) => m.role === "user");
+  if (!first) return "New conversation";
+  const t = first.content.trim();
+  return t.length > 50 ? t.slice(0, 50) + "\u2026" : t;
+}
+
+// --- Component ---
+
 export function SimpleChat() {
   const server = useServerStore((s) => s.active());
   const n9routerUrl = useN9RouterStore((s) => s.url);
+  const n9routerKey = useN9RouterStore((s) => s.key);
 
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [model, setModel] = useState(loadModel);
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<string[]>([DEFAULT_MODEL]);
+  const [showDebug, setShowDebug] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+  const [conversations, setConversations] = useState<Conversation[]>(loadConversations);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
 
   const { streaming, streamError, startStream, cancelStream, clearError } =
     useChatStream();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Persist messages on change
+  // Fetch available models on mount
+  useEffect(() => {
+    if (!n9routerUrl) return;
+    availableModels(n9routerUrl, n9routerKey).then((list) => {
+      if (list.length > 0) setModels(list);
+    });
+  }, [n9routerUrl, n9routerKey]);
+
+  // Persist messages
   useEffect(() => {
     saveMessages(messages);
   }, [messages]);
 
-  // Scroll to bottom on new messages
+  // Persist model
+  useEffect(() => {
+    saveModel(model);
+  }, [model]);
+
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -72,6 +152,15 @@ export function SimpleChat() {
       setError(streamError);
     }
   }, [streamError]);
+
+  // Responsive sidebar
+  useEffect(() => {
+    const handler = () => {
+      setSidebarOpen(window.innerWidth > 768);
+    };
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
   const client = useMemo(() => {
     if (!server) return null;
@@ -86,7 +175,6 @@ export function SimpleChat() {
     setError(null);
     setInput("");
 
-    // Add user message
     const userMsg: ChatMessage = {
       id: generateId(),
       role: "user",
@@ -95,7 +183,6 @@ export function SimpleChat() {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    // Add empty assistant message
     const assistantId = generateId();
     const assistantMsg: ChatMessage = {
       id: assistantId,
@@ -106,7 +193,6 @@ export function SimpleChat() {
     };
     setMessages((prev) => [...prev, assistantMsg]);
 
-    // Get formatted messages
     const chatMessages = [...messages, userMsg].map((m) => ({
       role: m.role === "user" ? "user" as const : "assistant" as const,
       content: m.content,
@@ -130,7 +216,6 @@ export function SimpleChat() {
           );
         },
         onDone: () => {
-          // Update finish reason if available
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
@@ -143,7 +228,7 @@ export function SimpleChat() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, error: friendlyError(err) }
+                ? { ...m, error: err instanceof Error ? err.message : String(err) }
                 : m,
             ),
           );
@@ -159,7 +244,7 @@ export function SimpleChat() {
           ),
         );
       } else {
-        const msg = friendlyError(err);
+        const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
         setMessages((prev) =>
           prev.map((m) =>
@@ -187,260 +272,504 @@ export function SimpleChat() {
 
   const handleClear = useCallback(() => {
     setMessages([]);
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(MSGS_KEY);
     setError(null);
     clearError();
   }, [clearError]);
+
+  // --- Conversation management ---
+
+  const handleNewConversation = useCallback(() => {
+    // Save current conversation
+    if (messages.length > 0) {
+      const c: Conversation = {
+        id: activeConvId ?? convId(),
+        title: convTitle(messages),
+        timestamp: Date.now(),
+      };
+      setConversations((prev) => {
+        const existing = prev.findIndex((x) => x.id === c.id);
+        if (existing >= 0) {
+          const next = [...prev];
+          next[existing] = c;
+          return next;
+        }
+        return [...prev, c];
+      });
+    }
+    // Start fresh
+    setMessages([]);
+    setActiveConvId(null);
+    setError(null);
+    clearError();
+  }, [messages, activeConvId, clearError]);
+
+  const handleSwitchConversation = useCallback(
+    (conv: Conversation) => {
+      // Save current messages to previous conversation
+      if (messages.length > 0 && activeConvId) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === activeConvId ? { ...c, title: convTitle(messages), timestamp: Date.now() } : c,
+          ),
+        );
+      }
+      // Switch to new conversation
+      setActiveConvId(conv.id);
+      setError(null);
+      clearError();
+    },
+    [messages, activeConvId, clearError],
+  );
+
+  const handleDeleteConversation = useCallback(
+    (convId: string) => {
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      if (activeConvId === convId) {
+        setActiveConvId(null);
+        setMessages([]);
+      }
+    },
+    [activeConvId],
+  );
+
+  // Persist conversations
+  useEffect(() => {
+    saveConversations(conversations);
+  }, [conversations]);
+
+  const toggleDebug = useCallback(() => {
+    setShowDebug((prev) => !prev);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, []);
+
+  // --- Render ---
 
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         height: "100%",
-        maxWidth: 800,
         width: "100%",
-        margin: "0 auto",
-        padding: "0 16px",
       }}
     >
-      {/* Header */}
+      {/* Sidebar */}
+      {sidebarOpen && (
+        <div
+          style={{
+            width: 260,
+            minWidth: 260,
+            borderRight: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surface,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Sidebar header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px",
+              borderBottom: `1px solid ${colors.borderSubtle}`,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.sm,
+                fontWeight: 600,
+                color: colors.text,
+              }}
+            >
+              Conversations
+            </span>
+            <button
+              onClick={handleNewConversation}
+              style={{
+                background: "none",
+                border: `1px solid ${colors.border}`,
+                color: colors.accent,
+                cursor: "pointer",
+                padding: "2px 10px",
+                borderRadius: 6,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.xs,
+              }}
+            >
+              + New
+            </button>
+          </div>
+
+          {/* Conversation list */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+            {conversations.length === 0 && (
+              <div
+                style={{
+                  padding: "16px",
+                  textAlign: "center",
+                  color: colors.muted,
+                  fontFamily: fonts.sans,
+                  fontSize: fontSizes.sm,
+                }}
+              >
+                No saved conversations
+              </div>
+            )}
+            {conversations.map((conv) => (
+              <div
+                key={conv.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  backgroundColor:
+                    activeConvId === conv.id ? colors.surfaceAlt : "transparent",
+                  borderLeft:
+                    activeConvId === conv.id
+                      ? `3px solid ${colors.accent}`
+                      : "3px solid transparent",
+                }}
+                onClick={() => handleSwitchConversation(conv)}
+              >
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      fontFamily: fonts.sans,
+                      fontSize: fontSizes.sm,
+                      color: colors.text,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {conv.title}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: fonts.sans,
+                      fontSize: fontSizes.xs,
+                      color: colors.muted,
+                      marginTop: 2,
+                    }}
+                  >
+                    {new Date(conv.timestamp).toLocaleDateString()}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteConversation(conv.id);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: colors.muted,
+                    cursor: "pointer",
+                    padding: "4px",
+                    fontSize: fontSizes.sm,
+                    opacity: 0.6,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main chat area */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 0",
-          borderBottom: `1px solid ${colors.borderSubtle}`,
-          marginBottom: 12,
+          flexDirection: "column",
+          flex: 1,
+          maxWidth: sidebarOpen ? undefined : 800,
+          width: "100%",
+          margin: "0 auto",
+          padding: "0 16px",
+          minWidth: 0,
         }}
       >
-        <span
+        {/* Header */}
+        <div
           style={{
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.lg,
-            fontWeight: 600,
-            color: colors.text,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 0",
+            borderBottom: `1px solid ${colors.borderSubtle}`,
+            marginBottom: 12,
+            gap: 8,
           }}
         >
-          💬 Chat
-        </span>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span
-            style={{
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.xs,
-              color: colors.muted,
-              padding: "2px 8px",
-              backgroundColor: colors.surfaceAlt,
-              borderRadius: 4,
-            }}
-          >
-            {model}
-          </span>
+          {/* Sidebar toggle (mobile) */}
           <button
-            onClick={handleClear}
+            onClick={toggleSidebar}
             style={{
               background: "none",
               border: `1px solid ${colors.border}`,
               color: colors.muted,
               cursor: "pointer",
-              padding: "4px 10px",
+              padding: "4px 8px",
               borderRadius: 6,
               fontFamily: fonts.sans,
               fontSize: fontSizes.sm,
+              display: window.innerWidth <= 768 ? "block" : "none",
             }}
           >
-            Clear
+            ☰
           </button>
-        </div>
-      </div>
 
-      {/* Messages area */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "8px 0",
-        }}
-      >
-        {messages.length === 0 && (
-          <div
+          <span
             style={{
-              textAlign: "center",
-              color: colors.muted,
               fontFamily: fonts.sans,
-              fontSize: fontSizes.md,
-              marginTop: 80,
-              opacity: 0.6,
+              fontSize: fontSizes.lg,
+              fontWeight: 600,
+              color: colors.text,
             }}
           >
-            Send a message to start chatting
+            💬 Chat
+          </span>
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* Model selector */}
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.xs,
+                color: colors.text,
+                padding: "2px 8px",
+                backgroundColor: colors.surfaceAlt,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 4,
+                cursor: "pointer",
+                maxWidth: 200,
+              }}
+            >
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+
+            {/* Debug toggle */}
+            <button
+              onClick={toggleDebug}
+              style={{
+                background: "none",
+                border: `1px solid ${showDebug ? colors.accent : colors.border}`,
+                color: showDebug ? colors.accent : colors.muted,
+                cursor: "pointer",
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.sm,
+              }}
+            >
+              Debug
+            </button>
+
+            <button
+              onClick={handleClear}
+              style={{
+                background: "none",
+                border: `1px solid ${colors.border}`,
+                color: colors.muted,
+                cursor: "pointer",
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.sm,
+              }}
+            >
+              Clear
+            </button>
           </div>
-        )}
-        {messages.map((msg) => (
-          <ChatMessageBubble key={msg.id} message={msg} />
-        ))}
-        {streaming && (
+        </div>
+
+        {/* Messages area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "8px 0",
+          }}
+        >
+          {messages.length === 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                color: colors.muted,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.md,
+                marginTop: 80,
+                opacity: 0.6,
+              }}
+            >
+              Send a message to start chatting
+            </div>
+          )}
+          {messages.map((msg) => (
+            <ChatMessageBubble key={msg.id} message={msg} />
+          ))}
+          {streaming && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 4px",
+                color: colors.muted,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.sm,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: colors.accent,
+                  animation: "pulse 1s infinite",
+                }}
+              />
+              Thinking...
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Error banner */}
+        {error && !streaming && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "8px 4px",
-              color: colors.muted,
+              gap: 12,
+              padding: "8px 12px",
+              marginBottom: 8,
+              borderRadius: 8,
+              backgroundColor: colors.errorTint,
+              color: colors.error,
               fontFamily: fonts.sans,
               fontSize: fontSizes.sm,
             }}
           >
-            <span
+            <span style={{ flex: 1 }}>⚠ {error}</span>
+            <button
+              onClick={handleRetry}
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                backgroundColor: colors.accent,
-                animation: "pulse 1s infinite",
+                background: "none",
+                border: `1px solid ${colors.error}`,
+                color: colors.error,
+                cursor: "pointer",
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.sm,
               }}
-            />
-            Thinking...
+            >
+              Retry
+            </button>
           </div>
         )}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Error banner */}
-      {error && !streaming && (
+        {/* Input area */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "8px 12px",
-            marginBottom: 8,
-            borderRadius: 8,
-            backgroundColor: colors.errorTint,
-            color: colors.error,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.sm,
+            gap: 8,
+            padding: "12px 0",
+            borderTop: `1px solid ${colors.borderSubtle}`,
           }}
         >
-          <span style={{ flex: 1 }}>⚠ {error}</span>
-          <button
-            onClick={handleRetry}
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              !server
+                ? "No server configured..."
+                : streaming
+                  ? "Waiting for response..."
+                  : "Type a message... (Enter to send)"
+            }
+            disabled={!server || streaming}
             style={{
-              background: "none",
-              border: `1px solid ${colors.error}`,
-              color: colors.error,
-              cursor: "pointer",
-              padding: "4px 10px",
-              borderRadius: 6,
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: 8,
+              border: `1px solid ${colors.border}`,
+              backgroundColor: colors.surface,
+              color: colors.text,
               fontFamily: fonts.sans,
-              fontSize: fontSizes.sm,
+              fontSize: fontSizes.md,
+              outline: "none",
             }}
-          >
-            Retry
-          </button>
+          />
+          {streaming ? (
+            <button
+              onClick={cancelStream}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: colors.error,
+                color: colors.accentText,
+                cursor: "pointer",
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.md,
+                fontWeight: 600,
+              }}
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim() || !server}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor:
+                  !input.trim() || !server ? colors.surfaceAlt : colors.accent,
+                color:
+                  !input.trim() || !server ? colors.muted : colors.accentText,
+                cursor:
+                  !input.trim() || !server ? "not-allowed" : "pointer",
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.md,
+                fontWeight: 600,
+              }}
+            >
+              Send
+            </button>
+          )}
         </div>
-      )}
 
-      {/* Input area */}
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: "12px 0",
-          borderTop: `1px solid ${colors.borderSubtle}`,
-        }}
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            !server
-              ? "No server configured..."
-              : streaming
-                ? "Waiting for response..."
-                : "Type a message... (Enter to send)"
+        {/* Debug panel */}
+        <DebugPanel visible={showDebug} onToggle={toggleDebug} />
+
+        {/* Pulse animation */}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
           }
-          disabled={!server || streaming}
-          style={{
-            flex: 1,
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: `1px solid ${colors.border}`,
-            backgroundColor: colors.surface,
-            color: colors.text,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.md,
-            outline: "none",
-          }}
-        />
-        {streaming ? (
-          <button
-            onClick={cancelStream}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 8,
-              border: "none",
-              backgroundColor: colors.error,
-              color: colors.accentText,
-              cursor: "pointer",
-              fontFamily: fonts.sans,
-              fontSize: fontSizes.md,
-              fontWeight: 600,
-            }}
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={!input.trim() || !server}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 8,
-              border: "none",
-              backgroundColor:
-                !input.trim() || !server ? colors.surfaceAlt : colors.accent,
-              color:
-                !input.trim() || !server ? colors.muted : colors.accentText,
-              cursor:
-                !input.trim() || !server ? "not-allowed" : "pointer",
-              fontFamily: fonts.sans,
-              fontSize: fontSizes.md,
-              fontWeight: 600,
-            }}
-          >
-            Send
-          </button>
-        )}
+        `}</style>
       </div>
-
-      {/* Pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
-}
-
-function classifyError(status: number, message: string): string {
-  switch (status) {
-    case 401:
-      return "Authentication failed — check your API key and n9router config";
-    case 402:
-      return "Payment required — your n9router account needs funds";
-    case 429:
-      return "Rate limited — too many requests, please wait";
-    case 503:
-      return "Provider unavailable — the model provider may be down";
-    case 504:
-      return "Request timed out — n9router took too long to respond";
-    default:
-      return message || `n9router error (${status})`;
-  }
 }

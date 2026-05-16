@@ -88,9 +88,30 @@ jobs:
       - name: Lint
         run: npm run lint
 
-  # ─── Tests + coverage ───────────────────────────────────────────────────────
-  test:
-    name: Tests
+  # ─── Server tests ───────────────────────────────────────────────────────────
+  test-server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared (required for server imports)
+        run: npm run build -w shared
+
+      - name: Run server tests
+        run: npm run test -w server
+
+  # ─── UI tests + coverage ────────────────────────────────────────────────────
+  test-ui:
+    name: UI tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,8 +127,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage
-        run: npm run test:coverage -- --coverageReporters=json-summary --coverageReporters=text
+      - name: Run UI tests with coverage
+        run: npm run test:coverage -w ui -- --coverageReporters=json-summary --coverageReporters=text
 
       - name: Read coverage summary
         if: always() && github.event_name == 'pull_request'
@@ -170,7 +191,7 @@ jobs:
               });
             }
 
-  # ─── E2E (P11: production build + Playwright) ──────────────────────────────
+  # ─── E2E (production build + Playwright) ────────────────────────────────────
   e2e:
     name: E2E
     runs-on: ubuntu-latest
@@ -187,6 +208,13 @@ jobs:
 
       - name: Build shared + server + UI
         run: npm run build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -217,7 +245,7 @@ jobs:
   ci-pass:
     name: CI pass
     runs-on: ubuntu-latest
-    needs: [commitlint, typecheck, lint, test, e2e]
+    needs: [commitlint, typecheck, lint, test-server, test-ui, e2e]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -225,7 +253,8 @@ jobs:
           if [[ "${{ needs.commitlint.result }}" != "success" ||
                 "${{ needs.typecheck.result }}"  != "success" ||
                 "${{ needs.lint.result }}"       != "success" ||
-                "${{ needs.test.result }}"       != "success" ||
+                "${{ needs.test-server.result }}" != "success" ||
+                "${{ needs.test-ui.result }}"    != "success" ||
                 "${{ needs.e2e.result }}"        != "success" ]]; then
             echo "One or more CI jobs failed."
             exit 1

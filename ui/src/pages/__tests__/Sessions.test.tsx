@@ -182,4 +182,81 @@ describe("Sessions", () => {
     });
     expect(screen.getByText(/network error/i)).toBeInTheDocument();
   });
+
+  it("renames session when rename button clicked and saved", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: { get: () => "application/json" },
+          json: () =>
+            Promise.resolve([mockSession("ses_1", "Old Title")]),
+        });
+      }
+      // updateSession PATCH
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: { get: () => "application/json" },
+        json: () =>
+          Promise.resolve(mockSession("ses_1", "New Title")),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(
+      <MemoryRouter>
+        <Sessions />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Old Title")).toBeInTheDocument();
+    });
+
+    // Click rename
+    fireEvent.click(screen.getByTestId("rename-session-ses_1"));
+
+    // Input should appear
+    const input = screen.getByTestId("rename-input-ses_1");
+    expect(input).toBeInTheDocument();
+
+    // Change value and blur to save
+    fireEvent.change(input, { target: { value: "New Title" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(screen.getByText("New Title")).toBeInTheDocument();
+    });
+  });
+
+  it("cancels rename on Escape key", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => "application/json" },
+      json: () =>
+        Promise.resolve([mockSession("ses_1", "Original Title")]),
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(
+      <MemoryRouter>
+        <Sessions />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Original Title")).toBeInTheDocument();
+    });
+
+    // Click rename
+    fireEvent.click(screen.getByTestId("rename-session-ses_1"));
+
+    const input = screen.getByTestId("rename-input-ses_1");
+    fireEvent.change(input, { target: { value: "Changed" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    // Original title should still be shown
+    expect(screen.getByText("Original Title")).toBeInTheDocument();
+  });
 });

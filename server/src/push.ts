@@ -86,10 +86,18 @@ export function createPushRouter(cfg: PushConfig): Hono {
 export async function broadcastPushNotification(payload: {
   title: string;
   body: string;
+  sessionId?: string;
   data?: Record<string, unknown>;
 }): Promise<void> {
   const subs = getAllPushSubscriptions();
-  const message = JSON.stringify(payload);
+  const message = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    data: {
+      ...payload.data,
+      ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
+    },
+  });
 
   for (const sub of subs) {
     try {

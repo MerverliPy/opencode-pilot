@@ -19,7 +19,7 @@ import { shouldRateLimitRequest } from "./rateLimit.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const uiDist = resolve(__dirname, "../../ui/dist");
-import { createPushRouter, type PushConfig } from "./push.js";
+import { broadcastPushNotification, createPushRouter, type PushConfig } from "./push.js";
 import { createTunnelRouter } from "./tunnel.js";
 import { attachTerminalWS, listSessions } from "./terminal.js";
 import { createGitRouter } from "./git.js";

@@ -11,6 +11,30 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+declare module "workbox-routing" {
+  import type { RouteHandler, RouteMatchCallback } from "workbox-core/types.js";
+  export class Route {
+    constructor(match: RouteMatchCallback, handler: RouteHandler, method?: string);
+  }
+  export function registerRoute(
+    capture: RegExp | string | RouteMatchCallback | Route,
+    handler?: RouteHandler,
+    method?: string,
+  ): Route;
+}
+
+declare module "workbox-strategies" {
+  import type { RouteHandlerObject, RouteHandlerCallbackOptions } from "workbox-core/types.js";
+  interface NetworkFirstOptions {
+    networkTimeoutSeconds?: number;
+    cacheName?: string;
+  }
+  export class NetworkFirst implements RouteHandlerObject {
+    constructor(options?: NetworkFirstOptions);
+    handle: (options: RouteHandlerCallbackOptions) => Promise<Response>;
+  }
+}
+
 declare module "expo-secure-store" {
   export function getItemAsync(
     key: string,

@@ -11,6 +11,7 @@ import type { ChatMessage as ChatMessageType } from "../services/n9routerChat";
 
 type Props = {
   message: ChatMessageType;
+  onRetry?: () => void;
 };
 
 function formatTime(ts: number): string {
@@ -155,7 +156,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   );
 }
 
-export function ChatMessage({ message }: Props) {
+export function ChatMessage({ message, onRetry }: Props) {
   const isUser = message.role === "user";
   const sender = isUser ? "You" : message.model ?? "Assistant";
 
@@ -234,9 +235,29 @@ export function ChatMessage({ message }: Props) {
             color: colors.error,
             fontFamily: fonts.sans,
             fontSize: fontSizes.sm,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          ⚠ {message.error}
+          <span style={{ flex: 1 }}>⚠ {message.error}</span>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                background: "none",
+                border: `1px solid ${colors.error}`,
+                color: colors.error,
+                cursor: "pointer",
+                padding: "2px 8px",
+                borderRadius: 4,
+                fontFamily: fonts.sans,
+                fontSize: fontSizes.xs,
+              }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
     </div>

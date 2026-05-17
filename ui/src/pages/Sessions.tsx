@@ -1,7 +1,7 @@
 /**
  * Sessions page: list, create, and manage chat sessions.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
@@ -16,6 +16,8 @@ export function Sessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     if (!client) {
@@ -61,6 +63,48 @@ export function Sessions() {
     } catch (err) {
       setError(friendlyError(err));
       log.error("sessions", "delete failed", err);
+    }
+  };
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleRenameStart = (sess: Session) => {
+    setEditingId(sess.id);
+    setEditValue(sess.title);
+    // Auto-focus after render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleRenameSave = async () => {
+    if (!client || !editingId) return;
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === sessions.find(s => s.id === editingId)?.title) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      await client.updateSession(editingId, { title: trimmed });
+      setSessions((prev) =>
+        prev.map((s) => (s.id === editingId ? { ...s, title: trimmed } : s)),
+      );
+    } catch (err) {
+      setError(friendlyError(err));
+      log.error("sessions", "rename failed", err);
+    }
+    setEditingId(null);
+  };
+
+  const handleRenameCancel = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void handleRenameSave();
+    } else if (e.key === "Escape") {
+      handleRenameCancel();
     }
   };
 
@@ -184,38 +228,81 @@ export function Sessions() {
                 borderRadius: 6,
               }}
             >
-              <Link
-                to={`/chat/${sess.id}`}
+              {editingId === sess.id ? (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <input
+                    ref={inputRef}
+                    data-testid={`rename-input-${sess.id}`}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => void handleRenameSave()}
+                    onKeyDown={handleRenameKeyDown}
+                    style={{
+                      width: "100%",
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                      color: colors.text,
+                      backgroundColor: colors.surfaceAlt,
+                      border: `1px solid ${colors.accent}`,
+                      borderRadius: 4,
+                      padding: "2px 4px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              ) : (
+                <Link
+                  to={`/chat/${sess.id}`}
+                  style={{
+                    textDecoration: "none",
+                    color: colors.text,
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                      color: colors.text,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sess.title}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                      color: colors.muted,
+                      marginTop: 1,
+                    }}
+                  >
+                    {new Date(sess.time.created).toLocaleString()}
+                  </div>
+                </Link>
+              )}
+              <button
+                data-testid={`rename-session-${sess.id}`}
+                onClick={() => handleRenameStart(sess)}
+                disabled={editingId !== null && editingId !== sess.id}
                 style={{
-                  textDecoration: "none",
-                  color: colors.text,
-                  flex: 1,
-                  minWidth: 0,
+                  backgroundColor: "transparent",
+                  border: `1px solid ${colors.muted}`,
+                  color: colors.muted,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.xs,
+                  cursor: editingId !== null && editingId !== sess.id ? "not-allowed" : "pointer",
+                  marginLeft: 8,
+                  opacity: editingId !== null && editingId !== sess.id ? 0.4 : 1,
                 }}
               >
-                <div
-                  style={{
-                    fontFamily: fonts.mono,
-                    fontSize: fontSizes.xs,
-                    color: colors.text,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {sess.title}
-                </div>
-                <div
-                  style={{
-                    fontFamily: fonts.mono,
-                    fontSize: fontSizes.xs,
-                    color: colors.muted,
-                    marginTop: 1,
-                  }}
-                >
-                  {new Date(sess.time.created).toLocaleString()}
-                </div>
-              </Link>
+                rename
+              </button>
               <button
                 data-testid={`delete-session-${sess.id}`}
                 onClick={() => void handleDelete(sess.id)}

@@ -8,6 +8,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { colors, fonts } from "../theme";
 import { useServerStore } from "../store/server";
+import { ConnectivityIndicator } from "./ConnectivityIndicator";
 
 const NAV_ITEMS = [
   { path: "/chat", label: "Chat", icon: "💬" },
@@ -201,6 +202,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             />
           ))}
         </nav>
+        <ConnectivityIndicator />
       </aside>
 
       {/* Main content area */}

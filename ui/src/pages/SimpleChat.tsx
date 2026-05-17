@@ -268,7 +268,34 @@ export function SimpleChat() {
   const handleRetry = useCallback(() => {
     setError(null);
     clearError();
-  }, [clearError]);
+
+    // Find last assistant message with error
+    let lastFailedIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].error) {
+        lastFailedIdx = i;
+        break;
+      }
+    }
+    if (lastFailedIdx === -1) return;
+
+    // Find preceding user message
+    let lastUserIdx = -1;
+    for (let i = lastFailedIdx - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+
+    if (lastUserIdx >= 0) {
+      const userContent = messages[lastUserIdx].content;
+      setMessages((prev) =>
+        prev.filter((_, i) => i !== lastUserIdx && i !== lastFailedIdx),
+      );
+      setInput(userContent);
+    }
+  }, [messages, clearError]);
 
   const handleClear = useCallback(() => {
     setMessages([]);
@@ -627,7 +654,11 @@ export function SimpleChat() {
             </div>
           )}
           {messages.map((msg) => (
-            <ChatMessageBubble key={msg.id} message={msg} />
+            <ChatMessageBubble
+              key={msg.id}
+              message={msg}
+              onRetry={msg.error ? handleRetry : undefined}
+            />
           ))}
           {streaming && (
             <div

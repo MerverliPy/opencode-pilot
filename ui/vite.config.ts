@@ -9,22 +9,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       manifest: false, // Use our own public/manifest.webmanifest
-      workbox: {
-        navigateFallback: "/offline.html",
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern:
-              /\/(api|event|session|file|find|config|agent|command|global)\/.*/,
-            handler: "NetworkFirst",
-            options: {
-              networkTimeoutSeconds: 3,
-              cacheName: "api-cache",
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: false,

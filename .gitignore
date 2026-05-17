@@ -58,3 +58,6 @@ combo-edit.png
 upgrade-mobile-portal-project-cards.sh
 pilot.db-shm
 pilot.db-wal
+
+# Dogfood QA output
+dogfood-output/

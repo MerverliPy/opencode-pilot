@@ -194,7 +194,7 @@ test.describe("with seeded server", () => {
       await expect(page.getByTestId("memory-header")).toBeVisible();
 
       // Click the Chat nav link to navigate back
-      const chatLink = page.getByRole("link", { name: /chat/i });
+      const chatLink = page.locator('aside a[href="/chat"]');
       await expect(chatLink).toBeVisible();
       await chatLink.click();
 

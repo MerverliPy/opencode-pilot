@@ -95,7 +95,7 @@ test.describe("Sessions page — with seeded server", () => {
     await page.goto("/sessions");
     await expect(page.getByTestId("sessions-heading")).toBeVisible();
 
-    const chatLink = page.getByRole("link", { name: /chat/i });
+    const chatLink = page.locator('aside a[href="/chat"]');
     await expect(chatLink).toBeVisible();
     await chatLink.click();
     await expect(page).toHaveURL(/^\/(chat)?$/);

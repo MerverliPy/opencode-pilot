@@ -140,7 +140,7 @@ test.describe("Interactive elements — prompt input", () => {
 
     // Without a server configured, the prompt textarea must be disabled
     // to prevent the user from submitting messages that cannot be processed.
-    const textarea = page.getByPlaceholder("ask opencode…");
+    const textarea = page.getByTestId("prompt-input");
     await expect(textarea).toBeVisible();
     await expect(textarea).toBeDisabled();
   });

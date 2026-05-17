@@ -92,7 +92,7 @@ test.describe("Navigation — internal links", () => {
     await expect(page).toHaveURL("/sessions");
 
     // Navigate back to chat via nav link
-    const chatLink = page.getByRole("link", { name: /chat/i });
+    const chatLink = page.locator('aside a[href="/chat"]');
     await expect(chatLink).toBeVisible();
     await chatLink.click();
     await expect(page).toHaveURL(/^\/(chat)?$/);

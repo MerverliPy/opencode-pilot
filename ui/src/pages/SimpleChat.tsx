@@ -499,7 +499,7 @@ export function SimpleChat() {
         }}
       >
         {/* Header */}
-        <div
+        <header
           style={{
             display: "flex",
             alignItems: "center",
@@ -596,7 +596,7 @@ export function SimpleChat() {
               Clear
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Messages area */}
         <div
@@ -695,6 +695,7 @@ export function SimpleChat() {
           }}
         >
           <input
+            data-testid="prompt-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

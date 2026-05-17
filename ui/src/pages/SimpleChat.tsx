@@ -512,6 +512,7 @@ export function SimpleChat() {
             position: "sticky",
             top: 0,
             zIndex: 10,
+            flexShrink: 0,
           }}
         >
           {/* Sidebar toggle (mobile) */}

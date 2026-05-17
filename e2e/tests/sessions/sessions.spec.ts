@@ -98,7 +98,7 @@ test.describe("Sessions page — with seeded server", () => {
     const chatLink = page.getByRole("link", { name: /chat/i });
     await expect(chatLink).toBeVisible();
     await chatLink.click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL(/^\/(chat)?$/);
   });
 });
 

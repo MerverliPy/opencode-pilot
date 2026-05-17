@@ -199,7 +199,7 @@ test.describe("with seeded server", () => {
       await chatLink.click();
 
       // Should land on the chat page
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page).toHaveURL(/^\/(chat)?$/);
       await expect(page.getByTestId("main-content")).toBeVisible();
     });
   });

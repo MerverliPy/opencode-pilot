@@ -39,8 +39,8 @@ test.describe("Navigation — route rendering", () => {
 
   test("/chat/:sessionId deep link works", async ({ page }) => {
     const sessionId = "test-session-123";
-    await page.goto(`/chat/${sessionId}`);
-    await expect(page).toHaveURL(`/chat/${sessionId}`);
+    await page.goto(`/session/${sessionId}`);
+    await expect(page).toHaveURL(`/session/${sessionId}`);
     await expect(
       page.getByTestId("prompt-input"),
     ).toBeVisible();
@@ -95,7 +95,7 @@ test.describe("Navigation — internal links", () => {
     const chatLink = page.getByRole("link", { name: /chat/i });
     await expect(chatLink).toBeVisible();
     await chatLink.click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL(/^\/(chat)?$/);
   });
 });
 

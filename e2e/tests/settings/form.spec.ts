@@ -48,20 +48,20 @@ test.describe("Input — type_text / fill / press_key", () => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
 
-    const input = page.getByPlaceholder("ask opencode…");
+    const input = page.getByTestId("prompt-input");
     await expect(input).toBeVisible();
 
-    // The textarea is disabled when no server is configured.
+    // The input is disabled when no server is configured.
     // Use evaluate_script (mirrors chrome-devtools-mcp evaluate_script)
     // to directly set the value and enable the element.
     await page.evaluate(() => {
-      const textarea = document.querySelector(
-        'textarea[placeholder="ask opencode…"]',
-      ) as HTMLTextAreaElement | null;
-      if (textarea) {
-        textarea.disabled = false;
-        textarea.value = "Hello from Playwright";
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      const input = document.querySelector(
+        'input[data-testid="prompt-input"]',
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.disabled = false;
+        input.value = "Hello from Playwright";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
       }
     });
 
@@ -72,18 +72,18 @@ test.describe("Input — type_text / fill / press_key", () => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
 
-    const input = page.getByPlaceholder("ask opencode…");
+    const input = page.getByTestId("prompt-input");
     await expect(input).toBeVisible();
 
     // Enable and fill via evaluate_script
     await page.evaluate(() => {
-      const textarea = document.querySelector(
-        'textarea[placeholder="ask opencode…"]',
-      ) as HTMLTextAreaElement | null;
-      if (textarea) {
-        textarea.disabled = false;
-        textarea.value = "Test message";
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      const input = document.querySelector(
+        'input[data-testid="prompt-input"]',
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.disabled = false;
+        input.value = "Test message";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
       }
     });
 

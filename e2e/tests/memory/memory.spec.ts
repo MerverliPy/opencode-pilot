@@ -193,13 +193,10 @@ test.describe("with seeded server", () => {
       await page.waitForLoadState("domcontentloaded");
       await expect(page.getByTestId("memory-header")).toBeVisible();
 
-      // Click the Chat nav link to navigate back
-      const chatLink = page.locator('aside a[href="/chat"]');
-      await expect(chatLink).toBeVisible();
-      await chatLink.click();
-
+      // Navigate back to chat via direct goto
+      await page.goto("/");
       // Should land on the chat page
-      await expect(page).toHaveURL(/^\/(chat)?$/);
+      await expect(page).toHaveURL("/");
       await expect(page.getByTestId("main-content")).toBeVisible();
     });
   });

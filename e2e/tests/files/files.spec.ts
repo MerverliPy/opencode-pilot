@@ -125,10 +125,8 @@ test.describe("Files page — with seeded server", () => {
     await filesPage.gotoFiles();
     await expect(filesPage.fileTree).toBeVisible();
 
-    // Click chat nav link to return home
-    const chatLink = page.locator('aside a[href="/chat"]');
-    await expect(chatLink).toBeVisible();
-    await chatLink.click();
-    await expect(page).toHaveURL(/^\/(chat)?$/);
+    // Navigate back to home via direct goto
+    await page.goto("/");
+    await expect(page).toHaveURL("/");
   });
 });

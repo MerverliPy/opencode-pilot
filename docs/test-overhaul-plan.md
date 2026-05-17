@@ -494,12 +494,12 @@ decisions:   "<key decisions>"
 
 | # | Task | File | Change | ⏱ | Status | Notes |
 |---|------|------|--------|----|--------|-------|
-| 11.1 | Create `debugLog.ts` server middleware | `server/src/debugLog.ts` (NEW) | Log: method, path, status, latency. Optional: body logging with DEBUG=true. Never log credentials. | 20m | ⏳ | Format: `[debug] POST /api/chat/completions → 200 (1.2s)` |
-| 11.2 | Wire debug middleware | `server/src/n9routerChat.ts` | Apply debug middleware to chat completions route | 5m | ⏳ | `app.use("/api/chat/completions", debugMiddleware)` |
-| 11.3 | Create `DebugPanel.tsx` | `ui/src/components/DebugPanel.tsx` (NEW) | Collapsible panel: request log, status, latency, model, tokens. Toggle Ctrl+D. | 30m | ⏳ | Red for errors, green for success. Expandable entries. |
-| 11.4 | Create `useDebugLog` hook | `ui/src/services/useDebugLog.ts` (NEW) | Collect debug entries, clear, toggle. 100 entry FIFO limit. | 20m | ⏳ | Methods: `addEntry()`, `clear()`, `toggle()` |
-| 11.5 | Wire debug into SimpleChat | `ui/src/pages/SimpleChat.tsx` | Add DebugPanel below chat area | 10m | ⏳ | `<DebugPanel entries={debugEntries} />` |
-| 11.6 | Error classifier | `ui/src/lib/errorClassifier.ts` (NEW) | Map errors: 401=auth, 429=rate limit, 503=provider down, timeout=network | 15m | ⏳ | Export `classifyError(err): {message, detail, code}` |
+| 11.1 | Create `debugLog.ts` server middleware | `server/src/debugLog.ts` (NEW) | Log: method, path, status, latency. Optional: body logging with DEBUG=true. Never log credentials. | 20m | ✅ | Format: `[debug] POST /api/chat/completions → 200 (1.2s)` |
+| 11.2 | Wire debug middleware | `server/src/n9routerChat.ts` | Apply debug middleware to chat completions route | 5m | ✅ | `app.use("/api/chat/completions", debugMiddleware)` |
+| 11.3 | Create `DebugPanel.tsx` | `ui/src/components/DebugPanel.tsx` (NEW) | Collapsible panel: request log, status, latency, model, tokens. Toggle Ctrl+D. | 30m | ✅ | Red for errors, green for success. Expandable entries. |
+| 11.4 | Create `useDebugLog` hook | `ui/src/services/useDebugLog.ts` (NEW) | Collect debug entries, clear, toggle. 100 entry FIFO limit. | 20m | ✅ | Methods: `addEntry()`, `clear()`, `toggle()` |
+| 11.5 | Wire debug into SimpleChat | `ui/src/pages/SimpleChat.tsx` | Add DebugPanel below chat area | 10m | ✅ | `<DebugPanel entries={debugEntries} />` |
+| 11.6 | Error classifier | `ui/src/lib/errorClassifier.ts` (NEW) | Map errors: 401=auth, 429=rate limit, 503=provider down, timeout=network | 15m | ✅ | Export `classifyError(err): {message, detail, code}` |
 
 **Debug entry shape:**
 ```typescript
@@ -520,12 +520,12 @@ type DebugEntry = {
 
 #### Phase 11 Sign-off
 ```yaml
-signed_by:   <role>
+signed_by:   Orchestrator
 model:       n9router/ds/deepseek-v4-flash
-date:        YYYY-MM-DD
-verification: "typecheck -w server pass, typecheck -w ui pass"
-difficulties: "<any issues>"
-decisions:   "<key decisions>"
+date:        2026-05-16
+verification: "typecheck -w server && typecheck -w ui — both pass"
+difficulties: "debugLog.ts import in n9routerChat.ts missing .js extension (Node ESM) — fixed in later CI pass."
+decisions:   "DebugLog middleware uses createMiddleware pattern. DebugPanel collapsible with Ctrl+D toggle. errorClassifier maps 401/429/503/timeout to user-friendly messages."
 ```
 
 

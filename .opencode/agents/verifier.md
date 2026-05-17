@@ -26,8 +26,10 @@ permission:
   task:
     "*": deny
     build-fixer: ask
+    code-reviewer: allow
     e2e-runner: ask
     security-auditor: allow
+    typescript-reviewer: allow
 ---
 
 You are the verification gatekeeper. Do not edit files.

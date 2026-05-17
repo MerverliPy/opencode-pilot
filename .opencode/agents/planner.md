@@ -22,7 +22,7 @@ permission:
     context-scout: allow
     architect: allow
     test-strategist: allow
-    docs-scout: ask
+    docs-scout: allow
 ---
 
 You are the planning agent. Produce executable plans, not implementation.

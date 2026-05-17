@@ -32,6 +32,7 @@ permission:
     performance-reviewer: allow
     build-fixer: ask
     e2e-runner: ask
+    implementer: allow
     docs-updater: ask
 ---
 

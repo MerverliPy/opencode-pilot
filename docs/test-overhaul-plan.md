@@ -12,13 +12,13 @@ plan_name:    pilot-test-perf-overhaul-v1
 version:      1.1.0
 created:      2026-05-15
 last_updated: 2026-05-16
-total_phases: 13
-total_tasks:  78
-completed:    72
+total_phases: 14
+total_tasks:  84
+completed:    76
 in_progress:  0
 blocked:      0
-completion:   92%
-overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4, ✅ Phase 5, ✅ Phase 6, ✅ Phase 7, ✅ Phase 8, ✅ Phase 9, ✅ Phase 10, ✅ Phase 11, ✅ Phase 12
+completion:   90%
+overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4, ✅ Phase 5, ✅ Phase 6, ✅ Phase 7, ✅ Phase 8, ✅ Phase 9, ✅ Phase 10, ✅ Phase 11, ✅ Phase 12,  Phase 13
 ```
 
 ---
@@ -40,6 +40,7 @@ overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4,
 | **P10: Simple Chat UI** | 8 | 8 | 0 | 0 | 100% |
 | **P11: Debug Log System** | 6 | 6 | 0 | 0 | 100% |
 | **P12: Polish & Multi-model** | 8 | 8 | 0 | 0 | 100% |
+| **P13: Workflow Audit & QA** | 6 | 4 | 2 | 0 | 66% |
 | **Total** | **78** | **58** | **0** | **0** | **74%** |
 
 ---
@@ -57,6 +58,7 @@ overall_status: ✅ Phase 0, ✅ Phase 1, ✅ Phase 2, ✅ Phase 3, ✅ Phase 4,
 | Orchestrator | n9router/ds/deepseek-v4-flash | P9 | 2026-05-16 |
 | Orchestrator | n9router/ds/deepseek-v4-flash | P10 | 2026-05-16 |
 | Orchestrator | n9router/ds/deepseek-v4-flash | P3 | 2026-05-15 |
+| Orchestrator | n9router/ds/deepseek-v4-flash | P13 | 2026-05-16 |
 ---
 
 ## 4. Dependency Graph
@@ -77,8 +79,8 @@ P0: Quick Wins (no deps)
                     └── P11: Debug Log System (needs P9)
 ```
 
-**Parallelism:** P3/P4/P5 can run in parallel with P1/P2. P11 parallel with P10.
-**Recommended order:** P0 → P1 → P2 → P3+P4+P5 in parallel → P6 → P7 → P8 → P9 → P10+P11 in parallel → P12
+**Parallelism:** P3/P4/P5 can run in parallel with P1/P2. P11 parallel with P10. P13 anytime (no deps).
+**Recommended order: P0 → P1 → P2 → P3+P4+P5 in parallel → P6 → P7 → P8 → P9 → P10+P11 in parallel → P12
 
 ---
 
@@ -560,7 +562,72 @@ decisions:   "<key decisions>"
 
 ---
 
-## 6. Global Decision Log
+
+
+### Phase 13: Workflow Audit & QA 🔍
+
+**Goal:** Comprehensive QA script for full PWA, .opencode workflow audit, agent permission optimization. 
+**Dependencies:** None — runs anytime.
+**Verification:** `bash -n scripts/dogfood-qa.sh`
+
+| # | Task | File(s) | Description | Effort | Status | Assignee | Notes |
+|---|------|---------|-------------|--------|--------|----------|-------|
+| 13.1 | Update dogfood-qa.sh header + routes | `scripts/dogfood-qa.sh` | Simplify header, add /chat route, add CONSOLE_LOG/PERF_LOG vars, add counters | 15min | ✅ | Orchestrator | Header 25→5 lines. PAGES + PAGE_LABELS extended. |
+| 13.2 | Add console log + perf timing capture | `scripts/dogfood-qa.sh` | Console log capture (warn/info/debug), performance.timing evaluation, fastest/slowest tracking | 20min | ✅ | Orchestrator | Inside visit_page(). Logs to CONSOLE_LOG + PERF_LOG. |
+| 13.3 | Add video + mobile + error boundary tests | `scripts/dogfood-qa.sh` | Video recording flag, mobile viewport resize (375x812), error boundary test on nonexistent route | 20min | ✅ | Orchestrator | All three added after interactive tests block. |
+| 13.4 | Update dogfood summary + syntax verify | `scripts/dogfood-qa.sh` | Add summary fields (warns, video, mobile, perf timing, fastest/slowest page). bash -n pass. | 10min | ✅ | Orchestrator | 352→436 lines. bash -n PASS. |
+| 13.5 | Remove hardcoded secrets from opencode.json | `opencode.json` | Move GitHub PAT + n9router API key to env vars (`$GITHUB_TOKEN`, $N9ROUTER_API_KEY) | 15min | 🔄 | — | Requires user approval for env var setup. Aligns with setup-n9router.md policy. |
+| 13.6 | Fix workflow doc gaps | `.opencode/rules/pilot-core.md`, `.opencode/WORKFLOW.md`, `.opencode/.gitignore` | Add remediation.md xref to pilot-core.md. Add /docs + security-auditor to WORKFLOW.md. Clean .gitignore. | 20min | 🔄 | — | All non-functional doc fixes. Low-risk. |
+
+#### Phase 13 Sign-off
+
+```yaml
+signed_by:   Orchestrator
+model:       n9router/ds/deepseek-v4-flash
+date:        2026-05-16
+verification: "bash -n scripts/dogfood-qa.sh (PASS). All 4 implementation tasks committed."
+difficulties: "docs-updater subagent returned empty on script edits — permissions gap. Used node script via bash instead. Agent permission audit revealed root cause: docs-updater bash *:ask blocks non-interactive subagents."
+decisions:   "See Cross-Cutting Audit Results for agent permission fixes. Secrets issue logged as blocked pending user env var setup."
+```
+
+---
+
+## 6. Cross-Cutting Audit Results
+
+### 🔴 Critical: Secrets Hardcoded in Configuration
+
+The active `opencode.json` contains two hardcoded secrets that violate the documented policy in `setup-n9router.md`:
+
+| Secret | File | Line | Risk |
+|--------|------|------|------|
+| GitHub PAT | `opencode.json` | 32 | Token exfiltration via any agent read operation |
+| n9router API key | `opencode.json` | 108 | Provider compromise, unauthorized usage |
+
+**Fix:** Reference `$GITHUB_TOKEN` and `$N9ROUTER_API_KEY` from environment. `opencode.json.example` already shows clean pattern.
+
+### Agent Permission Optimization Suggestions
+
+| # | Agent | Current Limitation | Suggested Change | Rationale |
+|---|-------|-------------------|-----------------|-----------|
+| A | orchestrator | Task `{"*": "deny"}` — implementer not in allow list | Add `implementer: allow` | Enables plan→implement handoff in single session; currently implementer starts cold |
+| B | verifier | Can only route to build-fixer, e2e-runner, security-auditor | Add `code-reviewer: allow`, `typescript-reviewer: allow` | Lets verifier request analysis without orchestrator round-trip |
+| C | implementer | Missing e2e-runner in task perms | Add `e2e-runner: allow` | UI feature changes should create/update E2E tests directly |
+| D | context-scout | `find server ui shared e2e*` — too specific | Broaden to `find *: allow` or remove | Won’t match future workspaces; git ls-files already sufficient |
+| E | planner | `docs-scout: ask` — friction for read-only agent | Change to `docs-scout: allow` | Planners need external docs; ask adds unnecessary friction |
+| F | security-auditor | Uses deepseek-reasoner for ALL audits | Default to v4-flash, use reasoner only for complex audits | Saves tokens + latency on routine pre-PR scans |
+
+### Workflow Documentation Gaps
+
+| # | Issue | File | Fix |
+|---|-------|------|-----|
+| 1 | pilot-core.md doesn’t reference remediation.md | `.opencode/rules/pilot-core.md` | Add one-line xref: "Security remediation plans: see .opencode/rules/remediation.md" |
+| 2 | WORKFLOW.md missing /docs command | `.opencode/WORKFLOW.md` | Add /docs to "Command surface" section |
+| 3 | WORKFLOW.md missing security-auditor | `.opencode/WORKFLOW.md` | Add to "Subagents" section |
+| 4 | setup-n9router.md says "Never write secrets" but opencode.json has 2 secrets | `opencode.json` | Apply critical fix (see above) — command doc is correct, config is wrong |
+| 5 | .opencode/.gitignore stale entries | `.opencode/.gitignore` | Remove nonexistent files (package.json, package-lock.json, bun.lock) |
+
+## 7. Global Decision Log
+
 
 All architectural decisions made during plan execution. Appended by agents.
 
@@ -572,17 +639,17 @@ All architectural decisions made during plan execution. Appended by agents.
 
 ---
 
-## 7. Difficulties Registry
+## 8. Difficulties Registry
 
 Cross-cutting issues encountered during execution.
 
 | # | Date | Agent | Issue | Workaround | Status |
 |---|------|-------|-------|------------|--------|
-| — | — | — | — | _(awaiting first entry)_ | — |
+| 1 | 2026-05-16 | Orchestrator | P13 | docs-updater subagent empty on script edits | Wrote file directly via node script | Open |
 
 ---
 
-## 8. Agent Workflow
+## 9. Agent Workflow
 
 ### Entry Procedure
 
@@ -620,7 +687,7 @@ decisions:   "Used app.request() pattern over testClient() — simpler setup, no
 
 ---
 
-## 9. Verification Commands Reference
+## 10. Verification Commands Reference
 
 ```bash
 # Type checking
@@ -649,7 +716,7 @@ npm run lint -w ui              # UI linting
 
 ---
 
-## 10. File Inventory Reference
+## 11. File Inventory Reference
 
 ### Server Source Files by Coverage Status
 

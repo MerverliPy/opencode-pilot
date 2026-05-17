@@ -1,30 +1,10 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# dogfood-qa.sh — Exploratory QA workflow for the Pilot PWA using agent-browser
-#
-# Automates a systematic walk through every Pilot page, captures annotated
-# screenshots, snapshots interactive elements, and collects console errors.
-#
-# Usage:
-#   ./scripts/dogfood-qa.sh                          # defaults
-#   ./scripts/dogfood-qa.sh http://localhost:3000    # custom URL
-#   ./scripts/dogfood-qa.sh http://localhost:3000 ./qa-output
-#
-# Prerequisites:
-#   - agent-browser installed globally (npm i -g agent-browser)
-#   - Pilot PWA running at the target URL
-#
-# agent-browser CLI reference (key commands used below):
-#   agent-browser --session <name> open <url>              navigate
-#   agent-browser --session <name> wait --load networkidle  wait for network idle
-#   agent-browser --session <name> screenshot --annotate <path>  annotated screenshot
-#   agent-browser --session <name> snapshot -i              interactive elements
-#   agent-browser --session <name> console                 console logs
-#   agent-browser --session <name> errors                  page errors
-#   agent-browser --session <name> click @eN               click element
-#   agent-browser --session <name> fill @eN "text"         fill input
-#   agent-browser --session <name> close                   close session
-# ──────────────────────────────────────────────────────────────────────────────
+# dogfood-qa.sh — Comprehensive QA suite for opencode-pilot
+# Walks all PWA routes, captures annotated screenshots, interactive
+# element snapshots, console errors/logs, perf timings, mobile viewport
+# tests, and video recording.
+# Usage: ./scripts/dogfood-qa.sh [url] [output-dir]
 
 set -euo pipefail
 
@@ -38,6 +18,8 @@ SCREENSHOT_DIR="${OUTPUT_DIR}/screenshots"
 VIDEO_DIR="${OUTPUT_DIR}/videos"
 ERROR_LOG="${OUTPUT_DIR}/console-errors.log"
 SNAPSHOT_LOG="${OUTPUT_DIR}/snapshots.log"
+CONSOLE_LOG="${OUTPUT_DIR}/console-log.log"
+PERF_LOG="${OUTPUT_DIR}/perf-timings.log"
 
 # Pages to visit (relative paths appended to TARGET_URL)
 PAGES=(
@@ -48,6 +30,7 @@ PAGES=(
   "/diff"
   "/settings"
   "/memory"
+  "/chat"
 )
 
 # Friendly labels for each page (used in filenames and echo output)
@@ -59,6 +42,7 @@ PAGE_LABELS=(
   "diff"
   "settings"
   "memory"
+  "chat-alias"
 )
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
@@ -88,6 +72,10 @@ step "Creating output directories: ${OUTPUT_DIR}"
 mkdir -p "${SCREENSHOT_DIR}" "${VIDEO_DIR}"
 : > "${ERROR_LOG}"
 : > "${SNAPSHOT_LOG}"
+: > "${CONSOLE_LOG}"
+: > "${PERF_LOG}"
+: > "${CONSOLE_LOG}"
+: > "${PERF_LOG}"
 ok "Output directories ready"
 
 # ── Helper: slugify a page label for filenames ────────────────────────────────
@@ -101,6 +89,13 @@ slugify() {
 # Globals used for summary
 SCREENSHOTS_TAKEN=0
 TOTAL_ERRORS=0
+TOTAL_WARNINGS=0
+MOBILE_WIDTH=375
+MOBILE_HEIGHT=812
+FASTEST_PAGE=""
+SLOWEST_PAGE=""
+FASTEST_TIME=99999
+SLOWEST_TIME=0
 
 visit_page() {
   local label="$1"
@@ -165,13 +160,50 @@ visit_page() {
   else
     ok "No console errors on ${label}"
   fi
+
+  # ── Console logs (warnings, info)
+  local page_logs
+  page_logs=$(agent-browser --session "${SESSION}" console 2>/dev/null) || true
+  if [ -n "${page_logs}" ]; then
+    local warn_count
+    warn_count=$(echo "${page_logs}" | grep -ci "warn\|warning" 2>/dev/null || echo 0)
+    TOTAL_WARNINGS=$((TOTAL_WARNINGS + warn_count))
+    {
+      echo "── Console logs on ${label} (${path}) ──"
+      echo "${page_logs}"
+      echo ""
+    } >> "${CONSOLE_LOG}"
+  fi
+
+  # ── Performance timing
+  local perf_data
+  perf_data=$(agent-browser --session "${SESSION}" evaluate "JSON.stringify({domReady: performance.timing.domComplete - performance.timing.navigationStart, loadTime: performance.timing.loadEventEnd - performance.timing.navigationStart})" 2>/dev/null) || perf_data="(unavailable)"
+  {
+    echo "── Perf timing on ${label} (${path}) ──"
+    echo "${perf_data}"
+    echo ""
+  } >> "${PERF_LOG}"
+  if [ "${perf_data}" != "(unavailable)" ] && [ -n "${perf_data}" ]; then
+    local load_time
+    load_time=$(echo "${perf_data}" | grep -oP '"loadTime":\K\d+' 2>/dev/null || echo 0)
+    if [ "${load_time}" -gt 0 ] 2>/dev/null; then
+      if [ "${load_time}" -lt "${FASTEST_TIME}" ]; then
+        FASTEST_TIME="${load_time}"
+        FASTEST_PAGE="${label}"
+      fi
+      if [ "${load_time}" -gt "${SLOWEST_TIME}" ]; then
+        SLOWEST_TIME="${load_time}"
+        SLOWEST_PAGE="${label}"
+      fi
+    fi
+  fi
 }
 
 # ── Start session ─────────────────────────────────────────────────────────────
 
 echo ""
 echo -e "${CYAN}┌──────────────────────────────────────────────────────┐${RESET}"
-echo -e "${CYAN}│  Pilot PWA — Exploratory QA (dogfood-qa)             │${RESET}"
+echo -e "${CYAN}│  opencode-pilot — Full QA Suite             │${RESET}"
 echo -e "${CYAN}│  Target : ${BOLD}${TARGET_URL}${RESET}"
 echo -e "${CYAN}│  Output : ${BOLD}${OUTPUT_DIR}${RESET}"
 echo -e "${CYAN}│  Session: ${BOLD}${SESSION}${RESET}"
@@ -186,6 +218,11 @@ agent-browser --session "${SESSION}" open "${TARGET_URL}" || {
 }
 agent-browser --session "${SESSION}" wait --load networkidle 2>/dev/null || \
   agent-browser --session "${SESSION}" wait 2000
+
+# Start video recording if supported
+agent-browser --session "${SESSION}" record --output "${VIDEO_DIR}" 2>/dev/null || {
+  warn "Video recording not supported by this agent-browser version"
+}
 
 # ── Initial screenshot (landing page) ─────────────────────────────────────────
 
@@ -303,6 +340,42 @@ fi
 echo ""
 ok "Interactive tests complete"
 
+# ── Error boundary test
+step "  Test: Error boundary (non-existent route)"
+agent-browser --session "${SESSION}" open "${TARGET_URL}/nonexistent-route-xyz" 2>/dev/null || true
+agent-browser --session "${SESSION}" wait 2000
+agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-error-boundary.png" 2>/dev/null || true
+SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+boundary_errors=$(agent-browser --session "${SESSION}" errors 2>/dev/null) || true
+if [ -n "${boundary_errors}" ]; then
+  warn "Errors detected on non-existent route"
+else
+  ok "Error boundary handled non-existent route cleanly"
+fi
+
+echo ""
+
+# ── Mobile viewport tests
+step "Running mobile viewport tests (${MOBILE_WIDTH}x${MOBILE_HEIGHT})…"
+agent-browser --session "${SESSION}" resize "${MOBILE_WIDTH}" "${MOBILE_HEIGHT}" 2>/dev/null || {
+  warn "Resize not supported — skipping mobile tests"
+}
+for mi in 0 1 3; do
+  if [ "${mi}" -lt "${#PAGES[@]}" ]; then
+    mlabel="${PAGE_LABELS[$mi]}"
+    mpath="${PAGES[$mi]}"
+    step "  Mobile: Visiting ${mlabel}"
+    agent-browser --session "${SESSION}" open "${TARGET_URL}${mpath}" 2>/dev/null || true
+    agent-browser --session "${SESSION}" wait 2000
+    agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/mobile-${mlabel}.png" 2>/dev/null || true
+    SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  fi
+done
+agent-browser --session "${SESSION}" resize 1280 720 2>/dev/null || true
+ok "Mobile tests complete"
+
+echo ""
+
 # ── Close session ──────────────────────────────────────────────────────────────
 
 step "Closing agent-browser session: ${SESSION}"
@@ -319,7 +392,11 @@ echo -e "  Target URL    : ${TARGET_URL}"
 echo -e "  Output dir    : ${OUTPUT_DIR}"
 echo -e "  Screenshots   : ${SCREENSHOTS_TAKEN} files in ${SCREENSHOT_DIR}/"
 echo -e "  Console errors: ${TOTAL_ERRORS} (see ${ERROR_LOG})"
+echo -e "  Console warns : ${TOTAL_WARNINGS}"
+echo -e "  Videos        : ${VIDEO_DIR}/"
+echo -e "  Mobile tests  : 3 pages at ${MOBILE_WIDTH}x${MOBILE_HEIGHT}"
 echo -e "  Snapshots     : ${SNAPSHOT_LOG}"
+echo -e "  Perf timings  : ${PERF_LOG}"
 echo ""
 
 # List all screenshots taken
@@ -346,6 +423,11 @@ fi
 
 echo ""
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+if [ -n "${FASTEST_PAGE}" ]; then
+  echo -e "${GREEN}Fastest page:${RESET} ${FASTEST_PAGE} (${FASTEST_TIME}ms)"
+  echo -e "${RED}Slowest page:${RESET} ${SLOWEST_PAGE} (${SLOWEST_TIME}ms)"
+  echo ""
+fi
 echo -e "${DIM}Tip: Review annotated screenshots for visual QA.${RESET}"
 echo -e "${DIM}Tip: Check ${SNAPSHOT_LOG} for interactive element inventory.${RESET}"
 echo -e "${DIM}Tip: Re-run with a different URL: ./scripts/dogfood-qa.sh http://localhost:3000${RESET}"

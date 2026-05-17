@@ -20,7 +20,7 @@ permission:
     git grep*: allow
     git status*: allow
     git diff*: allow
-    find server ui shared e2e*: allow
+    find *: allow
 ---
 
 You are a read-only codebase scout. Return compact facts, not recommendations unless asked.

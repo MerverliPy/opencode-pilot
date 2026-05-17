@@ -21,6 +21,7 @@
 | P10 💬 | [Simple Chat UI](P10.md) | 8 | ~4h | P9 | `typecheck -w ui && test -w ui` |
 | P11 🔍 | [Debug Log System](P11.md) | 6 | ~1.5h | P9 | `typecheck -w server && typecheck -w ui` |
 | P12 ✨ | [Polish & Multi-model](P12.md) | 8 | ~3h | P10,P11 | `build && test && test:e2e` |
+| P13 🔍 | [Workflow Audit & QA](P13.md) | 6 | ~2h | none | `bash -n scripts/dogfood-qa.sh` |
 
 ## Dependency DAG
 
@@ -37,6 +38,7 @@ P0+P1 ─── P7 ─── P8
 ```
 
 **Parallelism allowed:** P3/P4/P5 can run in parallel with P1/P2. P11 parallel with P10.
+**P13:** No dependencies — runs anytime. Independent of all other phases.
 
 ## How to Use
 
@@ -76,3 +78,39 @@ decisions:   "<rationale>"
 | 2 | Sessions.tsx, wcag.spec.ts | 2 failures (#4, #5) | ~10 |
 | 3 | interaction.spec.ts, performance-regression.spec.ts | 2 failures (#6, #7) | ~6 |
 | 4 | benchtest/package.json, benchtest/tsconfig.json | 5 benchtest scenarios | ~6 |
+
+---
+
+## Cross-Cutting Audit Findings
+
+### 🔴 Critical: Secrets in `opencode.json`
+
+| Type | Location | Risk |
+|------|----------|------|
+| GitHub PAT | `opencode.json:32` | Token exfiltration via agent reads |
+| n9router API key | `opencode.json:108` | Provider takeover |
+
+**Fix:** Move both to env vars (`$GITHUB_TOKEN`, `$N9ROUTER_API_KEY`).
+
+### Agent Permission Optimizations
+
+| Agent | Change | Why |
+|-------|--------|-----|
+| orchestrator | Add `implementer: allow` | Chain plan→implement inline |
+| verifier | Add `code-reviewer`, `typescript-reviewer: allow` | Route analysis without round-trip |
+| implementer | Add `e2e-runner: allow` | Write E2E tests on UI changes |
+| context-scout | Broaden `find` pattern | Covers future workspaces |
+| planner | Change `docs-scout: ask`→`allow` | Unblock external doc research |
+| security-auditor | Default to `v4-flash` | Save tokens on routine audits |
+
+### Workflow Gaps
+
+| Issue | Fix |
+|-------|-----|
+| pilot-core.md missing remediation.md xref | Add one-line reference |
+| WORKFLOW.md missing `/docs` command + `security-auditor` | Update agent topology |
+| `.opencode/.gitignore` stale entries | Clean up nonexistent references |
+
+---
+
+> **P13 task card:** see `docs/briefings/P13.md` (create if not exists) or `docs/test-overhaul-plan.md` Phase 13.

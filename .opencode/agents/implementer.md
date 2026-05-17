@@ -27,6 +27,7 @@ permission:
     build-fixer: allow
     typescript-reviewer: allow
     code-reviewer: allow
+    e2e-runner: allow
     security-auditor: allow
     performance-reviewer: allow
 ---

@@ -17,6 +17,8 @@ import {
   deleteAllMemoriesByServer,
 } from "../MemoryRepository.js";
 import { insertEmbedding } from "../EmbeddingRepository.js";
+import { upsertProfileEntry, getProfile } from "../ProfileRepository.js";
+import { insertTimelineEvent, getTimeline } from "../TimelineRepository.js";
 import type { Memory } from "../schema.js";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -326,6 +328,220 @@ describe("memoryRouter — happy paths", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Suite 2.3: Semantic Search (9 tests)
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("POST /:serverId/semantic-search", () => {
+  let app: Hono;
+
+  beforeEach(() => {
+    app = createTestApp();
+    deleteAllMemoriesByServer(SERVER_ID);
+    deleteAllMemoriesByServer(OTHER_SERVER);
+  });
+
+  // ── Validation errors ──────────────────────────────────────────────────
+
+  it("2.3.1 returns 400 when queryVector is missing", async () => {
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("queryVector");
+  });
+
+  it("2.3.2 returns 400 when queryVector is not an array", async () => {
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: "not-array", modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("queryVector");
+  });
+
+  it("2.3.3 returns 400 when queryVector is empty array", async () => {
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [], modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("queryVector");
+  });
+
+  it("2.3.4 returns 400 when modelId is missing", async () => {
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [1, 2, 3] }),
+      },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("modelId");
+  });
+
+  // ── Empty results ──────────────────────────────────────────────────────
+
+  it("2.3.5 returns empty results when no embeddings exist", async () => {
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [1, 0, 0], modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results).toEqual([]);
+  });
+
+  // ── Happy path: scored results ─────────────────────────────────────────
+
+  it("2.3.6 returns scored results for matching embeddings", async () => {
+    const memory = insertMemory(sample({ content: "semantic test" }));
+    insertEmbedding({
+      memoryId: memory.id,
+      modelId: "test-model",
+      vector: [1.0, 0.0, 0.0],
+    });
+
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [1, 0, 0], modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0]).toMatchObject({
+      memory: expect.objectContaining({
+        id: memory.id,
+        content: "semantic test",
+      }),
+      score: expect.any(Number),
+    });
+    expect(body.results[0].score).toBeGreaterThan(0);
+  });
+
+  // ── topK parameter ─────────────────────────────────────────────────────
+
+  it("2.3.7 honors topK parameter", async () => {
+    for (let i = 0; i < 3; i++) {
+      const mem = insertMemory(sample({ content: `memory-${i}` }));
+      insertEmbedding({
+        memoryId: mem.id,
+        modelId: "test-model",
+        vector: [1.0, 0.0, 0.0],
+      });
+    }
+
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          queryVector: [1, 0, 0],
+          modelId: "test-model",
+          topK: 2,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results).toHaveLength(2);
+  });
+
+  // ── Archived exclusion ─────────────────────────────────────────────────
+
+  it("2.3.8 excludes archived memories", async () => {
+    const activeMem = insertMemory(
+      sample({ content: "active", isArchived: false }),
+    );
+    insertEmbedding({
+      memoryId: activeMem.id,
+      modelId: "test-model",
+      vector: [1.0, 0.0, 0.0],
+    });
+
+    const archivedMem = insertMemory(
+      sample({ content: "archived", isArchived: true }),
+    );
+    insertEmbedding({
+      memoryId: archivedMem.id,
+      modelId: "test-model",
+      vector: [1.0, 0.0, 0.0],
+    });
+
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [1, 0, 0], modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0].memory.content).toBe("active");
+  });
+
+  // ── Score ordering ─────────────────────────────────────────────────────
+
+  it("2.3.9 returns results sorted by score descending", async () => {
+    // Insert lower-score embedding first (cosSim ≈ 0.6 with [1,0,0])
+    const memB = insertMemory(sample({ content: "lower-score" }));
+    insertEmbedding({
+      memoryId: memB.id,
+      modelId: "test-model",
+      vector: [0.6, 0.8, 0.0],
+    });
+
+    // Insert higher-score embedding second (cosSim = 1.0 with [1,0,0])
+    const memA = insertMemory(sample({ content: "higher-score" }));
+    insertEmbedding({
+      memoryId: memA.id,
+      modelId: "test-model",
+      vector: [1.0, 0.0, 0.0],
+    });
+
+    const res = await app.request(
+      `/memory/${SERVER_ID}/semantic-search`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ queryVector: [1, 0, 0], modelId: "test-model" }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results).toHaveLength(2);
+    expect(body.results[0].score).toBeGreaterThanOrEqual(body.results[1].score);
+  });
+});
+// ═══════════════════════════════════════════════════════════════════════════════
 // Suite 2.2: Security Edge Cases (12 tests)
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("memoryRouter — security edge cases", () => {
@@ -536,5 +752,169 @@ describe("memoryRouter — security edge cases", () => {
     const listRes = await app.request(`/memory/${SERVER_ID}`);
     const listBody = await listRes.json();
     expect(listBody.memories.some((m: Memory) => m.content === unicodeContent)).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Suite 2.4: Export/Import (8 tests)
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("memoryRouter — export/import", () => {
+  let app: Hono;
+
+  beforeEach(() => {
+    app = createTestApp();
+    deleteAllMemoriesByServer(SERVER_ID);
+    deleteAllMemoriesByServer(OTHER_SERVER);
+  });
+
+  // ── GET /:serverId/export ───────────────────────────────────────────────
+
+  describe("GET /:serverId/export", () => {
+    it("2.4.1 returns export object with all data sections", async () => {
+      insertMemory(sample({ content: "export-mem-1" }));
+      upsertProfileEntry(SERVER_ID, "name", "Alice", 0.9);
+      insertTimelineEvent({
+        serverId: SERVER_ID,
+        eventType: "memory_extracted",
+        payload: {},
+      });
+
+      const res = await app.request(`/memory/${SERVER_ID}/export`);
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.version).toBe(1);
+      expect(body).toHaveProperty("exportedAt");
+      expect(body.serverId).toBe(SERVER_ID);
+      expect(Array.isArray(body.memories)).toBe(true);
+      expect(body.memories.length).toBe(1);
+      expect(body.memories[0].content).toBe("export-mem-1");
+      expect(Array.isArray(body.profile)).toBe(true);
+      expect(body.profile.length).toBe(1);
+      expect(body.profile[0].key).toBe("name");
+      expect(Array.isArray(body.timeline)).toBe(true);
+      expect(body.timeline.length).toBe(1);
+      expect(body.timeline[0].eventType).toBe("memory_extracted");
+      expect(body.config).toHaveProperty("serverId", SERVER_ID);
+      expect(body.config).toHaveProperty("enabled");
+    });
+
+    it("2.4.2 includes archived memories in export", async () => {
+      insertMemory(sample({ content: "archived-mem", isArchived: true }));
+
+      const res = await app.request(`/memory/${SERVER_ID}/export`);
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.memories.length).toBe(1);
+      expect(body.memories[0].isArchived).toBe(true);
+    });
+  });
+
+  // ── POST /:serverId/import ──────────────────────────────────────────────
+
+  describe("POST /:serverId/import", () => {
+    it("2.4.3 imports memories from JSON", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: 1,
+          memories: [{ content: "imported-mem", category: "fact", confidence: 0.9, tags: [], isPinned: false, isArchived: false }],
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.imported.memories).toBe(1);
+
+      // Verify it's in the DB
+      const listRes = await app.request(`/memory/${SERVER_ID}`);
+      const listBody = await listRes.json();
+      expect(listBody.count).toBe(1);
+      expect(listBody.memories[0].content).toBe("imported-mem");
+    });
+
+    it("2.4.4 imports profile entries from JSON", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: 1,
+          profile: [{ key: "name", value: "Bob", confidence: 0.8 }],
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.imported.profile).toBe(1);
+
+      // Verify it's in the DB
+      const profile = getProfile(SERVER_ID);
+      expect(profile.length).toBe(1);
+      expect(profile[0].key).toBe("name");
+      expect(profile[0].value).toBe("Bob");
+    });
+
+    it("2.4.5 imports timeline events from JSON", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: 1,
+          timeline: [{ eventType: "memory_created", payload: { memoryId: "m1" } }],
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.imported.timeline).toBe(1);
+
+      // Verify it's in the DB
+      const timeline = getTimeline(SERVER_ID, 100);
+      expect(timeline.length).toBeGreaterThanOrEqual(1);
+      expect(timeline.some((e) => e.eventType === "memory_created")).toBe(true);
+    });
+
+    it("2.4.6 returns 400 for invalid import format (non-object)", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify("not-an-object"),
+      });
+      expect(res.status).toBe(400);
+
+      const body = await res.json();
+      expect(body).toHaveProperty("error");
+    });
+
+    it("2.4.7 returns 400 for null body", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(null),
+      });
+      expect(res.status).toBe(400);
+
+      const body = await res.json();
+      expect(body).toHaveProperty("error");
+    });
+
+    it("2.4.8 handles empty arrays gracefully", async () => {
+      const res = await app.request(`/memory/${SERVER_ID}/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: 1,
+          memories: [],
+          profile: [],
+          timeline: [],
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.imported).toEqual({ memories: 0, profile: 0, timeline: 0 });
+    });
   });
 });

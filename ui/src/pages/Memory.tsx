@@ -10,8 +10,11 @@ import { useMemoryStore } from "../plugin/memory/store/memoryStore";
 import { createMemoryApi } from "../services/memoryApi";
 import { MemoryCard } from "../plugin/memory/ui/components/MemoryCard";
 import { CategoryFilter } from "../plugin/memory/ui/components/CategoryFilter";
+import { TimelineFeed } from "../plugin/memory/ui/components/TimelineFeed";
+import { ProfilePanel } from "../plugin/memory/ui/components/ProfilePanel";
 import { EmptyState } from "../plugin/memory/ui/components/EmptyState";
 import type { FilterCategory } from "../plugin/memory/ui/components/CategoryFilter";
+import { createProviderFromConfig } from "../plugin/memory/embeddings/EmbeddingProviderFactory";
 import { colors, fonts, fontSizes } from "../theme";
 import { friendlyError } from "../lib/errors";
 
@@ -30,6 +33,7 @@ export function Memory() {
   const deleteMemory = useMemoryStore((s) => s.deleteMemory);
   const pinMemory = useMemoryStore((s) => s.pinMemory);
   const archiveMemory = useMemoryStore((s) => s.archiveMemory);
+  const config = useMemoryStore((s) => s.config);
 
   const [filter, setFilter] = useState<FilterCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +42,12 @@ export function Memory() {
   );
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState<"text" | "semantic">("text");
+  const [isEmbedding, setIsEmbedding] = useState(false);
+  const [viewMode, setViewMode] = useState<"memories" | "timeline" | "profile">("memories");
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   // Hydrate server store on mount
   useEffect(() => {
@@ -52,10 +62,10 @@ export function Memory() {
     });
   }, [activeServer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced search
+  // Debounced text search
   useEffect(() => {
-    if (!searchQuery.trim() || !activeServer) {
-      setSearchResults(null);
+    if (searchMode !== "text" || !searchQuery.trim() || !activeServer) {
+      if (searchMode !== "text") setSearchResults(null);
       return;
     }
     setIsSearching(true);
@@ -73,7 +83,62 @@ export function Memory() {
         .finally(() => setIsSearching(false));
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, activeServer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery, activeServer?.id, searchMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Semantic search (runs when searchMode is "semantic")
+  useEffect(() => {
+    if (searchMode !== "semantic" || !searchQuery.trim() || !activeServer || !config) {
+      if (searchMode !== "semantic") setSearchResults(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsEmbedding(true);
+
+    const doSemanticSearch = async () => {
+      try {
+        // Create embedding provider from memory config
+        const provider = await createProviderFromConfig({
+          modelId: config.embeddingModel,
+          provider: config.embeddingProvider,
+          serverUrl: activeServer.url,
+        });
+
+        // Generate query embedding
+        const [queryVector] = await provider.embed([searchQuery], "query");
+
+        if (cancelled) return;
+
+        // Search via server
+        const api = createMemoryApi(activeServer);
+        const { results } = await api.semanticSearch(
+          activeServer.id,
+          queryVector,
+          config.embeddingModel,
+          config.topK,
+        );
+
+        if (cancelled) return;
+        setSearchResults(results.map((r) => r.memory));
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(friendlyError(e));
+        setSearchResults([]);
+      } finally {
+        if (!cancelled) setIsEmbedding(false);
+      }
+    };
+
+    // Debounce 500ms for semantic (embedding generation is expensive)
+    const timer = setTimeout(() => {
+      void doSemanticSearch();
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, searchMode, activeServer?.id, config?.embeddingModel, config?.embeddingProvider]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePin = useCallback(
     (id: string, isPinned: boolean) => {
@@ -98,6 +163,61 @@ export function Memory() {
     },
     [deleteMemory, activeServer],
   );
+
+  const handleExport = useCallback(async () => {
+    if (!activeServer) return;
+    setIsExporting(true);
+    setError(null);
+    try {
+      const api = createMemoryApi(activeServer);
+      const data = await api.exportAll(activeServer.id);
+      // Download as JSON file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pilot-memory-${activeServer.id}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setError(friendlyError(e));
+    } finally {
+      setIsExporting(false);
+    }
+  }, [activeServer]);
+
+  const handleImport = useCallback(async () => {
+    if (!activeServer) return;
+    // Create a hidden file input
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      setIsImporting(true);
+      setError(null);
+      setImportMessage(null);
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        const api = createMemoryApi(activeServer);
+        const result = await api.importAll(activeServer.id, data);
+        setImportMessage(
+          `Imported: ${result.imported.memories} memories, ${result.imported.profile} profile entries, ${result.imported.timeline} timeline events`,
+        );
+        // Reload memories after import
+        loadForServer(activeServer.id, activeServer).catch(() => {});
+      } catch (e: unknown) {
+        setError(friendlyError(e));
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    input.click();
+  }, [activeServer, loadForServer]);
 
   if (!activeServer) {
     return (
@@ -183,31 +303,166 @@ export function Memory() {
           )}
         </div>
 
-        {/* Search */}
-        <input
-          data-testid="memory-search"
-          type="search"
-          aria-label="Search memories"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="search memories…"
-          style={{
-            flex: 1,
-            maxWidth: 300,
-            backgroundColor: colors.surfaceAlt,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 6,
-            padding: "6px 10px",
-            color: colors.text,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-            outline: "none",
-          }}
-        />
+        {/* View mode toggle */}
+        <div style={{ display: "flex", gap: 4, marginLeft: 12 }}>
+          <button
+            data-testid="view-mode-memories"
+            onClick={() => setViewMode("memories")}
+            style={{
+              padding: "3px 8px",
+              background: viewMode === "memories" ? colors.accent : "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: viewMode === "memories" ? "#000" : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+            }}
+          >
+            memories
+          </button>
+          <button
+            data-testid="view-mode-timeline"
+            onClick={() => setViewMode("timeline")}
+            style={{
+              padding: "3px 8px",
+              background: viewMode === "timeline" ? colors.accent : "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: viewMode === "timeline" ? "#000" : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+            }}
+          >
+            timeline
+          </button>
+          <button
+            data-testid="view-mode-profile"
+            onClick={() => setViewMode("profile")}
+            style={{
+              padding: "3px 8px",
+              background: viewMode === "profile" ? colors.accent : "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: viewMode === "profile" ? "#000" : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+            }}
+          >
+            profile
+          </button>
+          </div>
+
+        {viewMode === "memories" && (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              data-testid="export-memories"
+              onClick={handleExport}
+              disabled={isExporting}
+              style={{
+                padding: "4px 8px",
+                background: "transparent",
+                border: `1px solid ${colors.border}`,
+                borderRadius: 4,
+                color: colors.muted,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.xs,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isExporting ? "…" : "export"}
+            </button>
+            <button
+              data-testid="import-memories"
+              onClick={handleImport}
+              disabled={isImporting}
+              style={{
+                padding: "4px 8px",
+                background: "transparent",
+                border: `1px solid ${colors.border}`,
+                borderRadius: 4,
+                color: colors.muted,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.xs,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isImporting ? "…" : "import"}
+            </button>
+          </div>
+        )}
+
+        {viewMode === "memories" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Search mode toggle */}
+          <button
+            data-testid="search-mode-text"
+            onClick={() => { setSearchMode("text"); setSearchResults(null); }}
+            style={{
+              padding: "4px 8px",
+              background: searchMode === "text" ? colors.accent : "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: searchMode === "text" ? "#000" : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+            }}
+          >
+            text
+          </button>
+          <button
+            data-testid="search-mode-semantic"
+            onClick={() => { setSearchMode("semantic"); setSearchResults(null); }}
+            style={{
+              padding: "4px 8px",
+              background: searchMode === "semantic" ? colors.accent : "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: searchMode === "semantic" ? "#000" : colors.muted,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+            }}
+            disabled={!config}
+            title={!config ? "No memory config loaded" : "Semantic search using embeddings"}
+          >
+            semantic
+          </button>
+
+          {/* Search */}
+          <input
+            data-testid="memory-search"
+            type="search"
+            aria-label="Search memories"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={searchMode === "semantic" ? "semantic search…" : "search memories…"}
+            style={{
+              flex: 1,
+              maxWidth: 300,
+              backgroundColor: colors.surfaceAlt,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 6,
+              padding: "6px 10px",
+              color: colors.text,
+              fontFamily: fonts.mono,
+              fontSize: fontSizes.sm,
+              outline: "none",
+            }}
+          />
+        </div>
+        )}
       </div>
 
       {/* Category filter tabs */}
+      {viewMode === "memories" && (
       <CategoryFilter value={filter} onChange={setFilter} />
+      )}
 
       {/* Error */}
       {error && (
@@ -225,45 +480,66 @@ export function Memory() {
         </div>
       )}
 
-      {/* Memory list */}
-      <div data-testid="memory-list" style={{ flex: 1, overflowY: "auto" }}>
-        {isSearching ? (
-          <div
-            data-testid="memory-searching"
-            style={{
-              padding: 24,
-              color: colors.muted,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.sm,
-              textAlign: "center",
-            }}
-          >
-            searching…
-          </div>
-        ) : displayed.length === 0 ? (
-          <div data-testid="memory-list-empty">
-            <EmptyState
-              message={
-              searchQuery
-                ? `no memories matching "${searchQuery}"`
-                : filter !== "all"
-                  ? `no ${filter} memories`
-                  : undefined
-            }
-          />
-          </div>
-        ) : (
-          displayed.map((m) => (
-            <MemoryCard
-              key={m.id}
-              memory={m}
-              onPin={handlePin}
-              onArchive={handleArchive}
-              onDelete={handleDelete}
+      {importMessage && (
+        <div
+          data-testid="import-message"
+          style={{
+            padding: "8px 16px",
+            color: colors.success,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.xs,
+            flexShrink: 0,
+          }}
+        >
+          {importMessage}
+        </div>
+      )}
+
+      {/* Memory list / Timeline / Profile */}
+      {viewMode === "memories" ? (
+        <div data-testid="memory-list" style={{ flex: 1, overflowY: "auto" }}>
+          {isSearching || isEmbedding ? (
+            <div
+              data-testid="memory-searching"
+              style={{
+                padding: 24,
+                color: colors.muted,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.sm,
+                textAlign: "center",
+              }}
+            >
+              {isEmbedding ? "generating embedding…" : "searching…"}
+            </div>
+          ) : displayed.length === 0 ? (
+            <div data-testid="memory-list-empty">
+              <EmptyState
+                message={
+                searchQuery
+                  ? `no memories matching "${searchQuery}"`
+                  : filter !== "all"
+                    ? `no ${filter} memories`
+                    : undefined
+              }
             />
-          ))
-        )}
-      </div>
+            </div>
+          ) : (
+            displayed.map((m) => (
+              <MemoryCard
+                key={m.id}
+                memory={m}
+                onPin={handlePin}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </div>
+      ) : viewMode === "timeline" ? (
+        <TimelineFeed serverId={activeServer.id} server={activeServer} />
+      ) : (
+        <ProfilePanel serverId={activeServer.id} server={activeServer} />
+      )}
     </div>
   );
 }

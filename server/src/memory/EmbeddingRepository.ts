@@ -2,7 +2,9 @@
  * Server-side EmbeddingRepository — synchronous better-sqlite3 API.
  */
 import { getMemoryDb, newId } from "./memoryDb.js";
-import type { MemoryEmbedding } from "./schema.js";
+import type { MemoryEmbedding, Memory } from "./schema.js";
+import { type MemoryRow, rowToMemory } from "./MemoryRepository.js";
+import { cosineSimilarity } from "./similarity.js";
 
 type EmbeddingRow = {
   id: string;
@@ -94,4 +96,43 @@ export function upsertEmbedding(
   } else {
     insertEmbedding(e);
   }
+}
+
+// ── Semantic Search ────────────────────────────────────────────────────────────
+
+export type SimilarMemoryResult = {
+  memory: Memory;
+  score: number;
+};
+
+export function searchSimilarMemories(
+  serverId: string,
+  modelId: string,
+  queryVector: number[],
+  topK: number = 5,
+): SimilarMemoryResult[] {
+  const db = getMemoryDb();
+
+  const rows = db
+    .prepare(
+      `SELECT m.*, me.vector as embedding_vector
+       FROM memory_embeddings me
+       INNER JOIN memories m ON me.memory_id = m.id
+       WHERE me.model_id = @modelId AND m.server_id = @serverId AND m.is_archived = 0
+       LIMIT 100`,
+    )
+    .all({ modelId, serverId }) as (MemoryRow & {
+    embedding_vector: string;
+  })[];
+
+  const scored = rows.map((row) => {
+    const vector = JSON.parse(row.embedding_vector) as number[];
+    const score = cosineSimilarity(queryVector, vector);
+    return { memory: rowToMemory(row), score };
+  });
+
+  return scored
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
 }

@@ -10,6 +10,14 @@ jest.mock("../../plugin/memory/store/memoryStore", () => ({
   useMemoryStore: jest.fn(),
 }));
 
+// Mock embedding provider factory (avoids actual network calls)
+jest.mock("../../plugin/memory/embeddings/EmbeddingProviderFactory", () => ({
+  createProviderFromConfig: jest.fn().mockResolvedValue({
+    embed: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
+    model: { id: "test-model" },
+  }),
+}));
+
 // Mock plugin UI components
 jest.mock("../../plugin/memory/ui/components/MemoryCard", () => ({
   MemoryCard: ({ memory, onPin, onArchive, onDelete }: any) => (
@@ -40,6 +48,18 @@ jest.mock("../../plugin/memory/ui/components/EmptyState", () => ({
   ),
 }));
 
+jest.mock("../../plugin/memory/ui/components/TimelineFeed", () => ({
+  TimelineFeed: ({ serverId }: { serverId: string }) => (
+    <div data-testid="timeline-feed">Timeline for {serverId}</div>
+  ),
+}));
+
+jest.mock("../../plugin/memory/ui/components/ProfilePanel", () => ({
+  ProfilePanel: ({ serverId }: { serverId: string }) => (
+    <div data-testid="profile-panel">Profile for {serverId}</div>
+  ),
+}));
+
 import { useServerStore } from "../../store/server";
 import { useMemoryStore } from "../../plugin/memory/store/memoryStore";
 import { Memory } from "../Memory";
@@ -64,6 +84,7 @@ const mockMemory = (id: string, content: string, overrides = {}) => ({
 type MemStore = {
   memories: ReturnType<typeof mockMemory>[];
   memoryCount: number;
+  config: { serverId: string; enabled: boolean; extractEnabled: boolean; injectEnabled: boolean; embeddingProvider: string; embeddingModel: string; dedupThreshold: number; topK: number; maxMemories: number } | null;
   isExtracting: boolean;
   loadForServer: jest.Mock;
   deleteMemory: jest.Mock;
@@ -75,6 +96,7 @@ function createMemStore(overrides?: Partial<MemStore>): MemStore {
   return {
     memories: [],
     memoryCount: 0,
+    config: null,
     isExtracting: false,
     loadForServer: jest.fn().mockResolvedValue(undefined),
     deleteMemory: jest.fn().mockResolvedValue(undefined),
@@ -222,5 +244,158 @@ describe("Memory", () => {
     });
     render(<Memory />);
     expect(mem.loadForServer).toHaveBeenCalledWith("s1", expect.objectContaining({ id: "s1" }));
+  });
+
+  describe("semantic search mode", () => {
+    function activeServerOverride() {
+      return {
+        servers: [{ id: "s1", name: "Home", url: "http://localhost:4096" }],
+        activeId: "s1",
+      };
+    }
+
+    it("renders text/semantic toggle buttons", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      expect(screen.getByTestId("search-mode-text")).toBeInTheDocument();
+      expect(screen.getByTestId("search-mode-semantic")).toBeInTheDocument();
+    });
+
+    it("shows semantic placeholder when semantic mode is active", () => {
+      setupStores({
+        config: { serverId: "s1", enabled: true, extractEnabled: true, injectEnabled: true, embeddingProvider: "ollama", embeddingModel: "nomic-embed-text", dedupThreshold: 0.92, topK: 5, maxMemories: 2000 },
+      }, activeServerOverride());
+      render(<Memory />);
+      fireEvent.click(screen.getByTestId("search-mode-semantic"));
+      const input = screen.getByTestId("memory-search") as HTMLInputElement;
+      expect(input.placeholder).toBe("semantic search…");
+    });
+
+    it("disables semantic toggle when config is null", () => {
+      setupStores({ config: null }, activeServerOverride());
+      render(<Memory />);
+      const btn = screen.getByTestId("search-mode-semantic") as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+    });
+
+    it("enables semantic toggle when config is loaded", () => {
+      setupStores({
+        config: { serverId: "s1", enabled: true, extractEnabled: true, injectEnabled: true, embeddingProvider: "ollama", embeddingModel: "nomic-embed-text", dedupThreshold: 0.92, topK: 5, maxMemories: 2000 },
+      }, activeServerOverride());
+      render(<Memory />);
+      const btn = screen.getByTestId("search-mode-semantic") as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    });
+  });
+
+  describe("timeline view toggle", () => {
+    function activeServerOverride() {
+      return {
+        servers: [{ id: "s1", name: "Home", url: "http://localhost:4096" }],
+        activeId: "s1",
+      };
+    }
+
+    it("renders memories/timeline view toggle buttons", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      expect(screen.getByTestId("view-mode-memories")).toBeInTheDocument();
+      expect(screen.getByTestId("view-mode-timeline")).toBeInTheDocument();
+    });
+
+    it("shows timeline content when timeline view is selected", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      fireEvent.click(screen.getByTestId("view-mode-timeline"));
+      // Timeline Feed mocked component is shown
+      expect(screen.getByTestId("timeline-feed")).toBeInTheDocument();
+      // Search input and filter are NOT visible in timeline mode
+      expect(screen.queryByTestId("memory-search")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("category-filter")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("search-mode-text")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("search-mode-semantic")).not.toBeInTheDocument();
+    });
+
+    it("defaults to memories view", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      expect(screen.getByTestId("category-filter")).toBeInTheDocument();
+      expect(screen.getByTestId("memory-search")).toBeInTheDocument();
+      expect(screen.queryByTestId("timeline-feed")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("profile view toggle", () => {
+    function activeServerOverride() {
+      return {
+        servers: [{ id: "s1", name: "Home", url: "http://localhost:4096" }],
+        activeId: "s1",
+      };
+    }
+
+    it("renders profile view toggle button", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      expect(screen.getByTestId("view-mode-profile")).toBeInTheDocument();
+    });
+
+    it("shows profile content when profile view is selected", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      fireEvent.click(screen.getByTestId("view-mode-profile"));
+      // Profile Panel mocked component is shown
+      expect(screen.getByTestId("profile-panel")).toBeInTheDocument();
+      // Search input, category filter, and search mode toggles are NOT visible
+      expect(screen.queryByTestId("memory-search")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("category-filter")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("search-mode-text")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("search-mode-semantic")).not.toBeInTheDocument();
+    });
+
+    it("returns to memories view after switching back", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      // Switch to profile
+      fireEvent.click(screen.getByTestId("view-mode-profile"));
+      expect(screen.getByTestId("profile-panel")).toBeInTheDocument();
+
+      // Switch back to memories
+      fireEvent.click(screen.getByTestId("view-mode-memories"));
+      expect(screen.queryByTestId("profile-panel")).not.toBeInTheDocument();
+      expect(screen.getByTestId("category-filter")).toBeInTheDocument();
+      expect(screen.getByTestId("memory-search")).toBeInTheDocument();
+    });
+  });
+
+  describe("export/import buttons", () => {
+    function activeServerOverride() {
+      return {
+        servers: [{ id: "s1", name: "Home", url: "http://localhost:4096" }],
+        activeId: "s1",
+      };
+    }
+
+    it("renders export and import buttons in memories view", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      expect(screen.getByTestId("export-memories")).toBeInTheDocument();
+      expect(screen.getByTestId("import-memories")).toBeInTheDocument();
+    });
+
+    it("hides export/import buttons in timeline view", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      fireEvent.click(screen.getByTestId("view-mode-timeline"));
+      expect(screen.queryByTestId("export-memories")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("import-memories")).not.toBeInTheDocument();
+    });
+
+    it("hides export/import buttons in profile view", () => {
+      setupStores(undefined, activeServerOverride());
+      render(<Memory />);
+      fireEvent.click(screen.getByTestId("view-mode-profile"));
+      expect(screen.queryByTestId("export-memories")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("import-memories")).not.toBeInTheDocument();
+    });
   });
 });

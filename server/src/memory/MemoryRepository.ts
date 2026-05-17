@@ -6,7 +6,7 @@ import type { Memory, MemoryCategory, MemoryConfig } from "./schema.js";
 
 // ── Row shapes ───────────────────────────────────────────────────────────────
 
-type MemoryRow = {
+export type MemoryRow = {
   id: string;
   server_id: string;
   content: string;
@@ -33,7 +33,7 @@ type ConfigRow = {
   max_memories: number;
 };
 
-function rowToMemory(r: MemoryRow): Memory {
+export function rowToMemory(r: MemoryRow): Memory {
   return {
     id: r.id,
     serverId: r.server_id,

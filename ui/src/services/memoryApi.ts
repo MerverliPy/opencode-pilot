@@ -109,6 +109,25 @@ export function createMemoryApi(server: ServerConfig) {
       return r("DELETE", `/memory/${encodeURIComponent(serverId)}/all`);
     },
 
+    exportAll(serverId: string): Promise<{
+      version: number;
+      exportedAt: string;
+      serverId: string;
+      memories: Memory[];
+      profile: ProfileEntry[];
+      timeline: TimelineEvent[];
+      config: MemoryConfig;
+    }> {
+      return r("GET", `/memory/${encodeURIComponent(serverId)}/export`);
+    },
+
+    importAll(
+      serverId: string,
+      data: Record<string, unknown>,
+    ): Promise<{ imported: { memories: number; profile: number; timeline: number } }> {
+      return r("POST", `/memory/${encodeURIComponent(serverId)}/import`, data);
+    },
+
     getConfig(serverId: string): Promise<MemoryConfig> {
       return r("GET", `/memory/${encodeURIComponent(serverId)}/config`);
     },
@@ -133,6 +152,21 @@ export function createMemoryApi(server: ServerConfig) {
       if (opts.offset) qs.set("offset", String(opts.offset));
       const q = qs.toString() ? `?${qs.toString()}` : "";
       return r("GET", `/memory/${encodeURIComponent(serverId)}/timeline${q}`);
+    },
+
+    // ── Semantic Search ──────────────────────────────────────────────────────
+
+    semanticSearch(
+      serverId: string,
+      queryVector: number[],
+      modelId: string,
+      topK?: number,
+    ): Promise<{ results: Array<{ memory: Memory; score: number }> }> {
+      return r(
+        "POST",
+        `/memory/${encodeURIComponent(serverId)}/semantic-search`,
+        { queryVector, modelId, topK },
+      );
     },
 
     // ── Embeddings ──────────────────────────────────────────────────────────

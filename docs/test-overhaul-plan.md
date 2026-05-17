@@ -19,6 +19,7 @@ in_progress:  0
 blocked:      0
 completion:  100%
 overall_status: ✅ Plan complete. Backlog P15-P18 + D11 done (2026-05-17)
+backlog_progress: "Tier 3 Memory Plugin P19-P22 complete 2026-05-17"
 ```
 
 ---
@@ -52,6 +53,7 @@ overall_status: ✅ Plan complete. Backlog P15-P18 + D11 done (2026-05-17)
 |------------|----------------|---------------|-------|
 | Orchestrator | n9router/ds/deepseek-v4-flash | P1,P3,P4,P5,P6,P7,P9,P10,P11,P12,P13,P14 | 2026-05-15/17 |
 | Orchestrator | deepseek/deepseek-v4-pro | P2 | 2026-05-15 |
+| Orchestrator | deepseek/deepseek-v4-pro | P19,P20,P21,P22 | 2026-05-17 |
 
 ---
 
@@ -470,6 +472,7 @@ decisions:   "Deep audit merged as Phase 14. Full raw report: docs/deep-audit-20
 | 2 | 2026-05-15 | Orchestrator | P3 | Path traversal docs as-is | Proxy passes unnormalized |
 | 3 | 2026-05-15 | Orchestrator | P3 | 204 null body returns 502 | Node undici limitation |
 | 4 | 2026-05-17 | Orchestrator | P14 | Deep audit = Phase 14 | Standalone: docs/deep-audit-2026-05-17.md |
+| 5 | 2026-05-17 | Orchestrator | P19-P22 | Cosine similarity on server, not client | Embeddings stored server-side; JOIN+compute more scalable |
 
 ---
 
@@ -579,12 +582,12 @@ npm run lint -w ui            # UI lint
 
 ### Tier 3 — v0.5.0 Memory Plugin
 
-| # | Task | Effort |
-|---|------|--------|
-| P19 | Semantic memory search UI | 4h |
-| P20 | Memory timeline view | 3h |
-| P21 | Profile visualization | 2h |
-| P22 | Memory export / backup | 1.5h |
+| # | Task | Effort | Status | Notes |
+|---|------|--------|--------|-------|
+| P19 | Semantic memory search UI | 4h | ✅ | Server cosine similarity endpoint + 9 tests. UI toggle + embedding provider + 6 tests |
+| P20 | Memory timeline view | 3h | ✅ | TimelineFeed component (308 lines) + 6 tests. Memory page view toggle + 3 tests |
+| P21 | Profile visualization | 2h | ✅ | ProfilePanel component + 8 tests. Memory page third view mode + 3 tests |
+| P22 | Memory export / backup | 1.5h | ✅ | Server export/import routes + 8 tests. UI buttons + file download/upload + 5 tests |
 
 ### Tier 4 — v1.0.0 Polish
 
@@ -600,4 +603,4 @@ npm run lint -w ui            # UI lint
 
 ---
 
-*End of document. 95/95 plan tasks complete. 11 backlog items remain outside plan scope.*
+*End of document. 95/95 plan tasks complete. 7 backlog items remain (Tier 4: P24-P30). Tier 3 (P19-P22) completed 2026-05-17.*

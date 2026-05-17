@@ -47,11 +47,14 @@ const mockApi: jest.Mocked<MemoryApi> = {
   updateMemory: jest.fn(),
   deleteMemory: jest.fn(),
   deleteAllMemories: jest.fn(),
+  exportAll: jest.fn(),
+  importAll: jest.fn(),
   getConfig: jest.fn(),
   saveConfig: jest.fn(),
   getProfile: jest.fn(),
   getTimeline: jest.fn(),
   deleteEmbeddingsByMemory: jest.fn(),
+  semanticSearch: jest.fn(),
 };
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────

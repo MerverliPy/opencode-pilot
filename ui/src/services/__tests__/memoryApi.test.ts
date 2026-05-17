@@ -394,6 +394,99 @@ describe("createMemoryApi", () => {
     });
   });
 
+  // ── Semantic Search ─────────────────────────────────────────────────────
+
+  describe("semanticSearch", () => {
+    it("calls POST with queryVector, modelId, topK and returns results", async () => {
+      const mockResults = {
+        results: [
+          { memory: { id: "mem_1", serverId, content: "found", category: "fact", confidence: 0.9, tags: [], isPinned: false, isArchived: false, createdAt: 100, updatedAt: 100 }, score: 0.95 },
+          { memory: { id: "mem_2", serverId, content: "also", category: "fact", confidence: 0.8, tags: [], isPinned: false, isArchived: false, createdAt: 200, updatedAt: 200 }, score: 0.82 },
+        ],
+      };
+      (global.fetch as jest.Mock).mockResolvedValue(mockJsonResponse(mockResults));
+
+      const result = await api.semanticSearch(serverId, [0.1, 0.2, 0.3], "model-1", 10);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/memory/svr_1/semantic-search",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ queryVector: [0.1, 0.2, 0.3], modelId: "model-1", topK: 10 }),
+        }),
+      );
+      expect(result).toEqual(mockResults);
+      expect(result.results[0].score).toBe(0.95);
+    });
+
+    it("omits topK from body when not provided", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue(mockJsonResponse({ results: [] }));
+
+      await api.semanticSearch(serverId, [0.5], "model-X");
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+      const body = JSON.parse(init.body as string);
+      expect(body).toEqual({ queryVector: [0.5], modelId: "model-X" });
+      // topK should not be in the body
+      expect(body).not.toHaveProperty("topK");
+    });
+  });
+
+  // ── Export / Import ─────────────────────────────────────────────────────
+
+  describe("exportAll", () => {
+    it("calls GET /export and returns export blob", async () => {
+      const exportData = {
+        version: 1,
+        exportedAt: "2025-01-01T00:00:00.000Z",
+        serverId,
+        memories: [],
+        profile: [],
+        timeline: [],
+        config: { serverId, enabled: true, extractEnabled: true, injectEnabled: true, embeddingProvider: "ollama", embeddingModel: "nomic-embed-text", dedupThreshold: 0.92, topK: 5, maxMemories: 2000 },
+      };
+      (global.fetch as jest.Mock).mockResolvedValue(mockJsonResponse(exportData));
+
+      const result = await api.exportAll(serverId);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/memory/svr_1/export",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toEqual(exportData);
+      expect(result.version).toBe(1);
+      expect(result.serverId).toBe(serverId);
+      expect(result.memories).toEqual([]);
+      expect(result.profile).toEqual([]);
+      expect(result.timeline).toEqual([]);
+      expect(result.config).toHaveProperty("embeddingProvider", "ollama");
+    });
+  });
+
+  describe("importAll", () => {
+    it("calls POST /import with data and returns import counts", async () => {
+      const importData = {
+        version: 1,
+        memories: [{ content: "test", category: "fact", confidence: 0.9, tags: [], isPinned: false, isArchived: false }],
+        profile: [{ key: "name", value: "Alice", confidence: 0.8 }],
+        timeline: [{ eventType: "memory_extracted", payload: {} }],
+      };
+      const importResult = { imported: { memories: 1, profile: 1, timeline: 1 } };
+      (global.fetch as jest.Mock).mockResolvedValue(mockJsonResponse(importResult));
+
+      const result = await api.importAll(serverId, importData);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/memory/svr_1/import",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify(importData),
+        }),
+      );
+      expect(result.imported).toEqual({ memories: 1, profile: 1, timeline: 1 });
+    });
+  });
+
   // ── URL encoding ─────────────────────────────────────────────────────────
 
   describe("URL encoding", () => {

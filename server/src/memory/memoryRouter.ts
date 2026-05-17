@@ -38,10 +38,11 @@ import {
   deleteEmbeddingsByMemory,
   getEmbeddingsByModel,
   insertEmbedding,
+  searchSimilarMemories,
 } from "./EmbeddingRepository.js";
-import { getProfile } from "./ProfileRepository.js";
-import { getTimeline } from "./TimelineRepository.js";
-import type { MemoryConfig, MemoryEmbedding } from "./schema.js";
+import { getProfile, upsertProfileEntry } from "./ProfileRepository.js";
+import { getTimeline, insertTimelineEvent } from "./TimelineRepository.js";
+import type { MemoryCategory, MemoryConfig, MemoryEmbedding, TimelineEventType } from "./schema.js";
 
 const router = new Hono();
 
@@ -132,6 +133,185 @@ router.delete("/:serverId/embeddings/:memoryId", (c) => {
   const { serverId, memoryId } = c.req.param();
   deleteEmbeddingsByMemory(memoryId);
   return c.body(null, 204);
+});
+
+// ── Semantic Search ────────────────────────────────────────────────────────────
+
+router.post("/:serverId/semantic-search", async (c) => {
+  const { serverId } = c.req.param();
+  const body = await c.req.json();
+  const { queryVector, modelId, topK } = body as {
+    queryVector: number[];
+    modelId: string;
+    topK?: number;
+  };
+
+  if (!Array.isArray(queryVector) || queryVector.length === 0) {
+    return c.json({ error: "queryVector must be a non-empty array of numbers" }, 400);
+  }
+  if (!modelId || typeof modelId !== "string") {
+    return c.json({ error: "modelId is required" }, 400);
+  }
+
+  const results = searchSimilarMemories(serverId, modelId, queryVector, topK ?? 5);
+  return c.json({ results });
+});
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+
+router.get("/:serverId/export", (c) => {
+  const { serverId } = c.req.param();
+
+  const memories = getMemoriesByServer(serverId, {
+    includeArchived: true,
+    limit: 999999,
+  });
+  const profile = getProfile(serverId);
+  const timeline = getTimeline(serverId, 999999);
+  const config = getMemoryConfig(serverId);
+
+  const exportData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    serverId,
+    memories,
+    profile,
+    timeline,
+    config,
+  };
+
+  return c.json(exportData);
+});
+
+// ── Import ─────────────────────────────────────────────────────────────────────
+
+router.post("/:serverId/import", async (c) => {
+  const { serverId } = c.req.param();
+  const body = await c.req.json();
+
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "invalid import format" }, 400);
+  }
+
+  const {
+    memories,
+    profile,
+    timeline,
+    config: importConfig,
+  } = body as {
+    version?: number;
+    memories?: unknown[];
+    profile?: unknown[];
+    timeline?: unknown[];
+    config?: unknown;
+  };
+
+  const imported = { memories: 0, profile: 0, timeline: 0 };
+
+  // Import memories
+  if (Array.isArray(memories)) {
+    for (const m of memories as Array<Record<string, unknown>>) {
+      if (typeof m.content !== "string" || !m.content) continue;
+      try {
+        insertMemory({
+          serverId,
+          content: String(m.content),
+          category: (m.category as MemoryCategory) ?? "fact",
+          confidence: typeof m.confidence === "number" ? m.confidence : 0.8,
+          tags: Array.isArray(m.tags) ? m.tags.map(String) : [],
+          sourceSessionId:
+            typeof m.sourceSessionId === "string"
+              ? m.sourceSessionId
+              : undefined,
+          sourceMessageId:
+            typeof m.sourceMessageId === "string"
+              ? m.sourceMessageId
+              : undefined,
+          isPinned: Boolean(m.isPinned),
+          isArchived: Boolean(m.isArchived),
+        });
+        imported.memories++;
+      } catch {
+        /* skip malformed row */
+      }
+    }
+  }
+
+  // Import profile entries (upsert by serverId+key)
+  if (Array.isArray(profile)) {
+    for (const p of profile as Array<Record<string, unknown>>) {
+      if (typeof p.key !== "string" || !p.key) continue;
+      try {
+        upsertProfileEntry(
+          serverId,
+          String(p.key),
+          String(p.value ?? ""),
+          typeof p.confidence === "number" ? p.confidence : 0.8,
+          typeof p.sourceMemoryId === "string" ? p.sourceMemoryId : undefined,
+        );
+        imported.profile++;
+      } catch {
+        /* skip malformed row */
+      }
+    }
+  }
+
+  // Import timeline events
+  if (Array.isArray(timeline)) {
+    for (const t of timeline as Array<Record<string, unknown>>) {
+      if (typeof t.eventType !== "string" || !t.eventType) continue;
+      try {
+        insertTimelineEvent({
+          serverId,
+          sessionId:
+            typeof t.sessionId === "string" ? t.sessionId : undefined,
+          messageId:
+            typeof t.messageId === "string" ? t.messageId : undefined,
+          eventType: t.eventType as TimelineEventType,
+          payload:
+            typeof t.payload === "object" && t.payload !== null
+              ? (t.payload as Record<string, unknown>)
+              : {},
+        });
+        imported.timeline++;
+      } catch {
+        /* skip malformed row */
+      }
+    }
+  }
+
+  // Import config
+  if (importConfig && typeof importConfig === "object") {
+    const cfg = importConfig as Record<string, unknown>;
+    const current = getMemoryConfig(serverId);
+    const merged: MemoryConfig = {
+      ...current,
+      ...(typeof cfg.enabled === "boolean" ? { enabled: cfg.enabled } : {}),
+      ...(typeof cfg.extractEnabled === "boolean"
+        ? { extractEnabled: cfg.extractEnabled }
+        : {}),
+      ...(typeof cfg.injectEnabled === "boolean"
+        ? { injectEnabled: cfg.injectEnabled }
+        : {}),
+      ...(typeof cfg.embeddingProvider === "string"
+        ? { embeddingProvider: cfg.embeddingProvider }
+        : {}),
+      ...(typeof cfg.embeddingModel === "string"
+        ? { embeddingModel: cfg.embeddingModel }
+        : {}),
+      ...(typeof cfg.dedupThreshold === "number"
+        ? { dedupThreshold: cfg.dedupThreshold }
+        : {}),
+      ...(typeof cfg.topK === "number" ? { topK: cfg.topK } : {}),
+      ...(typeof cfg.maxMemories === "number"
+        ? { maxMemories: cfg.maxMemories }
+        : {}),
+      serverId,
+    };
+    saveMemoryConfig(merged);
+  }
+
+  return c.json({ imported });
 });
 
 // ── Insert ────────────────────────────────────────────────────────────────────

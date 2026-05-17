@@ -26,14 +26,14 @@ test.describe("Navigation — route rendering", () => {
     await expect(page).toHaveURL(/\/$/);
     // Chat page shows prompt textarea with placeholder
     await expect(
-      page.getByPlaceholder("ask opencode…"),
+      page.getByTestId("prompt-input"),
     ).toBeVisible();
   });
 
   test("/chat renders Chat page", async ({ page }) => {
     await page.goto("/chat");
     await expect(
-      page.getByPlaceholder("ask opencode…"),
+      page.getByTestId("prompt-input"),
     ).toBeVisible();
   });
 
@@ -42,7 +42,7 @@ test.describe("Navigation — route rendering", () => {
     await page.goto(`/chat/${sessionId}`);
     await expect(page).toHaveURL(`/chat/${sessionId}`);
     await expect(
-      page.getByPlaceholder("ask opencode…"),
+      page.getByTestId("prompt-input"),
     ).toBeVisible();
   });
 

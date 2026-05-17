@@ -505,9 +505,13 @@ export function SimpleChat() {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "12px 0",
+            paddingTop: "env(safe-area-inset-top, 12px)",
             borderBottom: `1px solid ${colors.borderSubtle}`,
             marginBottom: 12,
             gap: 8,
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
           }}
         >
           {/* Sidebar toggle (mobile) */}
@@ -542,6 +546,7 @@ export function SimpleChat() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {/* Model selector */}
             <select
+              aria-label="Model selector"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               style={{
@@ -691,6 +696,7 @@ export function SimpleChat() {
             display: "flex",
             gap: 8,
             padding: "12px 0",
+            paddingBottom: "env(safe-area-inset-bottom, 12px)",
             borderTop: `1px solid ${colors.borderSubtle}`,
           }}
         >
@@ -704,7 +710,7 @@ export function SimpleChat() {
                 ? "No server configured..."
                 : streaming
                   ? "Waiting for response..."
-                  : "Type a message... (Enter to send)"
+                  : "ask opencode\u2026"
             }
             disabled={!server || streaming}
             style={{

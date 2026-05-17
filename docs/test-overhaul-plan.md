@@ -541,23 +541,23 @@ decisions:   "DebugLog middleware uses createMiddleware pattern. DebugPanel coll
 
 | # | Task | File | Change | ⏱ | Status | Notes |
 |---|------|------|--------|----|--------|-------|
-| 12.1 | Model selector dropdown | `ui/src/pages/SimpleChat.tsx` | Dropdown of available models from n9router. Default = last used. | 30m | ⏳ | Fetched from `/v1/models` via existing N9RouterClient |
-| 12.2 | Fetch model list | `ui/src/services/n9routerChat.ts` | Add `availableModels()` calling n9router `/v1/models`. Cache 5min. | 15m | ⏳ | Models endpoint is public (no auth) |
-| 12.3 | Markdown rendering | `ui/src/components/ChatMessage.tsx` | Render assistant content as markdown: headings, bold, lists, code blocks, links | 30m | ⏳ | Use lightweight parser. Code blocks get `<pre><code>` + lang label |
-| 12.4 | Code block copy button | `ui/src/components/ChatMessage.tsx` | Copy icon on hover. Clipboard write. "Copied!" tooltip. | 20m | ⏳ | `navigator.clipboard.writeText()` |
-| 12.5 | Conversation list sidebar | `ui/src/pages/SimpleChat.tsx` | Past conversations: title, date, delete, switch, new. localStorage. | 30m | ⏳ | Auto-title from first user message |
-| 12.6 | Stop generation button | `ui/src/pages/SimpleChat.tsx` | Red Stop button replaces Send during streaming. Calls cancelStream(). | 15m | ⏳ | Partial response stays visible |
-| 12.7 | Responsive layout | `ui/src/pages/SimpleChat.tsx` | Mobile: full-width. Desktop: centered 800px, sidebar. Media query 768px breakpoint. | 20m | ⏳ | Sidebar toggle with hamburger on mobile |
-| 12.8 | Verify full pipeline | Various | Build, typecheck, test, manual verify: send → stream → error → model switch → debug → stop → conversation switch | 30m | ⏳ | Quick E2E test if time permits |
+| 12.1 | Model selector dropdown | `ui/src/pages/SimpleChat.tsx` | Dropdown of available models from n9router. Default = last used. | 30m | ✅ | Fetched from `/v1/models` via existing N9RouterClient |
+| 12.2 | Fetch model list | `ui/src/services/n9routerChat.ts` | Add `availableModels()` calling n9router `/v1/models`. Cache 5min. | 15m | ✅ | Models endpoint is public (no auth) |
+| 12.3 | Markdown rendering | `ui/src/components/ChatMessage.tsx` | Render assistant content as markdown: headings, bold, lists, code blocks, links | 30m | ✅ | Use lightweight parser. Code blocks get `<pre><code>` + lang label |
+| 12.4 | Code block copy button | `ui/src/components/ChatMessage.tsx` | Copy icon on hover. Clipboard write. "Copied!" tooltip. | 20m | ✅ | `navigator.clipboard.writeText()` |
+| 12.5 | Conversation list sidebar | `ui/src/pages/SimpleChat.tsx` | Past conversations: title, date, delete, switch, new. localStorage. | 30m | ✅ | Auto-title from first user message |
+| 12.6 | Stop generation button | `ui/src/pages/SimpleChat.tsx` | Red Stop button replaces Send during streaming. Calls cancelStream(). | 15m | ✅ | Partial response stays visible |
+| 12.7 | Responsive layout | `ui/src/pages/SimpleChat.tsx` | Mobile: full-width. Desktop: centered 800px, sidebar. Media query 768px breakpoint. | 20m | ✅ | Sidebar toggle with hamburger on mobile |
+| 12.8 | Verify full pipeline | Various | Build, typecheck, test, manual verify: send → stream → error → model switch → debug → stop → conversation switch | 30m | ✅ | Quick E2E test if time permits |
 
 #### Phase 12 Sign-off
 ```yaml
-signed_by:   <role>
+signed_by:   Orchestrator
 model:       n9router/ds/deepseek-v4-flash
-date:        YYYY-MM-DD
+date:        2026-05-16
 verification: "npm run build (PASS), typecheck all (PASS), test (all PASS)"
-difficulties: "<any issues>"
-decisions:   "<key decisions>"
+difficulties: "SimpleChat component grew to 775 lines — model selector, conversation sidebar, stop button, responsive layout all in one file. n9routerChat.ts availableModels() needs .js import extension for Node ESM."
+decisions:   "Model selector uses native <select> with models fetched from /v1/models. Conversation sidebar stores data in localStorage. Stop button calls cancelStream() from useChatStream hook. Responsive layout uses 768px breakpoint with sidebar toggle."
 ```
 
 ---

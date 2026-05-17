@@ -6,6 +6,7 @@
 
 import type { ServerConfig } from "@pilot-shared/types";
 import { basicAuthHeader } from "./auth";
+import { log } from "./logger";
 
 export type ChatMessage = {
   id: string;
@@ -42,7 +43,7 @@ export class N9RouterChatClient {
     });
 
     if (!res.ok) {
-      let detail = "";
+      let detail: string;
       try {
         const body = await res.json();
         detail = body?.error?.message || body?.error?.code || "";
@@ -74,7 +75,7 @@ export async function availableModels(
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      console.warn(`[availableModels] GET /v1/models \u2192 ${res.status}`);
+      log.warn("models", `GET /v1/models \u2192 ${res.status}`);
       return [];
     }
     const body = (await res.json()) as {
@@ -82,7 +83,7 @@ export async function availableModels(
     };
     return body.data?.map((m) => m.id) ?? [];
   } catch (err) {
-    console.warn("[availableModels] fetch failed:", err);
+    log.warn("models", "fetch failed:", err);
     return [];
   }
 }

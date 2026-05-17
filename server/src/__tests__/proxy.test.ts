@@ -464,7 +464,7 @@ describe("proxy security edge cases", () => {
     expect(result.status).toBe(502);
   });
 
-  it("returns 502 for upstream 204 with null body (proxy limitation)", async () => {
+  it("passes through upstream 204 with null body", async () => {
     jest.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 204 }),
     );
@@ -474,8 +474,8 @@ describe("proxy security edge cases", () => {
       mockContext(),
     );
 
-    // The proxy c.newResponse(null, 204) throws because Response(null, {status: 204})
-    // is invalid — caught as 502. This is a known limitation.
-    expect(result.status).toBe(502);
+    // Modern Node.js supports Response(null, {status: 204}) per Fetch spec.
+    // Proxy correctly passes through 204 null-body responses.
+    expect(result.status).toBe(204);
   });
 });

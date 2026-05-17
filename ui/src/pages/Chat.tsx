@@ -17,7 +17,7 @@ import { useServerStore } from "../store/server";
 import { useSessionStore } from "../store/session";
 import { useEventStream } from "../services/sse";
 import { OpencodeClient } from "../services/api";
-import type { ServerEvent, Session } from "@pilot-shared/types";
+import type { ServerEvent, Session, SessionStatus } from "@pilot-shared/types";
 import { log } from "../services/logger";
 import { MessageList } from "../components/MessageList";
 import { PromptInput } from "../components/PromptInput";
@@ -90,7 +90,7 @@ export function Chat() {
           sessionID: string;
           status: { type: string };
         };
-        setStatus(props.status.type as any);
+        setStatus(props.status.type as SessionStatus);
         break;
       }
       case "session.error": {

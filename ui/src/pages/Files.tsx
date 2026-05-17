@@ -30,6 +30,7 @@ export function Files() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [treeWidth, setTreeWidth] = useState(280);
   const dragging = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (!client) {
@@ -92,6 +93,7 @@ export function Files() {
     };
     const onUp = () => {
       dragging.current = false;
+      setIsDragging(false);
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -128,7 +130,7 @@ export function Files() {
         flex: 1,
         minHeight: 0,
         overflow: "hidden",
-        userSelect: dragging.current ? "none" : undefined,
+        userSelect: isDragging ? "none" : undefined,
       }}
     >
       {/* Left pane: file tree */}
@@ -329,6 +331,7 @@ export function Files() {
         }}
         onMouseDown={(e) => {
           dragging.current = true;
+          setIsDragging(true);
           e.preventDefault();
         }}
       />

@@ -7,7 +7,7 @@
 
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { debugLogMiddleware } from "./debugLog";
+import { debugLogMiddleware } from "./debugLog.js";
 
 const DEFAULT_N9ROUTER_URL = "http://localhost:20128/v1";
 

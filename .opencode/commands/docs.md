@@ -1,6 +1,6 @@
 ---
 description: Update existing Pilot docs or codemaps from source-of-truth files.
-agent: maintainer
+agent: orchestrator
 ---
 
 # /docs

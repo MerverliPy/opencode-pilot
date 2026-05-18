@@ -360,19 +360,41 @@ step "Running mobile viewport tests (${MOBILE_WIDTH}x${MOBILE_HEIGHT})…"
 agent-browser --session "${SESSION}" resize "${MOBILE_WIDTH}" "${MOBILE_HEIGHT}" 2>/dev/null || {
   warn "Resize not supported — skipping mobile tests"
 }
-for mi in 0 1 3; do
-  if [ "${mi}" -lt "${#PAGES[@]}" ]; then
-    mlabel="${PAGE_LABELS[$mi]}"
-    mpath="${PAGES[$mi]}"
+for mlabel in "chat" "sessions" "settings"; do
+  mpath=""
+  for pi in "${!PAGE_LABELS[@]}"; do
+    if [ "${PAGE_LABELS[$pi]}" = "${mlabel}" ]; then
+      mpath="${PAGES[$pi]}"
+      break
+    fi
+  done
+  if [ -n "${mpath}" ]; then
     step "  Mobile: Visiting ${mlabel}"
     agent-browser --session "${SESSION}" open "${TARGET_URL}${mpath}" 2>/dev/null || true
     agent-browser --session "${SESSION}" wait 2000
     agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/mobile-${mlabel}.png" 2>/dev/null || true
     SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  else
+    warn "  Could not find path for mobile label: ${mlabel}"
   fi
 done
 agent-browser --session "${SESSION}" resize 1280 720 2>/dev/null || true
 ok "Mobile tests complete"
+
+# ── Route redirect test
+step "  Test: Non-existent route redirect"
+agent-browser --session "${SESSION}" open "${TARGET_URL}/nonexistent-route-xyz" 2>/dev/null || true
+agent-browser --session "${SESSION}" wait --load domcontentloaded 2>/dev/null || \
+  agent-browser --session "${SESSION}" wait 2000
+current_url=$(agent-browser --session "${SESSION}" get url 2>/dev/null || echo "")
+if echo "${current_url}" | grep -qE '/$'; then
+  ok "Non-existent route redirects to /"
+else
+  warn "Non-existent route did NOT redirect to / (url=${current_url})"
+fi
+agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-redirect-test.png" 2>/dev/null || true
+SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+echo ""
 
 echo ""
 

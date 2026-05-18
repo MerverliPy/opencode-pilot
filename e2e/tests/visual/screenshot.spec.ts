@@ -34,7 +34,7 @@ test.describe("Screenshot — element-level snapshots", () => {
     await page.goto(ROUTES.HOME);
     await page.waitForLoadState("domcontentloaded");
 
-    const input = page.getByPlaceholder("ask opencode…");
+    const input = page.getByTestId("prompt-input");
     await expect(input).toBeVisible();
 
     await expect(input).toHaveScreenshot();

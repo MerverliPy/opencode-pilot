@@ -14,12 +14,27 @@ import { test, expect } from "@playwright/test";
 const ROUTES = ["/", "/chat", "/sessions", "/files", "/settings"];
 
 test.describe("Console — error-free page loads", () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ context, page }) => {
     // Clear server state before each test to prevent cross-test pollution
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
     });
+    // Mock backend-dependent endpoints to prevent Vite proxy errors
+    await page.route("**/push/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ enabled: false, publicKey: null }),
+      }),
+    );
+    await page.route("**/tunnel/status", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ active: false, url: null, error: null }),
+      }),
+    );
   });
   for (const route of ROUTES) {
     test(`no console.error on ${route || "/"}`, async ({ page }) => {

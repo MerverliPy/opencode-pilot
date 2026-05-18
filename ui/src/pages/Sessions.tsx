@@ -1,7 +1,7 @@
 /**
  * Sessions page: list, create, and manage chat sessions.
  */
-import { useEffect, useState, useRef, useCallback, Fragment } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, Fragment } from "react";
 import { Link } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
@@ -12,7 +12,11 @@ import { friendlyError } from "../lib/errors";
 
 export function Sessions() {
   const server = useServerStore((s) => s.active());
-  const client = server ? new OpencodeClient(server) : null;
+  const client = useMemo(
+    () => (server ? new OpencodeClient(server) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [server?.id, server?.url, server?.username, server?.password],
+  );
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

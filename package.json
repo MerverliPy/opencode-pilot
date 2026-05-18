@@ -19,16 +19,18 @@
     "build:ui": "npm run build -w ui",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w ui && npm run typecheck -w e2e",
     "lint": "npm run lint -w ui",
+    "postinstall": "node -e \"try{['workbox-routing','workbox-strategies','workbox-background-sync'].forEach(p=>require('fs').writeFileSync('node_modules/'+p+'/index.mjs','export * from \\'./index.js\\';\\n'))}catch(e){}\"",
     "test": "npm run test -w ui",
     "test:e2e": "npm run test -w e2e",
     "test:e2e:fullstack": "npm run test:e2e:fullstack -w e2e",
     "test:coverage": "npm run test:coverage -w ui",
     "test:watch": "npm run test:watch -w ui",
-    "qa:exploratory": "./scripts/dogfood-qa.sh",
     "start": "npm run start -w server",
     "benchtest": "node benchtest-run.mjs --scenario all",
     "benchtest:quick": "node benchtest-run.mjs --scenario all --quick",
-    "benchtest:report": "echo \"HTML reports in benchtest-out-*/\""
+    "benchtest:report": "echo \"HTML reports in benchtest-out-*/\"",
+    "qa:agent-full": "bash scripts/agent-browser-full-suite.sh",
+    "qa:exploratory": "bash scripts/dogfood-qa.sh"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^19.0.0",
@@ -36,6 +38,7 @@
     "@semantic-release/changelog": "^6.0.0",
     "@semantic-release/git": "^10.0.0",
     "@semantic-release/npm": "^12.0.0",
+    "agent-browser": "^0.27.0",
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.5.0",

@@ -34,8 +34,16 @@ export default defineConfig({
       "/session": {
         target: proxyTarget,
         changeOrigin: true,
-        // Don't proxy /sessions (SPA route) — only proxy /session and /session/* API calls
-        bypass: (req) => req.url === "/sessions" || req.url?.startsWith("/sessions/") ? req.url : undefined,
+        // Don't proxy SPA routes — only proxy actual API calls
+        bypass: (req) => {
+          const url = req.url ?? "";
+          // SPA routes (serve index.html)
+          if (url === "/sessions" || url.startsWith("/sessions/")) return url;
+          // Deep link: /session/<sessionId> (exactly one path segment)
+          if (/^\/session\/[^/]+$/.test(url)) return url;
+          // Everything else (/session, /session/xxx/message, etc.) → proxy to backend
+          return undefined;
+        },
       },
       "/git": proxyTarget,
       "/push": proxyTarget,

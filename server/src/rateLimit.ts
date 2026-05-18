@@ -13,6 +13,7 @@ const rateLimitedPrefixes = [
   "/terminal",
   "/git",
   "/memory",
+  "/session-tags",
 ] as const;
 
 export function shouldRateLimitRequest(path: string): boolean {

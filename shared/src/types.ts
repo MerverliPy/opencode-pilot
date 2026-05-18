@@ -18,6 +18,13 @@ export type Session = {
 
 export type SessionStatus = "idle" | "busy" | "question" | "error" | "aborted";
 
+export type SessionTags = {
+  sessionId: string;
+  tags: string[];
+  folder: string;
+  updatedAt: number;
+};
+
 // ─── Provider / Agent / Command ───────────────────────────────────────────────
 
 export type Provider = {

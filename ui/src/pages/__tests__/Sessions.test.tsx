@@ -260,3 +260,179 @@ describe("Sessions", () => {
     expect(screen.getByText("Original Title")).toBeInTheDocument();
   });
 });
+
+describe("Session tags", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("fetches and displays tags on session rows", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        // listSessions
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([mockSession("ses_1", "Tagged Session")]),
+        });
+      }
+      // getSessionTags
+      return Promise.resolve({
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve([{ sessionId: "ses_1", tags: ["important", "bug"], folder: "Project A", updatedAt: Date.now() }]),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(<MemoryRouter><Sessions /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText("Tagged Session")).toBeInTheDocument();
+    });
+    // Tag chips should be visible
+    expect(screen.getByText("important")).toBeInTheDocument();
+    expect(screen.getByText("bug")).toBeInTheDocument();
+    // Folder should be shown
+    const folderEls = screen.getAllByText(/Project A/);
+    expect(folderEls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows folder filter when folders exist", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([mockSession("ses_1", "S1"), mockSession("ses_2", "S2")]),
+        });
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve([
+          { sessionId: "ses_1", tags: [], folder: "Work", updatedAt: Date.now() },
+          { sessionId: "ses_2", tags: [], folder: "Personal", updatedAt: Date.now() },
+        ]),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(<MemoryRouter><Sessions /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText("Folder:")).toBeInTheDocument();
+    });
+    // Dropdown should have folder options
+    const select = screen.getByRole("combobox");
+    expect(select).toBeInTheDocument();
+  });
+
+  it("filters sessions by selected folder", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([mockSession("ses_1", "Work Session"), mockSession("ses_2", "Personal Session")]),
+        });
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve([
+          { sessionId: "ses_1", tags: [], folder: "Work", updatedAt: Date.now() },
+          { sessionId: "ses_2", tags: [], folder: "Personal", updatedAt: Date.now() },
+        ]),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(<MemoryRouter><Sessions /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText("Work Session")).toBeInTheDocument();
+      expect(screen.getByText("Personal Session")).toBeInTheDocument();
+    });
+    // Select "Work" folder
+    const select = screen.getByRole("combobox");
+    fireEvent.change(select, { target: { value: "Work" } });
+    // Should only show Work session
+    expect(screen.getByText("Work Session")).toBeInTheDocument();
+    expect(screen.queryByText("Personal Session")).not.toBeInTheDocument();
+  });
+
+  it("shows tag editor when tags button clicked", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([mockSession("ses_1", "Editable Session")]),
+        });
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve([{ sessionId: "ses_1", tags: ["old"], folder: "", updatedAt: Date.now() }]),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(<MemoryRouter><Sessions /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText("Editable Session")).toBeInTheDocument();
+    });
+    // Click tags button
+    fireEvent.click(screen.getByTestId("edit-tags-ses_1"));
+    // Tag editor inputs should appear
+    expect(screen.getByTestId("tag-input-ses_1")).toBeInTheDocument();
+    expect(screen.getByTestId("folder-input-ses_1")).toBeInTheDocument();
+  });
+
+  it("saves tags and folder when Save clicked", async () => {
+    let fetchCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([mockSession("ses_1", "Save Test")]),
+        });
+      }
+      if (fetchCount === 2) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: () => "application/json" },
+          json: () => Promise.resolve([{ sessionId: "ses_1", tags: [], folder: "", updatedAt: Date.now() }]),
+        });
+      }
+      // setSessionTags (PUT)
+      return Promise.resolve({
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve({ sessionId: "ses_1", tags: ["newtag"], folder: "NewFolder", updatedAt: Date.now() }),
+      });
+    });
+    setup({ id: "s1", url: "http://localhost:4096", name: "Home" });
+    render(<MemoryRouter><Sessions /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText("Save Test")).toBeInTheDocument();
+    });
+    // Open tag editor
+    fireEvent.click(screen.getByTestId("edit-tags-ses_1"));
+    // Type new tag
+    fireEvent.change(screen.getByTestId("tag-input-ses_1"), { target: { value: "newtag" } });
+    // Type new folder
+    fireEvent.change(screen.getByTestId("folder-input-ses_1"), { target: { value: "NewFolder" } });
+    // Click Save
+    fireEvent.click(screen.getByTestId("save-tags-ses_1"));
+    await waitFor(() => {
+      expect(screen.getByText("newtag")).toBeInTheDocument();
+      const folderEls = screen.getAllByText(/NewFolder/);
+      expect(folderEls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+});

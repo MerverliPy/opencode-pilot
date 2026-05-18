@@ -1,7 +1,7 @@
 /**
  * Sessions page: list, create, and manage chat sessions.
  */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, Fragment } from "react";
 import { Link } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
@@ -18,6 +18,11 @@ export function Sessions() {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [tagsMap, setTagsMap] = useState<Record<string, { tags: string[]; folder: string }>>({});
+  const [folderFilter, setFolderFilter] = useState<string>("");
+  const [editingTagsId, setEditingTagsId] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [folderInput, setFolderInput] = useState("");
 
   useEffect(() => {
     if (!client) {
@@ -29,6 +34,19 @@ export function Sessions() {
       try {
         const list = await client.listSessions();
         if (!cancelled) setSessions(list);
+        // Fetch session tags
+        if (client) {
+          try {
+            const tags = await client.getSessionTags();
+            const map: Record<string, { tags: string[]; folder: string }> = {};
+            for (const t of tags) {
+              map[t.sessionId] = { tags: t.tags, folder: t.folder };
+            }
+            if (!cancelled) setTagsMap(map);
+          } catch {
+            // tags not available — ignore
+          }
+        }
       } catch (err) {
         if (!cancelled) {
           setError(friendlyError(err));
@@ -108,6 +126,26 @@ export function Sessions() {
     }
   };
 
+  const filteredSessions = folderFilter
+    ? sessions.filter(s => tagsMap[s.id]?.folder === folderFilter)
+    : sessions;
+
+  const saveTags = useCallback(async (sessionId: string) => {
+    if (!client) return;
+    const tagList = tagInput.split(",").map(t => t.trim()).filter(Boolean);
+    const folder = folderInput.trim();
+    try {
+      await client.setSessionTags(sessionId, { tags: tagList, folder });
+      setTagsMap(prev => ({
+        ...prev,
+        [sessionId]: { tags: tagList, folder },
+      }));
+    } catch (err) {
+      log.error("sessions", "save tags failed", err);
+    }
+    setEditingTagsId(null);
+  }, [client, tagInput, folderInput]);
+
   if (!server) {
     return (
       <div
@@ -167,6 +205,26 @@ export function Sessions() {
         </button>
       </div>
 
+      {Object.keys(tagsMap).length > 0 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted }}>Folder:</span>
+          <select
+            value={folderFilter}
+            onChange={(e) => setFolderFilter(e.target.value)}
+            style={{
+              fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.text,
+              padding: "2px 8px", backgroundColor: colors.surfaceAlt,
+              border: `1px solid ${colors.border}`, borderRadius: 4, cursor: "pointer",
+            }}
+          >
+            <option value="">All</option>
+            {[...new Set(Object.values(tagsMap).map(t => t.folder).filter(Boolean))].map(f => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {error && (
         <div
           data-testid="sessions-error"
@@ -199,7 +257,7 @@ export function Sessions() {
         >
           loading…
         </div>
-      ) : sessions.length === 0 ? (
+      ) : filteredSessions.length === 0 ? (
         <div
           data-testid="sessions-empty"
           style={{
@@ -214,7 +272,8 @@ export function Sessions() {
         </div>
       ) : (
         <div data-testid="session-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {sessions.map((sess) => (
+          {filteredSessions.map((sess) => (
+            <Fragment key={sess.id}>
             <div
               key={sess.id}
               data-testid={`session-row-${sess.id}`}
@@ -282,6 +341,24 @@ export function Sessions() {
                   >
                     {new Date(sess.time.created).toLocaleString()}
                   </div>
+                  {tagsMap[sess.id]?.folder && (
+                    <div style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.tool, marginTop: 1 }}>
+                      {'📁'} {tagsMap[sess.id].folder}
+                    </div>
+                  )}
+                  {tagsMap[sess.id]?.tags && tagsMap[sess.id].tags.length > 0 && (
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 2 }}>
+                      {tagsMap[sess.id].tags.map(tag => (
+                        <span key={tag} style={{
+                          fontFamily: fonts.mono, fontSize: "10px", color: colors.accent,
+                          backgroundColor: colors.surfaceAlt, padding: "1px 6px",
+                          borderRadius: 10, border: `1px solid ${colors.border}`,
+                        }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </Link>
               )}
               <button
@@ -320,7 +397,95 @@ export function Sessions() {
               >
                 delete
               </button>
+              <button
+                data-testid={`edit-tags-${sess.id}`}
+                onClick={() => {
+                  const existing = tagsMap[sess.id];
+                  setEditingTagsId(sess.id);
+                  setTagInput(existing?.tags?.join(", ") ?? "");
+                  setFolderInput(existing?.folder ?? "");
+                }}
+                disabled={editingId !== null || editingTagsId !== null}
+                style={{
+                  backgroundColor: "transparent", border: `1px solid ${colors.accent}`,
+                  color: colors.accent, borderRadius: 4, padding: "2px 6px",
+                  fontFamily: fonts.mono, fontSize: fontSizes.xs, cursor: "pointer",
+                  marginLeft: 8,
+                }}
+              >
+                tags
+              </button>
             </div>
+            {editingTagsId === sess.id && (
+              <div style={{
+                padding: "8px 12px", backgroundColor: colors.surfaceAlt,
+                border: `1px solid ${colors.accent}`, borderRadius: 6,
+                marginTop: 4, marginBottom: 4,
+              }}>
+                <div style={{ marginBottom: 6 }}>
+                  <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Tags (comma-separated)</label>
+                  <input
+                    data-testid={`tag-input-${sess.id}`}
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        saveTags(sess.id);
+                      } else if (e.key === "Escape") {
+                        setEditingTagsId(null);
+                      }
+                    }}
+                    placeholder="important, bug, feature"
+                    style={{
+                      width: "100%", padding: "4px 8px", borderRadius: 4,
+                      border: `1px solid ${colors.border}`, backgroundColor: colors.surface,
+                      color: colors.text, fontFamily: fonts.mono, fontSize: fontSizes.xs,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Folder</label>
+                  <input
+                    data-testid={`folder-input-${sess.id}`}
+                    value={folderInput}
+                    onChange={(e) => setFolderInput(e.target.value)}
+                    placeholder="Project A"
+                    style={{
+                      width: "100%", padding: "4px 8px", borderRadius: 4,
+                      border: `1px solid ${colors.border}`, backgroundColor: colors.surface,
+                      color: colors.text, fontFamily: fonts.mono, fontSize: fontSizes.xs,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    data-testid={`save-tags-${sess.id}`}
+                    onClick={() => saveTags(sess.id)}
+                    style={{
+                      backgroundColor: colors.accent, color: "#000", border: "none",
+                      borderRadius: 4, padding: "4px 12px", fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs, cursor: "pointer",
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingTagsId(null)}
+                    style={{
+                      backgroundColor: "transparent", border: `1px solid ${colors.muted}`,
+                      color: colors.muted, borderRadius: 4, padding: "4px 12px",
+                      fontFamily: fonts.mono, fontSize: fontSizes.xs, cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            </Fragment>
           ))}
         </div>
       )}

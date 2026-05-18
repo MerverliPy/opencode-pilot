@@ -18,8 +18,8 @@ completed:    95
 in_progress:  0
 blocked:      0
 completion:  100%
-overall_status: ✅ Plan complete. Tier 4 P24 done (2026-05-17)
-backlog_progress: "Tier 3 Memory Plugin P19-P22 complete. Tier 4 P24 complete 2026-05-17."
+overall_status: ✅ Plan complete. Tier 4 P24-P25 done (2026-05-17)
+backlog_progress: "Tier 3 Memory Plugin P19-P22 complete. Tier 4 P24-P25 complete 2026-05-17."
 ```
 
 ---
@@ -55,6 +55,7 @@ backlog_progress: "Tier 3 Memory Plugin P19-P22 complete. Tier 4 P24 complete 20
 | Orchestrator | deepseek/deepseek-v4-pro | P2 | 2026-05-15 |
 | Orchestrator | deepseek/deepseek-v4-pro | P19,P20,P21,P22 | 2026-05-17 |
 | Orchestrator | deepseek/deepseek-v4-pro | P24 | 2026-05-17 |
+| Orchestrator | deepseek/deepseek-v4-pro | P25 | 2026-05-17 |
 
 ---
 
@@ -540,7 +541,9 @@ npm run lint -w ui            # UI lint
 | terminal.ts | 187 | ✅ | Done | PTY, WS bridge |
 | tunnel.ts | 97 | ✅ | Done | cloudflared |
 | push.ts | 115 | ✅ | Done | VAPID |
-| db.ts | 65 | ✅ | Done | SQLite |
+| db.ts | 115 | ✅ | Done | SQLite + session_tags |
+| sessionTags.ts | 63 | ✅ | Done | Tag CRUD routes |
+| sessionTags.test.ts | 101 | ✅ | Done | 8 route tests (new P25) |
 | cli.ts | 56 | ✅ | Done | Arg parsing |
 | git.ts | 156 | ✅ | Done | simple-git |
 | **n9routerChat.ts** | **230** | **✅** | **Done** | **18 tests (2026-05-17)** |
@@ -552,7 +555,7 @@ npm run lint -w ui            # UI lint
 
 | File | Lines | Tests | Status | Notes |
 |------|-------|-------|--------|-------|
-| services/api.ts | 229 | ✅ | Done | 20 methods |
+| services/api.ts | 242 | ✅ | Done | 23 methods + session tags |
 | services/sse.ts | 75 | ✅ | Done | EventSource |
 | services/auth.ts | 106 | ✅ | Done | localStorage |
 | services/n9routerChat.ts | 98 | ✅ | Done | Chat client |
@@ -562,6 +565,8 @@ npm run lint -w ui            # UI lint
 | services/push.ts | 96 | ✅ | Done | Push helpers |
 | services/tunnel.ts | 25 | ✅ | Done | Tunnel client |
 | **SimpleChat.tsx** | **783** | ✅ | **LARGE** | Decompose |
+| Sessions.tsx | 494 | ✅ | Done | Session list + tag/folder UI |
+| Sessions.test.tsx | 438 | ✅ | Done | 12 tests (5 new P25) |
 | Settings.tsx | 468 | ✅ | Done | Inline styles |
 | ChatMessage.tsx | 282 | ✅ | Done | Custom markdown + img support |
 | ChatMessage.test.tsx | 96 | ✅ | Done | 7 tests (new P24) |
@@ -598,7 +603,7 @@ npm run lint -w ui            # UI lint
 | # | Task | Effort | Notes |
 |---|------|--------|-------|
 | P24 | Image rendering in messages | 2h | ✅ | ChatMessage img markdown + FilePart image preview + 9 tests |
-| P25 | Session tags / folders | 4h | Schema extension |
+| P25 | Session tags / folders | 4h | ✅ | session_tags SQLite table + /session-tags routes + tag chips + folder filter + 13 tests |
 | P26 | Structured JSON logging | 2h | pino |
 | P27 | Request correlation IDs | 1h | X-Request-ID |
 | P28 | Health check enhancements | 1h | uptime/memory |
@@ -607,4 +612,4 @@ npm run lint -w ui            # UI lint
 
 ---
 
-*End of document. 95/95 plan tasks complete. 7 backlog items remain (Tier 4: P24-P30). Tier 3 (P19-P22) completed 2026-05-17.*
+*End of document. 95/95 plan tasks complete. 6 backlog items remain (Tier 4: P26-P30). Tiers 2-3 (P15-P22) and Tier 4 P24-P25 completed.*

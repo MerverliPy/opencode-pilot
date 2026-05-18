@@ -144,6 +144,19 @@ export class OpencodeClient {
     );
   }
 
+  // ---------- Session Tags ----------
+  getSessionTags() {
+    return this.req<Array<{ sessionId: string; tags: string[]; folder: string; updatedAt: number }>>("GET", "/session-tags");
+  }
+
+  setSessionTags(sessionId: string, body: { tags?: string[]; folder?: string }) {
+    return this.req<{ sessionId: string; tags: string[]; folder: string; updatedAt: number }>("PUT", `/session-tags/${sessionId}`, { body });
+  }
+
+  deleteSessionTags(sessionId: string) {
+    return this.req<{ deleted: boolean }>("DELETE", `/session-tags/${sessionId}`);
+  }
+
   // ---------- Messages ----------
   listMessages(sessionId: string, limit?: number) {
     return this.req<MessageWithParts[]>(

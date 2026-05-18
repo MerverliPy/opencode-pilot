@@ -25,6 +25,7 @@ import { attachTerminalWS, listSessions } from "./terminal.js";
 import { createGitRouter } from "./git.js";
 import { createMemoryRouter } from "./memory/memoryRouter.js";
 import { setupChatRouter } from "./n9routerChat.js";
+import { createSessionTagsRouter } from "./sessionTags.js";
 
 const app = new Hono();
 
@@ -111,6 +112,8 @@ protectRoute("/global/*");
 protectRoute("/push/*");
 protectRoute("/memory/*");
 protectRoute("/api/chat/*");
+protectRoute("/session-tags");
+protectRoute("/session-tags/*");
 
 // ─── OpenCode proxy (M2: full proxy implementation) ──────────────────────────────
 export function setupProxy(
@@ -222,6 +225,11 @@ export function setupN9RouterChat() {
   app.route("/", chatRouter);
 }
 
+export function setupSessionTags() {
+  const sessionTagsRouter = createSessionTagsRouter();
+  app.route("/", sessionTagsRouter);
+}
+
 export function startServer(
   port: number = 3000,
   openCodeUrl?: string,
@@ -229,6 +237,7 @@ export function startServer(
   password?: string,
 ): void {
   setupN9RouterChat();
+  setupSessionTags();
   setupProxy(openCodeUrl, username, password);
   setupGit();
   setupMemory();

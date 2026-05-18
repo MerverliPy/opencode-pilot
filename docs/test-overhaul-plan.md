@@ -18,8 +18,8 @@ completed:    95
 in_progress:  0
 blocked:      0
 completion:  100%
-overall_status: ✅ Plan complete. Backlog P15-P18 + D11 done (2026-05-17)
-backlog_progress: "Tier 3 Memory Plugin P19-P22 complete 2026-05-17"
+overall_status: ✅ Plan complete. Tier 4 P24 done (2026-05-17)
+backlog_progress: "Tier 3 Memory Plugin P19-P22 complete. Tier 4 P24 complete 2026-05-17."
 ```
 
 ---
@@ -54,6 +54,7 @@ backlog_progress: "Tier 3 Memory Plugin P19-P22 complete 2026-05-17"
 | Orchestrator | n9router/ds/deepseek-v4-flash | P1,P3,P4,P5,P6,P7,P9,P10,P11,P12,P13,P14 | 2026-05-15/17 |
 | Orchestrator | deepseek/deepseek-v4-pro | P2 | 2026-05-15 |
 | Orchestrator | deepseek/deepseek-v4-pro | P19,P20,P21,P22 | 2026-05-17 |
+| Orchestrator | deepseek/deepseek-v4-pro | P24 | 2026-05-17 |
 
 ---
 
@@ -562,7 +563,10 @@ npm run lint -w ui            # UI lint
 | services/tunnel.ts | 25 | ✅ | Done | Tunnel client |
 | **SimpleChat.tsx** | **783** | ✅ | **LARGE** | Decompose |
 | Settings.tsx | 468 | ✅ | Done | Inline styles |
-| ChatMessage.tsx | 244 | Partial | Done | Custom markdown |
+| ChatMessage.tsx | 282 | ✅ | Done | Custom markdown + img support |
+| ChatMessage.test.tsx | 96 | ✅ | Done | 7 tests (new P24) |
+| MessageList.tsx | 350 | ✅ | Done | Turn rendering + image preview |
+| MessageList.test.tsx | 440 | ✅ | Done | 11 tests |
 | Layout.tsx | 266 | ✅ | Done | Responsive |
 | ErrorBoundary.tsx | 83 | ✅ | Done | Class component |
 | theme.ts | 129 | ✅ | Done | Dark+light |
@@ -593,7 +597,7 @@ npm run lint -w ui            # UI lint
 
 | # | Task | Effort | Notes |
 |---|------|--------|-------|
-| P24 | Image rendering in messages | 2h | FilePart exists |
+| P24 | Image rendering in messages | 2h | ✅ | ChatMessage img markdown + FilePart image preview + 9 tests |
 | P25 | Session tags / folders | 4h | Schema extension |
 | P26 | Structured JSON logging | 2h | pino |
 | P27 | Request correlation IDs | 1h | X-Request-ID |

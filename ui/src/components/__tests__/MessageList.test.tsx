@@ -196,6 +196,62 @@ describe("MessageList", () => {
     render(<MessageList turns={turns} />);
     expect(screen.getByText("test.ts")).toBeInTheDocument();
   });
+
+  it("renders image file part with img preview", () => {
+    const turns: Turn[] = [
+      {
+        message: {
+          id: "m1",
+          sessionID: "s1",
+          role: "assistant",
+          time: { created: 1 },
+        },
+        parts: [
+          {
+            id: "p1",
+            messageID: "m1",
+            sessionID: "s1",
+            type: "file",
+            filename: "screenshot.png",
+            mime: "image/png",
+            url: "https://example.com/img.png",
+          },
+        ],
+      },
+    ];
+    render(<MessageList turns={turns} />);
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "https://example.com/img.png");
+    expect(img).toHaveAttribute("alt", "screenshot.png");
+    // Filename is shown as caption
+    expect(screen.getByText("screenshot.png")).toBeInTheDocument();
+  });
+
+  it("renders non-image file part as clickable filename (no url)", () => {
+    const turns: Turn[] = [
+      {
+        message: {
+          id: "m1",
+          sessionID: "s1",
+          role: "assistant",
+          time: { created: 1 },
+        },
+        parts: [
+          {
+            id: "p1",
+            messageID: "m1",
+            sessionID: "s1",
+            type: "file",
+            filename: "report.pdf",
+            mime: "application/pdf",
+          },
+        ],
+      },
+    ];
+    render(<MessageList turns={turns} />);
+    expect(screen.getByText("report.pdf")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
 });
 
 it("renders text part with markdown content", () => {

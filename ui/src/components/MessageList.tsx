@@ -188,7 +188,47 @@ const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
                     )}
                   </div>
                 );
-              case "file":
+              case "file": {
+                const isImage = part.mime?.startsWith("image/") && part.url;
+                if (isImage) {
+                  return (
+                    <div key={part.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <img
+                        src={part.url}
+                        alt={part.filename ?? "image"}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: 400,
+                          borderRadius: 6,
+                          margin: "8px 0",
+                          display: "block",
+                          objectFit: "contain",
+                        }}
+                      />
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          navigator.clipboard.writeText(part.filename ?? "file").catch(() => {});
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            navigator.clipboard.writeText(part.filename ?? "file").catch(() => {});
+                          }
+                        }}
+                        style={{
+                          color: colors.accent,
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          fontSize: fontSizes.xs,
+                        }}
+                        title="Copy filename to clipboard"
+                      >
+                        {part.filename ?? "file"}
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={part.id}
@@ -213,6 +253,7 @@ const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
                     {part.filename ?? "file"}
                   </div>
                 );
+              }
               case "step-start":
               case "step-finish":
                 return null;

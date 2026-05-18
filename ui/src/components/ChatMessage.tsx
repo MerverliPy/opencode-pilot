@@ -48,6 +48,23 @@ function renderMarkdown(content: string): React.ReactNode[] {
       continue;
     }
 
+    // Image (![alt](url))
+    const imgMatch = line.match(/^!\[(.+?)\]\((.+?)\)$/);
+    if (imgMatch) {
+      const alt = imgMatch[1];
+      const url = imgMatch[2];
+      nodes.push(
+        <img
+          key={key++}
+          src={url}
+          alt={alt ?? ""}
+          style={{ maxWidth: "100%", borderRadius: 6, margin: "8px 0", display: "block" }}
+        />,
+      );
+      i++;
+      continue;
+    }
+
     // Bold (**text**)
     const rendered = line
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')

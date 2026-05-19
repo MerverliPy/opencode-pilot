@@ -30,8 +30,69 @@ const MAX_TAG_BUF = 500;  // max chars to buffer for an unclosed tag
 const XML_TOOL_TAGS = new Set([
   "tool_calls", "invoke", "use_mcp_tool", "result",
   "search", "read", "write", "edit", "glob", "grep", "bash", "execute",
-  "parameter"
+  "parameter", "thinking", "answer"
 ]);
+
+/** Per-stream XML filter instance with isolated state. */
+export interface XmlFilter {
+  /** Filter XML tool call / thinking blocks from a content string. Call on each chunk. */
+  filter(chunk: string): string;
+  /** Reset state for a new stream. */
+  reset(): void;
+}
+
+/** Create a new XML filter with isolated per-instance state. */
+export function createXmlFilter(): XmlFilter {
+  let depth = 0;
+  let tagBuf = "";
+  let inTag = false;
+
+  return {
+    filter(chunk: string): string {
+      if (!chunk) return chunk;
+      let result = "";
+      for (let i = 0; i < chunk.length; i++) {
+        const ch = chunk[i];
+        if (inTag) {
+          if (tagBuf.length > MAX_TAG_BUF) {
+            result += "<" + tagBuf + ch;
+            inTag = false;
+            tagBuf = "";
+            continue;
+          }
+          tagBuf += ch;
+          if (ch === ">") {
+            inTag = false;
+            const parsed = parseXmlTag(tagBuf);
+            if (parsed) {
+              const [, isClose] = parsed;
+              tagBuf = "";
+              if (isClose) { if (depth > 0) depth--; }
+              else { depth++; }
+            } else {
+              result += "<" + tagBuf;
+              tagBuf = "";
+            }
+          }
+          continue;
+        }
+        if (ch === "<") {
+          inTag = true;
+          tagBuf = "";
+          continue;
+        }
+        if (depth > 0) continue;
+        result += ch;
+      }
+      return result;
+    },
+    reset(): void {
+      depth = 0;
+      tagBuf = "";
+      inTag = false;
+    },
+  };
+}
 
 /**
  * Extract tag name from a complete XML tag string like "<invoke name='x'>".
@@ -54,6 +115,11 @@ function parseXmlTag(tagStr: string): [string, boolean] | null {
  */
 function filterXmlContent(chunk: string): string {
   if (!chunk) return chunk;
+  // DEBUG: trace XML content through filter
+  const hasAngleBrackets = chunk.includes("<");
+  if (hasAngleBrackets) {
+    console.error("[filter-xml-debug] INPUT:", chunk.slice(0, 200));
+  }
 
   let result = "";
 
@@ -74,9 +140,9 @@ function filterXmlContent(chunk: string): string {
         // Complete tag — check it
         _inTag = false;
         const parsed = parseXmlTag(_xmlTagBuf);
-        _xmlTagBuf = "";
         if (parsed) {
           const [, isClose] = parsed;
+          _xmlTagBuf = "";
           if (isClose) {
             if (_xmlDepth > 0) _xmlDepth--;
           } else {
@@ -84,11 +150,9 @@ function filterXmlContent(chunk: string): string {
           }
           // Skip this tag — don't add to result
         } else {
-          // Not a tool tag — release buffered content
-          result += "<" + _xmlTagBuf; // wait, _xmlTagBuf is reset above
-          // Actually the tag was <...content>, and _xmlTagBuf was the content between < and >
-          // We need "<" + the original content
-          // But we stored the full tag including <> in _xmlTagBuf
+          // Not a tool tag — release the entire tag including brackets
+          result += "<" + _xmlTagBuf;
+          _xmlTagBuf = "";
         }
       }
       // Still accumulating — don't output anything
@@ -115,6 +179,10 @@ function filterXmlContent(chunk: string): string {
     result += ch;
   }
 
+  // DEBUG: report filtering
+  if (hasAngleBrackets && result !== chunk) {
+    console.error("[filter-xml-debug] OUTPUT:", result.slice(0, 200) || "(empty)");
+  }
   return result;
 }
 
@@ -362,6 +430,7 @@ async function streamFromN9router(
   c.header("Connection", "keep-alive");
 
   resetXmlFilter();
+  console.error("[filter-xml-debug] streamFromN9router started, reset filter");
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let inputTokens = 0;

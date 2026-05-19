@@ -19,9 +19,9 @@
 
 ## Phase 0 — Critical Bugs (Fix before ANY other work)
 
-**Completion gate:** All 7 tasks checked, `npm run typecheck` clean.
+**Completion gate:** [x] All 7 tasks completed, `npm run typecheck` clean (4/4 packages: shared, server, ui, e2e).
 
-### TASK C2 [ ] Fix XML filter concurrency — switch n9routerChat.ts to per-instance filter
+### TASK C2 [x] completed @2026-05-19 Fix XML filter concurrency — switch n9routerChat.ts to per-instance filter
 
 - **Files:** `server/src/n9routerChat.ts`
 - **Risk:** Concurrent `POST /api/chat/completions` requests corrupt each other's XML filtering. Data corruption on 2+ users.
@@ -44,9 +44,12 @@
 
 - **Verification:** `npm run typecheck -w server && npm run test -w server 2>&1 | tail -5`
 
+**Done:** Switched rawSSEToResponse + streamFromN9router to createXmlFilter() instances. Deleted filterXmlContent, resetXmlFilter, and module-level globals `_xmlDepth`, `_xmlTagBuf`, `_inTag`.
+**Verification:** typecheck ✅ / server tests 253/259 (6 pre-existing cli.test.ts failures unrelated)
+
 ---
 
-### TASK C3 [ ] Fix broken Stop button — wire AbortController
+### TASK C3 [x] completed @2026-05-19 Fix broken Stop button — wire AbortController
 
 - **Files:** `ui/src/services/useChatStream.ts`, `ui/src/pages/SimpleChat.tsx`
 - **Risk:** Stop button is a no-op. Streaming cannot be cancelled.
@@ -69,9 +72,12 @@
 
 - **Verification:** `npm run typecheck -w ui && npm run test -w ui 2>&1 | tail -5`
 
+**Done:** Wired AbortController as optional 3rd param to startStream(). SimpleChat now passes abortController to useChatStream.
+**Verification:** typecheck ✅ / UI tests 572/572 ✅
+
 ---
 
-### TASK C1 [ ] Fix shell command injection in toolExecutor
+### TASK C1 [x] completed @2026-05-19 Fix shell command injection in toolExecutor
 
 - **Files:** `server/src/tools/toolExecutor.ts`
 - **Risk:** LLM-generated search patterns containing `$()`, backticks, `;`, `|`, `&&` execute arbitrary shell commands via `execSync`.
@@ -90,9 +96,12 @@ IMPORTANT: `spawnSync` does NOT throw on non-zero exit — check `result.status 
 
 - **Verification:** `npm run typecheck -w server && npm run test -w server 2>&1 | tail -5`
 
+**Done:** Replaced execSync with spawnSync using array args (no shell interpolation). Both rg and grep calls now use spawnSync("rg"/"grep", [...args], ...).
+**Verification:** typecheck ✅ / server tests 253/259 (6 pre-existing cli.test.ts)
+
 ---
 
-### TASK C5 [ ] Fix dangerouslySetInnerHTML XSS in ChatMessage
+### TASK C5 [x] completed @2026-05-19 Fix dangerouslySetInnerHTML XSS in ChatMessage
 
 - **Files:** `ui/src/components/ChatMessage.tsx`
 - **Risk:** Persistent XSS — model output containing `<script>alert(1)</script>` executes in user context.
@@ -113,9 +122,12 @@ Keep existing styling: `fontFamily: fonts.sans, fontSize: fontSizes.md, lineHeig
 
 - **Verification:** `npm run typecheck -w ui && npm run test -w ui 2>&1 | tail -5`
 
+**Done:** Replaced custom renderMarkdown (dangerouslySetInnerHTML) with MarkdownContent (react-markdown). Removed CodeBlock (Copy button UX regression, XSS fix takes priority).
+**Verification:** typecheck ✅ / UI tests 572/572 ✅
+
 ---
 
-### TASK C7 [ ] Add PTY WebSocket heartbeat + stale client cleanup
+### TASK C7 [x] completed @2026-05-19 Add PTY WebSocket heartbeat + stale client cleanup
 
 - **Files:** `server/src/terminal.ts`
 - **Risk:** Zombie WebSocket entries grow forever. Dead connections waste CPU on every keystroke broadcast.
@@ -130,9 +142,12 @@ Keep existing styling: `fontFamily: fonts.sans, fontSize: fontSizes.md, lineHeig
 
 - **Verification:** `npm run typecheck -w server && npm run test -w server 2>&1 | tail -5`
 
+**Done:** Added 30s heartbeat interval that removes CLOSED/CLOSING clients, clearInterval on exit, try/catch around ws.send(data), and 1MB max message size check.
+**Verification:** typecheck ✅ / server tests 253/259 (6 pre-existing cli.test.ts)
+
 ---
 
-### TASK C4 [ ] Remove live API key from opencode.json
+### TASK C4 [x] completed @2026-05-19 Remove live API key from opencode.json
 
 - **Files:** `.env` (verify gitignore), `docker/.env` (verify gitignore), `opencode.json`
 - **Risk:** Live n9router API key in plaintext on disk in three locations.
@@ -150,9 +165,12 @@ Keep existing styling: `fontFamily: fonts.sans, fontSize: fontSizes.md, lineHeig
   git check-ignore docker/.env && echo "docker/.env gitignored"
   ```
 
+**Done:** Replaced live n9r_* API key with placeholder `<your-n9router-api-key>`.
+**Verification:** grep confirm: no n9r_ patterns remain / .env and docker/.env are gitignored
+
 ---
 
-### TASK C8 [ ] Remove better-sqlite3 from ui/package.json
+### TASK C8 [x] completed @2026-05-19 Remove better-sqlite3 from ui/package.json
 
 - **Files:** `ui/package.json`
 - **Risk:** Native C++ addon in browser package — install bloat, misleading dependency.
@@ -167,6 +185,9 @@ Remove from `devDependencies`:
 ```
 
 - **Verification:** `npm run typecheck -w ui && npm run test -w ui 2>&1 | tail -5`
+
+**Done:** Removed better-sqlite3 + @types/better-sqlite3 from ui/package.json devDependencies.
+**Verification:** typecheck ✅ / UI tests 572/572 ✅
 
 ---
 

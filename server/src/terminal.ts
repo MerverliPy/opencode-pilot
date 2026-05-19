@@ -46,11 +46,24 @@ export function createPtySession(): string {
     clients: new Set(),
   };
 
+  const HEARTBEAT_INTERVAL = 30_000;
+  const heartbeatTimer = setInterval(() => {
+    for (const ws of session.clients) {
+      if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
+        session.clients.delete(ws);
+      }
+    }
+  }, HEARTBEAT_INTERVAL);
+
   // Broadcast pty output to all connected clients
   proc.onData((data: string) => {
     for (const ws of session.clients) {
       if (ws.readyState === ws.OPEN && ws.bufferedAmount < 65536) {
-        ws.send(data);
+        try {
+          ws.send(data);
+        } catch {
+          session.clients.delete(ws);
+        }
       }
     }
   });
@@ -63,6 +76,7 @@ export function createPtySession(): string {
         ws.close();
       }
     }
+    clearInterval(heartbeatTimer);
     sessions.delete(id);
   });
 
@@ -149,6 +163,7 @@ export function attachTerminalWS(
 
     ws.on("message", (raw: Buffer | string) => {
       const msg = raw.toString();
+      if (msg.length > 1_048_576) return; // 1MB max
 
       // Try to parse as control message first
       try {

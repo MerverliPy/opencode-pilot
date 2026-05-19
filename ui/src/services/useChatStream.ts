@@ -22,6 +22,7 @@ const XML_TAGS_TO_STRIP = new Set([
   "tool_calls", "invoke", "use_mcp_tool", "result",
   "search", "read", "write", "edit", "glob", "grep", "bash", "execute",
   "parameter", "thinking", "answer",
+  "tool_uses", "function_call", "mcp_result", "tool_result",
 ]);
 
 function createXmlStripper() {
@@ -42,11 +43,13 @@ function createXmlStripper() {
           if (ch === ">") {
             inTag = false;
             const cleaned = tagBuf.replace(/^<\s*/, "").replace(/\s*>$/, "").trim();
+            const isSelfClosing = cleaned.endsWith("/") || tagBuf.endsWith("/");
             const isClose = cleaned.startsWith("/");
             const name = isClose ? cleaned.slice(1).split(/\s+/)[0] : cleaned.split(/\s+/)[0];
             if (XML_TAGS_TO_STRIP.has(name.toLowerCase())) {
               tagBuf = "";
-              if (isClose) { if (depth > 0) depth--; } else { depth++; }
+              if (isClose) { if (depth > 0) depth--; }
+              else if (!isSelfClosing) { depth++; }
             } else {
               result += "<" + tagBuf;
               tagBuf = "";
@@ -72,9 +75,11 @@ export function useChatStream() {
     async (
       reader: ReadableStreamDefaultReader<Uint8Array>,
       callbacks: StreamCallbacks,
+      abortController?: AbortController,
     ) => {
       setStreaming(true);
       setStreamError(null);
+      if (abortController) abortRef.current = abortController;
 
       const decoder = new TextDecoder();
       const stripper = createXmlStripper();
@@ -131,6 +136,7 @@ export function useChatStream() {
         setStreamError(error.message);
         callbacks.onError(error);
       } finally {
+        abortRef.current = null;
         setStreaming(false);
       }
     },

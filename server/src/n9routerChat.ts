@@ -21,16 +21,12 @@ const MAX_TOOL_ROUNDS = 3; // max tool call iterations before forcing response
 // Strips Anthropic/Claude-style XML tool call blocks from model text output.
 // Uses character-level state machine to handle streaming token-by-token.
 
-let _xmlDepth = 0;      // nesting depth of XML tool blocks
-let _xmlTagBuf = "";    // buffer for in-progress XML tag
-let _inTag = false;     // true when accumulating between < and >
-const MAX_TAG_BUF = 500;  // max chars to buffer for an unclosed tag
-
 /** Known XML tool tags that should be stripped (lowercase). */
 const XML_TOOL_TAGS = new Set([
   "tool_calls", "invoke", "use_mcp_tool", "result",
   "search", "read", "write", "edit", "glob", "grep", "bash", "execute",
-  "parameter", "thinking", "answer"
+  "parameter", "thinking", "answer",
+  "tool_uses", "function_call", "mcp_result", "tool_result"
 ]);
 
 /** Per-stream XML filter instance with isolated state. */
@@ -46,6 +42,7 @@ export function createXmlFilter(): XmlFilter {
   let depth = 0;
   let tagBuf = "";
   let inTag = false;
+  const MAX_TAG_BUF = 500;
 
   return {
     filter(chunk: string): string {
@@ -66,9 +63,10 @@ export function createXmlFilter(): XmlFilter {
             const parsed = parseXmlTag(tagBuf);
             if (parsed) {
               const [, isClose] = parsed;
+              const isSelfClosing = tagBuf.endsWith("/>") || tagBuf.endsWith("/");
               tagBuf = "";
               if (isClose) { if (depth > 0) depth--; }
-              else { depth++; }
+              else if (!isSelfClosing) { depth++; }
             } else {
               result += "<" + tagBuf;
               tagBuf = "";
@@ -108,92 +106,7 @@ function parseXmlTag(tagStr: string): [string, boolean] | null {
   return null;
 }
 
-/**
- * Strip XML tool call blocks from content text.
- * Character-level state machine handles streaming token-by-token.
- * Call sequentially on each streamed content chunk.
- */
-function filterXmlContent(chunk: string): string {
-  if (!chunk) return chunk;
-  // DEBUG: trace XML content through filter
-  const hasAngleBrackets = chunk.includes("<");
-  if (hasAngleBrackets) {
-    console.error("[filter-xml-debug] INPUT:", chunk.slice(0, 200));
-  }
 
-  let result = "";
-
-  for (let i = 0; i < chunk.length; i++) {
-    const ch = chunk[i];
-
-    if (_inTag) {
-      // Guard: prevent unbounded tag buffer growth
-      if (_xmlTagBuf.length > MAX_TAG_BUF) {
-        // Buffer overflow — release as content and abort tag tracking
-        result += "<" + _xmlTagBuf + ch;
-        _inTag = false;
-        _xmlTagBuf = "";
-        continue;
-      }
-      _xmlTagBuf += ch;
-      if (ch === ">") {
-        // Complete tag — check it
-        _inTag = false;
-        const parsed = parseXmlTag(_xmlTagBuf);
-        if (parsed) {
-          const [, isClose] = parsed;
-          _xmlTagBuf = "";
-          if (isClose) {
-            if (_xmlDepth > 0) _xmlDepth--;
-          } else {
-            _xmlDepth++;
-          }
-          // Skip this tag — don't add to result
-        } else {
-          // Not a tool tag — release the entire tag including brackets
-          result += "<" + _xmlTagBuf;
-          _xmlTagBuf = "";
-        }
-      }
-      // Still accumulating — don't output anything
-      continue;
-    }
-
-    if (ch === "<") {
-      // Start of potential XML tag
-      // If already in a tag, release the incomplete one with opening <
-      if (_inTag) {
-        result += "<" + _xmlTagBuf;
-      }
-      _inTag = true;
-      _xmlTagBuf = "";
-      continue;
-    }
-
-    // We're at depth > 0 — skip content inside XML blocks
-    if (_xmlDepth > 0) {
-      continue;
-    }
-
-    // Normal character — append to result
-    result += ch;
-  }
-
-  // DEBUG: report filtering
-  if (hasAngleBrackets && result !== chunk) {
-    console.error("[filter-xml-debug] OUTPUT:", result.slice(0, 200) || "(empty)");
-  }
-  return result;
-}
-
-/**
- * Reset the XML filter state (call at start of each new response).
- */
-function resetXmlFilter(): void {
-  _xmlDepth = 0;
-  _xmlTagBuf = "";
-  _inTag = false;
-}
 
 
 interface ChatCompletionRequest {
@@ -343,7 +256,7 @@ async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<{ chunks
  * Used when no tool calls — just replay the original stream.
  */
 function rawSSEToResponse(raw: Uint8Array[]): ReadableStream<Uint8Array> {
-  resetXmlFilter();
+  const xmlFilter = createXmlFilter();
   // Pre-process raw chunks to filter XML from content fields
   const filtered = raw.map((chunk) => {
     const text = new TextDecoder().decode(chunk);
@@ -357,7 +270,7 @@ function rawSSEToResponse(raw: Uint8Array[]): ReadableStream<Uint8Array> {
           const parsed = JSON.parse(data);
           if (parsed.choices && parsed.choices[0]?.delta?.content) {
             const orig = parsed.choices[0].delta.content;
-            const filtered = filterXmlContent(orig);
+            const filtered = xmlFilter.filter(orig);
             if (filtered !== orig) {
               modified = true;
               if (filtered) {
@@ -429,8 +342,7 @@ async function streamFromN9router(
   c.header("Cache-Control", "no-cache");
   c.header("Connection", "keep-alive");
 
-  resetXmlFilter();
-  console.error("[filter-xml-debug] streamFromN9router started, reset filter");
+  const xmlFilter = createXmlFilter();
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let inputTokens = 0;
@@ -461,7 +373,7 @@ async function streamFromN9router(
               }
               if (parsed.choices && parsed.choices[0]?.delta?.content) {
                 const orig = parsed.choices[0].delta.content;
-                const filtered = filterXmlContent(orig);
+                const filtered = xmlFilter.filter(orig);
                 if (filtered !== orig) {
                   modified = true;
                   if (filtered) {

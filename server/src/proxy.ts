@@ -170,13 +170,30 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
                       modified = true;
                     }
                   }
+                  // Also filter OpenAI-compatible choices[0].delta.content path
+                  const deltaContent = (parsed as { choices?: Array<{ delta?: { content?: string } }> }).choices?.[0]?.delta?.content;
+                  if (typeof deltaContent === "string") {
+                    const orig = deltaContent;
+                    const filtered = xmlFilter.filter(orig);
+                    if (filtered !== orig) {
+                      (parsed as { choices: Array<{ delta: { content: string } }> }).choices[0].delta.content = filtered;
+                      modified = true;
+                    }
+                  }
                   if (modified) {
                     outLines.push("data: " + JSON.stringify(parsed));
                   } else {
                     outLines.push(line);
                   }
                 } catch {
-                  outLines.push(line);
+                  // JSON parse failed — still filter XML from the raw data content
+                  const dataContent = line.slice(6); // Remove "data: " prefix
+                  const filtered = xmlFilter.filter(dataContent);
+                  if (filtered !== dataContent) {
+                    outLines.push("data: " + filtered);
+                  } else {
+                    outLines.push(line);
+                  }
                 }
               } else {
                 outLines.push(line);
@@ -188,9 +205,12 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
             }
           },
           flush(controller) {
-            // Emit any remaining partial line in the buffer
+            // Emit any remaining partial line in the buffer, filtered
             if (lineBuffer && xmlFilter) {
-              controller.enqueue(encoder.encode(lineBuffer));
+              const filtered = xmlFilter.filter(lineBuffer);
+              if (filtered) {
+                controller.enqueue(encoder.encode(filtered));
+              }
             }
           },
         });

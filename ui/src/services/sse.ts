@@ -1,7 +1,8 @@
 /**
  * SSE client for the Pilot web client.
  *
- * Uses the native browser EventSource API (replaces react-native-sse).
+ * Uses `fetch` + `ReadableStream` (instead of native `EventSource`) so we
+ * can send the `Authorization` header needed by protected Pilot servers.
  * Auto-reconnects with exponential backoff.
  */
 import { useEffect, useRef } from "react";
@@ -10,13 +11,55 @@ import { log } from "./logger";
 
 type Handler = (event: ServerEvent) => void;
 
+/** Maximum reconnection delay (ms). */
+const MAX_BACKOFF = 30_000;
+
+/**
+ * Async generator that yields parsed ServerEvent objects from an SSE stream.
+ * Owns the reader and buffer for the connection lifetime — NOT per-event.
+ */
+async function* readSSEEvents(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): AsyncGenerator<ServerEvent> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Last element may be incomplete — keep it in the buffer
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        if (trimmed.startsWith("data: ")) {
+          const data = trimmed.slice(6);
+          if (data === "[DONE]") continue;
+          try {
+            yield JSON.parse(data) as ServerEvent;
+          } catch {
+            log.warn("sse", "malformed event (JSON parse failed)", data.slice(0, 200));
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock(); // release once at stream end
+  }
+}
+
 /**
  * Subscribes to /event SSE on the active server and dispatches typed events.
  * Auto-reconnects with exponential backoff. Single connection per server.
  *
- * Note: Native EventSource does not support custom headers (including
- * Authorization). The server proxy (M2) will handle auth via httpOnly
- * cookies. For now, we pass the server URL and rely on the proxy.
+ * When `server.authToken` is set, sends `Authorization: Bearer <token>`
+ * so the Pilot server's auth middleware allows the request.
  */
 export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
   const handlerRef = useRef(onEvent);
@@ -30,46 +73,70 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
   useEffect(() => {
     if (!server) return;
     let stopped = false;
-    let es: EventSource | null = null;
+    let controller: AbortController | null = null;
     let backoff = 500;
 
-    const connect = () => {
+    const connect = async () => {
       if (stopped) return;
+
       const url = `${server.url.replace(/\/$/, "")}/event`;
-      es = new EventSource(url);
+      const headers: Record<string, string> = { Accept: "text/event-stream" };
+      if (server.authToken) {
+        headers.Authorization = `Bearer ${server.authToken}`;
+      }
 
-      es.onopen = () => {
-        log.info("sse", `connected → ${server.name ?? server.url}`);
-        backoff = 500;
-      };
+      controller = new AbortController();
+      const signal = controller.signal;
 
-      es.onmessage = (msg: MessageEvent) => {
-        if (!msg.data) return;
-        try {
-          const parsed = JSON.parse(msg.data as string) as ServerEvent;
-          handlerRef.current(parsed);
-        } catch {
-          log.warn("sse", "malformed event (JSON parse failed)", msg.data);
+      try {
+        const response = await fetch(url, { headers, signal });
+
+        if (!response.ok) {
+          const status = response.status;
+          // 401: token is wrong — don"t retry; 5xx: temporary, retry
+          if (status === 401 || status === 403) {
+            log.error("sse", `auth rejected (${status}) — not reconnecting`);
+            return;
+          }
+          throw new Error(`HTTP ${status}`);
         }
-      };
 
-      es.onerror = () => {
-        es?.close();
-        es = null;
-        if (stopped) return;
-        backoff = Math.min(backoff * 2 + Math.random() * 500, 15_000);
-        log.warn("sse", `disconnected — reconnecting in ${backoff}ms`);
-        setTimeout(connect, backoff);
-      };
+        log.info("sse", `connected → ${server.name ?? server.url}`);
+        backoff = 500; // reset backoff on successful connection
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          log.warn("sse", "no readable stream body");
+          return;
+        }
+
+        // Consume SSE events from the generator
+        for await (const event of readSSEEvents(reader)) {
+          if (stopped) break;
+          handlerRef.current(event);
+        }
+      } catch (err: unknown) {
+        if (signal.aborted) return; // intentional abort, don't reconnect
+        log.warn("sse", "stream error", err instanceof Error ? err.message : String(err));
+      }
+
+      controller = null;
+
+      if (stopped) return;
+      // Exponential backoff with jitter before reconnecting
+      backoff = Math.min(backoff * 2 + Math.random() * 500, MAX_BACKOFF);
+      log.info("sse", `reconnecting in ${Math.round(backoff)}ms`);
+      setTimeout(connect, backoff);
     };
 
     connect();
+
     return () => {
       stopped = true;
-      es?.close();
+      controller?.abort();
     };
     // Depend on individual properties so a new server object with identical
     // values does not trigger an unnecessary reconnect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [server?.id, server?.url, server?.username, server?.password]);
+  }, [server?.id, server?.url, server?.username, server?.password, server?.authToken]);
 }

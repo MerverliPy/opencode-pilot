@@ -209,7 +209,7 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
             if (lineBuffer && xmlFilter) {
               const filtered = xmlFilter.filter(lineBuffer);
               if (filtered) {
-                controller.enqueue(encoder.encode(filtered));
+                controller.enqueue(encoder.encode(filtered + "\n"));
               }
             }
           },

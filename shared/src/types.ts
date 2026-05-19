@@ -173,6 +173,12 @@ export type ServerConfig = {
   url: string;
   username?: string;
   password?: string;
+  /** Bearer token for authenticating with the Pilot server itself
+   *  (PILOT_AUTH_TOKEN).  When a protected server is configured,
+   *  the UI sends `Authorization: Bearer <authToken>` so the
+   *  server-side auth middleware allows the request.  The proxy
+   *  strips this token before forwarding to the upstream. */
+  authToken?: string;
 };
 
 // ─── N9Router ────────────────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ interface FileClassification {
   risks: RiskLabel[];
 }
 
-function repoRoot(context: ToolContext): string {
+function repoRoot(context: ToolContext = {}): string {
   return context.worktree || context.directory || process.cwd();
 }
 
@@ -140,7 +140,7 @@ function formatClassifications(classifications: FileClassification[]): string {
   return classifications.map((entry) => `- ${entry.file} [${entry.workspace}] risks=${entry.risks.join(",")}`).join("\n");
 }
 
-export const changed_files = tool({
+export const pilot_changed_files = tool({
   description: "Return compact changed-file, workspace, and risk summary for Pilot.",
   args: {},
   async execute(_args, context) {
@@ -161,7 +161,7 @@ export const changed_files = tool({
   },
 });
 
-export const risk_scan = tool({
+export const pilot_risk_scan = tool({
   description: "Flag high-risk Pilot file categories and reviewer needs from a file list or current diff.",
   args: {
     files: tool.schema.array(tool.schema.string()).optional(),
@@ -191,7 +191,7 @@ export const risk_scan = tool({
   },
 });
 
-export const verify_plan = tool({
+export const pilot_verify_plan = tool({
   description: "Return the narrowest adequate verification commands for changed Pilot files.",
   args: {
     files: tool.schema.array(tool.schema.string()).optional(),
@@ -213,7 +213,7 @@ export const verify_plan = tool({
   },
 });
 
-export const repo_map = tool({
+export const pilot_repo_map = tool({
   description: "Return compact Pilot workspace, scripts, and key-directory map.",
   args: {},
   async execute(_args, context) {

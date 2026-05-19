@@ -4,7 +4,7 @@
  */
 import { readFileSync, statSync, readdirSync, existsSync } from "node:fs";
 import { resolve, relative, normalize } from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const WORKSPACE_ROOT = resolve(process.cwd());
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
@@ -56,38 +56,39 @@ function searchCodeTool(args: Record<string, unknown>): string {
   const searchPath = args.path ? resolvePath(String(args.path)) : WORKSPACE_ROOT;
   const relPath = relative(WORKSPACE_ROOT, searchPath) || ".";
 
-  let cmd = `rg --line-number --with-filename -i "${pattern.replace(/"/g, '\\"')}" "${relPath}"`;
+  const rgArgs: string[] = ["--line-number", "--with-filename", "-i", pattern, relPath];
   if (include) {
-    cmd = `rg --line-number --with-filename -i -g "${include}" "${pattern.replace(/"/g, '\\"')}" "${relPath}"`;
+    rgArgs.splice(0, 0, "-g", include);
   }
-  try {
-    const output = execSync(cmd, {
-      cwd: WORKSPACE_ROOT,
-      encoding: "utf-8",
-      maxBuffer: MAX_FILE_SIZE,
-      timeout: 10_000,
-    }).toString();
-    const lines = output.trim().split("\n").slice(0, MAX_SEARCH_RESULTS);
+  const result = spawnSync("rg", rgArgs, {
+    cwd: WORKSPACE_ROOT,
+    encoding: "utf-8",
+    maxBuffer: MAX_FILE_SIZE,
+    timeout: 10_000,
+  });
+  if (result.status === 0 || result.status === 1) {
+    const lines = result.stdout.trim().split("\n").filter(Boolean).slice(0, MAX_SEARCH_RESULTS);
     if (lines.length === 0) return "No results found.";
     const summary = `Found ${lines.length} result${lines.length === 1 ? "" : "s"}`;
     return `${summary}\n${lines.join("\n")}`;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("exit code 1")) return "No results found.";
-    // rg might fail if pattern is invalid
-    if (msg.includes("stdout")) {
-      // Try grep fallback
-      try {
-        const grepCmd = `grep -rn "${pattern.replace(/"/g, '\\"')}" "${relPath}" --include="*.ts" --include="*.tsx" 2>/dev/null | head -${MAX_SEARCH_RESULTS}`;
-        const output = execSync(grepCmd, { cwd: WORKSPACE_ROOT, encoding: "utf-8", timeout: 10_000 }).toString().trim();
-        if (!output) return "No results found.";
-        return `Found results (grep fallback):\n${output}`;
-      } catch {
-        return "No results found (search failed).";
-      }
-    }
-    return `Search error: ${msg}`;
   }
+  // rg exit code 2 = error; try grep fallback
+  const grepResult = spawnSync("grep", ["-rn", pattern, relPath, "--include=*.ts", "--include=*.tsx"], {
+    cwd: WORKSPACE_ROOT,
+    encoding: "utf-8",
+    timeout: 10_000,
+  });
+  if (grepResult.status === 0 || grepResult.status === 1) {
+    const output = grepResult.stdout
+      .split("\n")
+      .filter(Boolean)
+      .slice(0, MAX_SEARCH_RESULTS)
+      .join("\n")
+      .trim();
+    if (!output) return "No results found.";
+    return `Found results (grep fallback):\n${output}`;
+  }
+  return `Search error: rg exited with status ${result.status}`;
 }
 
 /**

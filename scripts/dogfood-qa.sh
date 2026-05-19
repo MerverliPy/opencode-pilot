@@ -149,7 +149,8 @@ visit_page() {
 
   if [ -n "${page_errors}" ]; then
     local error_count
-    error_count=$(echo "${page_errors}" | grep -c '.' 2>/dev/null || echo 0)
+    error_count=$(echo "${page_errors}" | grep -c '.' 2>/dev/null | tail -1)
+    error_count=${error_count:-0}
     TOTAL_ERRORS=$((TOTAL_ERRORS + error_count))
     warn "Found ${error_count} error(s) on ${label}"
     {
@@ -166,7 +167,8 @@ visit_page() {
   page_logs=$(agent-browser --session "${SESSION}" console 2>/dev/null) || true
   if [ -n "${page_logs}" ]; then
     local warn_count
-    warn_count=$(echo "${page_logs}" | grep -ci "warn\|warning" 2>/dev/null || echo 0)
+    warn_count=$(echo "${page_logs}" | grep -ci "warn\|warning" 2>/dev/null | tail -1)
+    warn_count=${warn_count:-0}
     TOTAL_WARNINGS=$((TOTAL_WARNINGS + warn_count))
     {
       echo "── Console logs on ${label} (${path}) ──"
@@ -254,32 +256,21 @@ agent-browser --session "${SESSION}" wait --load networkidle 2>/dev/null || \
   agent-browser --session "${SESSION}" wait 2000
 
 # Find and click the sidebar toggle button
-sidebar_snapshot=$(agent-browser --session "${SESSION}" snapshot -i 2>/dev/null || echo "")
+# Use agent-browser find to locate and click by role + accessible name
+if agent-browser --session "${SESSION}" find role button click --name "Collapse sidebar" 2>/dev/null; then
+  agent-browser --session "${SESSION}" wait 1000
+  agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-sidebar-collapsed.png" 2>/dev/null || true
+  SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  ok "    Sidebar collapsed screenshot taken"
 
-# Look for a sidebar toggle — common patterns: button with "sidebar" or menu icon
-# We try the most common refs; if the sidebar toggle isn't found we skip gracefully
-if echo "${sidebar_snapshot}" | grep -qi 'sidebar\|menu\|toggle.*side\|hamburger'; then
-  # Try to find the toggle ref
-  toggle_ref=$(echo "${sidebar_snapshot}" | grep -i 'sidebar\|menu\|toggle.*side\|hamburger' | head -1 | grep -oP '@e\d+' || true)
-  if [ -n "${toggle_ref}" ]; then
-    step "    Clicking sidebar toggle: ${toggle_ref}"
-    agent-browser --session "${SESSION}" click "${toggle_ref}" 2>/dev/null || warn "Could not click sidebar toggle"
-    agent-browser --session "${SESSION}" wait 1000
-    agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-sidebar-collapsed.png" 2>/dev/null || true
-    SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
-    ok "    Sidebar collapsed screenshot taken"
-
-    # Expand again
-    agent-browser --session "${SESSION}" click "${toggle_ref}" 2>/dev/null || true
-    agent-browser --session "${SESSION}" wait 1000
-    agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-sidebar-expanded.png" 2>/dev/null || true
-    SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
-    ok "    Sidebar expanded screenshot taken"
-  else
-    warn "    Sidebar toggle ref not found — skipping collapse/expand test"
-  fi
+  # Expand again
+  agent-browser --session "${SESSION}" find role button click --name "Expand sidebar" 2>/dev/null || true
+  agent-browser --session "${SESSION}" wait 1000
+  agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-sidebar-expanded.png" 2>/dev/null || true
+  SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  ok "    Sidebar expanded screenshot taken"
 else
-  warn "    No sidebar toggle detected in snapshot — skipping collapse/expand test"
+  warn "    Sidebar toggle not found — skipping collapse/expand test"
 fi
 
 # ── Test 2: Settings form fill ────────────────────────────────────────────────
@@ -290,23 +281,33 @@ agent-browser --session "${SESSION}" wait --load networkidle 2>/dev/null || \
 
 settings_snapshot=$(agent-browser --session "${SESSION}" snapshot -i 2>/dev/null || echo "")
 
-# Look for text inputs on the settings page
-input_refs=$(echo "${settings_snapshot}" | grep -i 'input\|textbox\|textarea' | head -3 || true)
-if [ -n "${input_refs}" ]; then
-  # Get the first input ref
-  first_input_ref=$(echo "${input_refs}" | head -1 | grep -oP '@e\d+' || true)
-  if [ -n "${first_input_ref}" ]; then
-    step "    Filling settings input: ${first_input_ref}"
-    agent-browser --session "${SESSION}" fill "${first_input_ref}" "qa-test-value" 2>/dev/null || warn "Could not fill settings input"
-    agent-browser --session "${SESSION}" wait 500
-    agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-settings-fill.png" 2>/dev/null || true
-    SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
-    ok "    Settings form fill screenshot taken"
-  else
-    warn "    No input ref found on settings page — skipping form fill test"
-  fi
+# Look for and click "Add Server" button to reveal form
+if agent-browser --session "${SESSION}" find text "Add Server" click 2>/dev/null; then
+  agent-browser --session "${SESSION}" wait 800
+  agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-settings-add-server.png" 2>/dev/null || true
+  SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  ok "    Settings: Add Server form opened"
+  
+  # Fill form fields via eval (more reliable than trying to find refs)
+  agent-browser --session "${SESSION}" eval "
+    (function(){
+      var inps=document.querySelectorAll('input:not([type=hidden])');
+      for(var i=0; i<inps.length && i<3; i++){
+        inps[i].value='qa-test-'+(i+1);
+        inps[i].dispatchEvent(new Event('input',{bubbles:true}));
+      }
+    })()
+  " 2>/dev/null || true
+  agent-browser --session "${SESSION}" wait 500
+  
+  # Try clicking Save
+  agent-browser --session "${SESSION}" find text "Save" click 2>/dev/null || true
+  agent-browser --session "${SESSION}" wait 500
+  agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-settings-fill.png" 2>/dev/null || true
+  SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  ok "    Settings form fill screenshot taken"
 else
-  warn "    No inputs found on settings page — skipping form fill test"
+  warn "    Add Server button not found — skipping settings form test"
 fi
 
 # ── Test 3: Navigation links ──────────────────────────────────────────────────
@@ -317,24 +318,15 @@ agent-browser --session "${SESSION}" wait --load networkidle 2>/dev/null || \
 
 nav_snapshot=$(agent-browser --session "${SESSION}" snapshot -i 2>/dev/null || echo "")
 
-# Find navigation links (links that point to internal pages)
-nav_links=$(echo "${nav_snapshot}" | grep -i 'link\|a ' | head -5 || true)
-if [ -n "${nav_links}" ]; then
-  # Click the first nav link we find
-  first_nav_ref=$(echo "${nav_links}" | head -1 | grep -oP '@e\d+' || true)
-  if [ -n "${first_nav_ref}" ]; then
-    step "    Clicking navigation link: ${first_nav_ref}"
-    agent-browser --session "${SESSION}" click "${first_nav_ref}" 2>/dev/null || warn "Could not click nav link"
-    agent-browser --session "${SESSION}" wait --load networkidle 2>/dev/null || \
-      agent-browser --session "${SESSION}" wait 2000
-    agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-nav-click.png" 2>/dev/null || true
-    SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
-    ok "    Navigation click screenshot taken"
-  else
-    warn "    No nav link ref found — skipping navigation test"
-  fi
+# Try clicking the Chat navigation link
+if agent-browser --session "${SESSION}" find text "Chat" click 2>/dev/null; then
+  agent-browser --session "${SESSION}" wait --load domcontentloaded 2>/dev/null || \
+    agent-browser --session "${SESSION}" wait 2000
+  agent-browser --session "${SESSION}" screenshot --annotate "${SCREENSHOT_DIR}/interactive-nav-click.png" 2>/dev/null || true
+  SCREENSHOTS_TAKEN=$((SCREENSHOTS_TAKEN + 1))
+  ok "    Navigation click screenshot taken"
 else
-  warn "    No navigation links found — skipping navigation test"
+  warn "    Navigation link not clickable — skipping navigation test"
 fi
 
 echo ""

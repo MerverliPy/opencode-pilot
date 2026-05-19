@@ -233,7 +233,7 @@ export function SimpleChat() {
             ),
           );
         },
-      });
+      }, abortController);
     } catch (err) {
       if (err instanceof N9RouterChatError) {
         const msg = classifyError(err.status, err.message);

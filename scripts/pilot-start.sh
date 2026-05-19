@@ -68,7 +68,7 @@ echo "--- Starting Pilot server on :$PILOT_PORT ---"
 env \
   PORT="$PILOT_PORT" \
   OPENCODE_URL="$OPENCODE_URL" \
-  N9ROUTER_API_KEY="${N9ROUTER_API_KEY:-$(grep N9ROUTER_API_KEY .env 2>/dev/null | cut -d= -f2-)}" \
+  N9ROUTER_API_KEY="${N9ROUTER_API_KEY:-$(grep N9ROUTER_API_KEY "$ROOT/.env" 2>/dev/null | cut -d= -f2-)}" \
   CORS_ORIGINS="http://localhost:$VITE_PORT,http://$TAILSCALE_IP:$VITE_PORT,http://$LAN_IP:$VITE_PORT,http://localhost:$PILOT_PORT,http://$TAILSCALE_IP:$PILOT_PORT,http://$LAN_IP:$PILOT_PORT" \
   node "$ROOT/server/dist/cli.js" \
     --port "$PILOT_PORT" \

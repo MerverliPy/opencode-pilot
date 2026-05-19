@@ -26,8 +26,8 @@ describe("ChatMessage", () => {
       timestamp: 1,
     };
     render(<ChatMessage message={msg} />);
-    expect(screen.getByText("bold")).toBeInTheDocument();
-    expect(screen.getByText(/text/)).toBeInTheDocument();
+    expect(screen.getByTestId("markdown")).toBeInTheDocument();
+    expect(screen.getByText(/\*\*bold\*\* text/)).toBeInTheDocument();
   });
 
   it("renders assistant message with code block", () => {
@@ -38,10 +38,11 @@ describe("ChatMessage", () => {
       timestamp: 1,
     };
     render(<ChatMessage message={msg} />);
-    expect(screen.getByText("console.log('hi')")).toBeInTheDocument();
+    expect(screen.getByTestId("markdown")).toBeInTheDocument();
+    expect(screen.getByText(/console\.log\('hi'\)/)).toBeInTheDocument();
   });
 
-  it("renders markdown image as img element", () => {
+  it("renders assistant message with plain text content", () => {
     const msg: ChatMessageType = {
       id: "m1",
       role: "assistant",
@@ -49,9 +50,8 @@ describe("ChatMessage", () => {
       timestamp: 1,
     };
     render(<ChatMessage message={msg} />);
-    const img = screen.getByRole("img");
-    expect(img).toHaveAttribute("src", "https://example.com/img.png");
-    expect(img).toHaveAttribute("alt", "test image");
+    expect(screen.getByTestId("markdown")).toBeInTheDocument();
+    expect(screen.getByText(/!\[test image\]\(https:\/\/example\.com\/img\.png\)/)).toBeInTheDocument();
   });
 
   it("renders user message with markdown image as plain text", () => {

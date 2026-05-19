@@ -17,6 +17,55 @@ type StreamCallbacks = {
   onError: (err: Error) => void;
 };
 
+// ── Client-side XML filter (belt-and-suspenders) ────────────────────
+const XML_TAGS_TO_STRIP = new Set([
+  "tool_calls", "invoke", "use_mcp_tool", "result",
+  "search", "read", "write", "edit", "glob", "grep", "bash", "execute",
+  "parameter", "thinking", "answer",
+  "tool_uses", "function_call", "mcp_result", "tool_result",
+]);
+
+function createXmlStripper() {
+  let depth = 0;
+  let tagBuf = "";
+  let inTag = false;
+  const MAX_TAG = 500;
+
+  return {
+    filter(chunk: string): string {
+      if (!chunk) return chunk;
+      let result = "";
+      for (let i = 0; i < chunk.length; i++) {
+        const ch = chunk[i];
+        if (inTag) {
+          if (tagBuf.length > MAX_TAG) { result += "<" + tagBuf + ch; inTag = false; tagBuf = ""; continue; }
+          tagBuf += ch;
+          if (ch === ">") {
+            inTag = false;
+            const cleaned = tagBuf.replace(/^<\s*/, "").replace(/\s*>$/, "").trim();
+            const isSelfClosing = cleaned.endsWith("/") || tagBuf.endsWith("/");
+            const isClose = cleaned.startsWith("/");
+            const name = isClose ? cleaned.slice(1).split(/\s+/)[0] : cleaned.split(/\s+/)[0];
+            if (XML_TAGS_TO_STRIP.has(name.toLowerCase())) {
+              tagBuf = "";
+              if (isClose) { if (depth > 0) depth--; }
+              else if (!isSelfClosing) { depth++; }
+            } else {
+              result += "<" + tagBuf;
+              tagBuf = "";
+            }
+          }
+          continue;
+        }
+        if (ch === "<") { inTag = true; tagBuf = ""; continue; }
+        if (depth > 0) continue;
+        result += ch;
+      }
+      return result;
+    },
+  };
+}
+
 export function useChatStream() {
   const [streaming, setStreaming] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -26,11 +75,14 @@ export function useChatStream() {
     async (
       reader: ReadableStreamDefaultReader<Uint8Array>,
       callbacks: StreamCallbacks,
+      abortController?: AbortController,
     ) => {
       setStreaming(true);
       setStreamError(null);
+      if (abortController) abortRef.current = abortController;
 
       const decoder = new TextDecoder();
+      const stripper = createXmlStripper();
       let buffer = "";
 
       try {
@@ -61,7 +113,10 @@ export function useChatStream() {
               };
               const choice = parsed.choices?.[0];
               if (choice?.delta?.content) {
-                callbacks.onChunk({ content: choice.delta.content });
+                const filtered = stripper.filter(choice.delta.content);
+                if (filtered) {
+                  callbacks.onChunk({ content: filtered });
+                }
               }
               if (choice?.finish_reason) {
                 callbacks.onChunk({ content: "", finishReason: choice.finish_reason });
@@ -81,6 +136,7 @@ export function useChatStream() {
         setStreamError(error.message);
         callbacks.onError(error);
       } finally {
+        abortRef.current = null;
         setStreaming(false);
       }
     },

@@ -6,6 +6,7 @@
  */
 import type { Context, MiddlewareHandler } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
+import { createXmlFilter, type XmlFilter } from "./n9routerChat.js";
 
 export type ProxyConfig = {
   upstreamUrl: string;
@@ -101,10 +102,119 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
       const status = upstream.status as StatusCode;
       const nullBody = status === 204 || status === 304;
       if (upstream.body && !nullBody) {
-        // Pipe through TransformStream for backpressure.
-        // Default highWaterMark of 1 naturally backpressures upstream
-        // when downstream consumer is slow, preventing OOM.
-        const transform = new TransformStream<Uint8Array, Uint8Array>();
+        const isSSE = contentType.includes("text/event-stream");
+        const xmlFilter: XmlFilter | null = isSSE ? createXmlFilter() : null;
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+        // Buffer for partial SSE lines split across chunk boundaries
+        let lineBuffer = "";
+
+        const transform = new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            if (!xmlFilter) {
+              // Non-SSE: pass through unmodified
+              controller.enqueue(chunk);
+              return;
+            }
+
+            const text = decoder.decode(chunk, { stream: true });
+            lineBuffer += text;
+            const lines = lineBuffer.split("\n");
+            // Keep the last (potentially incomplete) line in the buffer
+            lineBuffer = lines.pop() ?? "";
+
+            const outLines: string[] = [];
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+                if (data === "[DONE]" || data.trim() === "[DONE]") {
+                  outLines.push(line);
+                  continue;
+                }
+                // DEBUG: capture structure of events with XML content
+                if (line.includes("<")) {
+                  console.error("[proxy-xml-debug] RAW_DATA_LINE:", line.slice(0, 300));
+                  try {
+                    const testParse = JSON.parse(data);
+                    console.error("[proxy-xml-debug] JSON_KEYS:", JSON.stringify(Object.keys(testParse)));
+                    if (testParse.properties) {
+                      console.error("[proxy-xml-debug] PROPERTIES_KEYS:", JSON.stringify(Object.keys(testParse.properties)));
+                      if (testParse.properties.part) {
+                        console.error("[proxy-xml-debug] PART_KEYS:", JSON.stringify(Object.keys(testParse.properties.part)));
+                        console.error("[proxy-xml-debug] PART_TYPE:", testParse.properties.part.type);
+                        console.error("[proxy-xml-debug] PART_TEXT_LEN:", typeof testParse.properties.part.text === "string" ? testParse.properties.part.text.length : "not-string");
+                      } else {
+                        console.error("[proxy-xml-debug] NO_PART:", "properties exists but no .part key");
+                      }
+                    }
+                  } catch { /* ignore parse errors */ }
+                }
+                try {
+                  const parsed = JSON.parse(data);
+                  let modified = false;
+                  // Filter text and reasoning parts
+                  if (parsed.properties?.part?.text) {
+                    const orig = parsed.properties.part.text;
+                    const filtered = xmlFilter.filter(orig);
+                    if (filtered !== orig) {
+                      parsed.properties.part.text = filtered;
+                      modified = true;
+                    }
+                  }
+                  // Also filter raw message content if present
+                  if (typeof parsed.content === "string") {
+                    const orig = parsed.content;
+                    const filtered = xmlFilter.filter(orig);
+                    if (filtered !== orig) {
+                      parsed.content = filtered;
+                      modified = true;
+                    }
+                  }
+                  // Also filter OpenAI-compatible choices[0].delta.content path
+                  const deltaContent = (parsed as { choices?: Array<{ delta?: { content?: string } }> }).choices?.[0]?.delta?.content;
+                  if (typeof deltaContent === "string") {
+                    const orig = deltaContent;
+                    const filtered = xmlFilter.filter(orig);
+                    if (filtered !== orig) {
+                      (parsed as { choices: Array<{ delta: { content: string } }> }).choices[0].delta.content = filtered;
+                      modified = true;
+                    }
+                  }
+                  if (modified) {
+                    outLines.push("data: " + JSON.stringify(parsed));
+                  } else {
+                    outLines.push(line);
+                  }
+                } catch {
+                  // JSON parse failed — still filter XML from the raw data content
+                  const dataContent = line.slice(6); // Remove "data: " prefix
+                  const filtered = xmlFilter.filter(dataContent);
+                  if (filtered !== dataContent) {
+                    outLines.push("data: " + filtered);
+                  } else {
+                    outLines.push(line);
+                  }
+                }
+              } else {
+                outLines.push(line);
+              }
+            }
+
+            if (outLines.length > 0) {
+              controller.enqueue(encoder.encode(outLines.join("\n")));
+            }
+          },
+          flush(controller) {
+            // Emit any remaining partial line in the buffer, filtered
+            if (lineBuffer && xmlFilter) {
+              const filtered = xmlFilter.filter(lineBuffer);
+              if (filtered) {
+                controller.enqueue(encoder.encode(filtered));
+              }
+            }
+          },
+        });
+
         upstream.body
           .pipeTo(transform.writable)
           .catch((err: unknown) => {

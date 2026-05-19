@@ -100,7 +100,7 @@ function setOutput(output: unknown, value: string): void {
 
 export const BuildLogCompressorPlugin: Plugin = async () => {
   return {
-    "tool.execute.after": async (_input, output) => {
+    "tool.execute.after": async (_input: unknown, output: unknown) => {
       const raw = getRawOutput(output);
       if (!raw || raw.length < MIN_BYTES) return;
       if (raw.includes("[RTK: build-log")) return;

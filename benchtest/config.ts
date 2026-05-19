@@ -21,6 +21,16 @@ export const DETECTOR_THRESHOLDS = {
   contextGrowthRate: 0.3,
   /** Compaction threshold: bytes saved below this triggers warning */
   compactionMinSavings: 100,
+  /** Routing classification should be fast enough to pay for itself */
+  workflowRoutingMs: 1_500,
+  /** Context packs should stay bounded for handoffs */
+  contextPackMaxLines: 120,
+  /** Plugin hooks should not add noticeable per-tool latency */
+  pluginHookMaxMs: 25,
+  /** RTK should save at least this fraction on compressible outputs */
+  rtkMinSavingsRatio: 0.35,
+  /** Review fanout should stay risk-based instead of broad by default */
+  reviewerFanoutMax: 3,
 };
 
 /** Model pricing per 1K tokens (USD). Used for cost estimation. */
@@ -40,7 +50,9 @@ export const DEFAULT_PRICE = { input: 0.00015, output: 0.0006 };
 /** Agent name → workflow phase mapping */
 export const AGENT_PHASE_MAP: Record<string, string> = {
   'orchestrator': 'routing',
+  'change-classifier': 'routing',
   'context-scout': 'discover',
+  'context-pack-builder': 'discover',
   'docs-scout': 'discover',
   'planner': 'plan',
   'architect': 'plan',
@@ -52,8 +64,13 @@ export const AGENT_PHASE_MAP: Record<string, string> = {
   'test-strategist': 'verify',
   'code-reviewer': 'review',
   'typescript-reviewer': 'review',
+  'api-contract-reviewer': 'review',
+  'sqlite-memory-reviewer': 'review',
+  'terminal-stream-reviewer': 'review',
+  'ui-render-reviewer': 'review',
   'security-auditor': 'review',
   'performance-reviewer': 'review',
+  'workflow-profiler': 'profile',
   'docs-updater': 'docs',
 };
 
@@ -72,6 +89,12 @@ export const SCENARIOS = [
   'api-throughput',
   'proxy-throughput',
   'terminal-concurrency',
+  'workflow-routing',
+  'context-pack-size',
+  'plugin-hook-overhead',
+  'rtk-compression-savings',
+  'verify-plan-accuracy',
+  'reviewer-fanout-control',
 ] as const;
 
 export type ScenarioName = typeof SCENARIOS[number];
@@ -86,4 +109,10 @@ export const QUICK_MODE: Record<string, Record<string, unknown>> = {
   'api-throughput': { iterations: 5 },
   'proxy-throughput': { iterations: 1 },
   'terminal-concurrency': { connections: 2 },
+  'workflow-routing': { tasks: 1, useDiff: true },
+  'context-pack-size': { packs: 1, maxLines: 120 },
+  'plugin-hook-overhead': { toolCalls: 5 },
+  'rtk-compression-savings': { samples: 3 },
+  'verify-plan-accuracy': { changedFileSets: 3 },
+  'reviewer-fanout-control': { changedFileSets: 3 },
 } as const;

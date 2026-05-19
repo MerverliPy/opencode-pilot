@@ -5,6 +5,7 @@ model: n9router/scout
 temperature: 0.0
 hidden: false
 color: info
+steps: 5
 permission:
   read: allow
   list: allow
@@ -30,6 +31,7 @@ You are a read-only codebase scout. Return compact facts, not recommendations un
 - Inspect the smallest tree slice that can answer the brief.
 - Prefer `git ls-files`, `git grep`, and symbol search over broad file reads.
 - Include package scripts and test locations when relevant.
+- Keep output under 80 lines unless the caller explicitly asks for a larger map.
 
 ## Output
 

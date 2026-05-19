@@ -1,5 +1,6 @@
 {
   "_comment": "Copy this file to opencode.json. Set baseURL to your n9router instance. Do NOT commit apiKey — add it only to local opencode.json (gitignored). Options: http://localhost:20128/v1 (local Docker) or any n9router URL.",
+  "_plugin_comment": "Project-local plugins in .opencode/plugins/ are auto-loaded by OpenCode. Do not list those same files here or hooks may run twice.",
   "$schema": "https://opencode.ai/config.json",
   "model": "n9router/ds/deepseek-v4-flash",
   "default_agent": "orchestrator",
@@ -7,11 +8,7 @@
     "AGENTS.md",
     ".opencode/rules/pilot-core.md"
   ],
-  "plugin": [
-    "./.opencode/plugins/n9router-director.ts",
-    "./.opencode/plugins/tool-guardrails.ts",
-    "./.opencode/plugins/rtk-compressor.ts"
-  ],
+  "plugin": [],
   "mcp": {
     "sequential-thinking": {
       "type": "local",

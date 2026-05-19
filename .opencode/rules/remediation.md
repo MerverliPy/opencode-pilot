@@ -15,7 +15,7 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 Also protected: /push/* and /memory/* routes.
 - [x] **Static file path traversal** — resolved: normalize() + resolve() + startsWith() guard in server/src/index.ts setupStatic() (`server/src/index.ts`) — serving static files from filesystem root may expose config, .env, DB.
 - [x] **Browser secret persistence** — resolved: AES-GCM-256 encryption via Web Crypto + IndexedDB in ui/src/services/crypto.ts, wrapping sensitive localStorage keys (`ui/src/services/auth.ts`, related stores) — tokens/credentials persist in browser storage. Exposed to XSS.
-- [ ] **SSE auth inconsistency** — UI `ui/src/services/sse.ts` uses naked `EventSource` without auth headers; auth story inconsistent and likely broken for protected servers.
+- [x] **SSE auth middleware audit** — resolved: UI uses `fetch` + `ReadableStream` with `Authorization: Bearer` header (`ui/src/services/sse.ts`). Server `/event` route protected via `protectRoute("/event")` + `requireBearerAuth()`. WS terminal auth via `isAuthorizedNodeRequest()`. Pilot token stripped before proxy forward. See `.opencode/codemap/auth-story.md`.
 - [ ] **Memory embedding tenant isolation gap** — embedding vectors not scoped to tenant/user. Cross-tenant data leak via similarity search.
 
 ### High
@@ -52,17 +52,18 @@ Also protected: /push/* and /memory/* routes.
 | 1 | Auth on terminal/git/tunnel/proxy routes | ✅ RESOLVED | 3h | Implemented via env-driven bearer token (PILOT_AUTH_TOKEN). Auth covers terminal WS + HTTP, git, tunnel, proxy, push, memory routes. | `server/src/auth.ts`, `server/src/index.ts`, `server/src/terminal.ts`, `server/src/proxy.ts` |
 | 2 | Static file traversal protection | Critical | 1h | Path traversal exposes env, DB, config. | `server/src/index.ts` |
 | 3 | Browser secret storage hardening | Critical | 2h | XSS -> token exfiltration. Move to httpOnly cookies or encrypted session store. | `ui/src/services/auth.ts`, auth stores |
-| 4 | SSE auth middleware audit | Critical | 1h | Auth story inconsistent and should be audited — UI EventSource omits auth headers. | SSE route registration |
-| 5 | Memory embedding tenant scoping | Critical | 2h | Cross-tenant data leak via vector similarity search. | Memory embedding service |
-| 6 | Debug log sanitization | High | 1h | Credentials, tokens, file contents in logs. Strip headers, truncate bodies. | Logger config, request middleware |
-| 7 | Duplicate memory schema → shared/ | High | 1h | Two schemas diverge over time. Move canonical types to `shared/src/`. | `ui/src/plugin/memory/db/schema.ts`, `server/src/memory/schema.ts`, `shared/src/types.ts` |
-| 8 | Unify UI server-target model | High | 1.5h | Diff/Push/Tunnel/Terminal/SSE bypass active server URL. All must read `serverUrl` from store. | `ui/src/services/push.ts`, `ui/src/services/tunnel.ts`, SSE service, diff service |
-| 9 | Rate limiter TTL cleanup | Medium | 1h | OOM under load. Add setInterval eviction or `lru-cache`. | `server/src/index.ts` |
-| 10 | Dead code: `broadcastPushNotification` | Medium | 0.5h | Zero callers. Remove or wire into SSE. | `server/src/push.ts` |
-| 11 | Input validation: git cwd, serverId params | Medium | 1h | Unvalidated input to filesystem and DB ops. | `server/src/git.ts`, `server/src/memory/memoryRouter.ts` |
-| 12 | Test coverage for auth + security paths | Medium | 2h | No test validates terminal/tunnel/proxy auth rejection. | `e2e/tests/terminal/`, `e2e/tests/tunnel/` |
-| 13 | Stale audit script + root cleanup | Low | 0.25h | RN references mislead. Root artifacts confuse agents. | `audit.sh`, root `.html`, `.json`, `.log` files |
-| 14 | Re-export shim + JSDoc cleanup | Low | 0.25h | Minor code quality. | `ui/src/services/types.ts`, `server/src/memory/memoryRouter.ts` |
+| 4 | SSE auth middleware audit | ✅ RESOLVED | — | UI uses `fetch` + `ReadableStream` with Bearer auth. All SSE/WS routes protected. See `.opencode/codemap/auth-story.md`. | `server/src/index.ts`, `ui/src/services/sse.ts` |
+| 5 | Proxy debug log leak (SSE) | High | 0.5h | `proxy.ts:135-150` logs AI response content metadata (XML debug). Leftover instrumentation. Gate behind `NODE_ENV=development` or remove. | `server/src/proxy.ts` |
+| 6 | Memory embedding tenant scoping | Critical | 2h | Cross-tenant data leak via vector similarity search. | Memory embedding service |
+| 7 | Debug log sanitization | High | 1h | Credentials, tokens, file contents in logs. Strip headers, truncate bodies. | Logger config, request middleware |
+| 8 | Duplicate memory schema → shared/ | High | 1h | Two schemas diverge over time. Move canonical types to `shared/src/`. | `ui/src/plugin/memory/db/schema.ts`, `server/src/memory/schema.ts`, `shared/src/types.ts` |
+| 9 | Unify UI server-target model | High | 1.5h | Diff/Push/Tunnel/Terminal/SSE bypass active server URL. All must read `serverUrl` from store. | `ui/src/services/push.ts`, `ui/src/services/tunnel.ts`, SSE service, diff service |
+| 10 | Rate limiter TTL cleanup | Medium | 1h | OOM under load. Add setInterval eviction or `lru-cache`. | `server/src/index.ts` |
+| 11 | Dead code: `broadcastPushNotification` | Medium | 0.5h | Zero callers. Remove or wire into SSE. | `server/src/push.ts` |
+| 12 | Input validation: git cwd, serverId params | Medium | 1h | Unvalidated input to filesystem and DB ops. | `server/src/git.ts`, `server/src/memory/memoryRouter.ts` |
+| 13 | Test coverage for auth + security paths | Medium | 2h | No test validates terminal/tunnel/proxy auth rejection. | `e2e/tests/terminal/`, `e2e/tests/tunnel/` |
+| 14 | Stale audit script + root cleanup | Low | 0.25h | RN references mislead. Root artifacts confuse agents. | `audit.sh`, root `.html`, `.json`, `.log` files |
+| 15 | Re-export shim + JSDoc cleanup | Low | 0.25h | Minor code quality. | `ui/src/services/types.ts`, `server/src/memory/memoryRouter.ts` |
 
 ---
 
@@ -81,7 +82,7 @@ Also protected: /push/* and /memory/* routes.
 | `server/src/memory/memoryRouter.ts` | Add `serverId` length/format validation on all param-based routes. Deduplicate JSDoc. |
 | `server/src/memory/schema.ts` | This is canonical server schema. Extract shared domain types to `shared/src/` for cross-package imports. |
 | Logger middleware | Sanitize request/response bodies before logging. Strip `authorization`, `cookie`, `x-api-key` headers. Truncate bodies >1KB. |
-| SSE route registration | Audit SSE route registration/auth — push idle-event relay unimplemented, UI EventSource omits auth headers. |
+| SSE route registration | ✅ Audit complete — `/event` route protected via `protectRoute("/event")` + `requireBearerAuth()`. UI uses `fetch` + `ReadableStream` with Bearer auth. See `.opencode/codemap/auth-story.md`. Open: proxy debug logging leaks AI response metadata (`proxy.ts:135-150`), unbounded PTY sessions (`terminal.ts`), no SSE auth-failure user feedback. |
 | Memory embedding service | Scope embedding vectors to tenant/user ID. Filter similarity searches by owner. |
 
 ### `ui`

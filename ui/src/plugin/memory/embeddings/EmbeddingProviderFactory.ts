@@ -13,8 +13,9 @@ import { OllamaEmbeddings } from "./OllamaEmbeddings";
 import { CohereEmbeddings } from "./CohereEmbeddings";
 import { OpenAICompatibleEmbeddings } from "./OpenAICompatibleEmbeddings";
 import { loadN9RouterConfig } from "../../../services/auth";
+import { encrypt, decrypt } from "../../../services/crypto";
 
-/** SecureStore key for a provider's API key. */
+/** localStorage key for a provider's API key. */
 export function apiKeyStoreKey(provider: string): string {
   return `memory_apikey_${provider}`;
 }
@@ -22,14 +23,21 @@ export function apiKeyStoreKey(provider: string): string {
 export async function getStoredApiKey(
   provider: string,
 ): Promise<string | null> {
-  return localStorage.getItem(apiKeyStoreKey(provider));
+  const raw = localStorage.getItem(apiKeyStoreKey(provider));
+  if (!raw) return null;
+  try {
+    return await decrypt(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function storeApiKey(
   provider: string,
   key: string,
 ): Promise<void> {
-  localStorage.setItem(apiKeyStoreKey(provider), key);
+  const encrypted = await encrypt(key);
+  localStorage.setItem(apiKeyStoreKey(provider), encrypted);
 }
 
 export async function deleteStoredApiKey(provider: string): Promise<void> {

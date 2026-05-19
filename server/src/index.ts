@@ -10,7 +10,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
 import { getConfiguredAuthToken, requireBearerAuth } from "./auth.js";
@@ -188,7 +188,11 @@ export function setupStatic() {
   app.get("/*", async (c) => {
     const { readFileSync, existsSync, statSync } = await import("node:fs");
     const relativePath = c.req.path.slice(1);
-    const filePath = relativePath ? resolve(uiDist, relativePath) : "";
+    const filePath = relativePath ? resolve(uiDist, normalize(relativePath)) : "";
+    // Path traversal guard: ensure resolved path stays within uiDist
+    if (filePath && !(filePath.startsWith(uiDist + "/") || filePath === uiDist)) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
     if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
       const ext = filePath.split(".").pop() ?? "";
       const mimes: Record<string, string> = {

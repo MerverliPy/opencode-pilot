@@ -3,8 +3,13 @@
  *
  * Uses localStorage for persistence (replaces Expo SecureStore from RN).
  * The server will use httpOnly session cookies for actual auth in M3.
+ *
+ * Sensitive values (servers, n9router config) are encrypted with AES-GCM
+ * via the Web Crypto API before being written to localStorage.  Plaintext
+ * keys (activeServer, lastSession, pushToken, workdir) are NOT encrypted.
  */
 import type { ServerConfig, N9RouterConfig } from "@pilot-shared/types";
+import { encrypt, decrypt, clearCryptoStore } from "./crypto";
 
 const KEY_SERVERS = "pilot.servers";
 const KEY_ACTIVE = "pilot.activeServer";
@@ -15,32 +20,40 @@ const KEY_N9ROUTER = "pilot.n9router";
 
 export type { ServerConfig, N9RouterConfig };
 
+// ── N9Router config (encrypted) ────────────────────────────────────────────
+
 export async function loadN9RouterConfig(): Promise<N9RouterConfig> {
   const raw = localStorage.getItem(KEY_N9ROUTER);
   if (!raw) return { url: "", key: "" };
   try {
-    return JSON.parse(raw) as N9RouterConfig;
+    const decrypted = await decrypt(raw);
+    return JSON.parse(decrypted) as N9RouterConfig;
   } catch {
     return { url: "", key: "" };
   }
 }
 
 export async function saveN9RouterConfig(cfg: N9RouterConfig): Promise<void> {
-  localStorage.setItem(KEY_N9ROUTER, JSON.stringify(cfg));
+  const encrypted = await encrypt(JSON.stringify(cfg));
+  localStorage.setItem(KEY_N9ROUTER, encrypted);
 }
+
+// ── Servers (encrypted — contains passwords) ───────────────────────────────
 
 export async function loadServers(): Promise<ServerConfig[]> {
   const raw = localStorage.getItem(KEY_SERVERS);
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as ServerConfig[];
+    const decrypted = await decrypt(raw);
+    return JSON.parse(decrypted) as ServerConfig[];
   } catch {
     return [];
   }
 }
 
 export async function saveServers(servers: ServerConfig[]): Promise<void> {
-  localStorage.setItem(KEY_SERVERS, JSON.stringify(servers));
+  const encrypted = await encrypt(JSON.stringify(servers));
+  localStorage.setItem(KEY_SERVERS, encrypted);
 }
 
 export async function loadActiveServerId(): Promise<string | null> {
@@ -103,4 +116,22 @@ export function basicAuthHeader(server: ServerConfig): Record<string, string> {
   const pass = server.password ?? "";
   const encoded = btoa(`${user}:${pass}`);
   return { Authorization: `Basic ${encoded}` };
+}
+
+/**
+ * Wipe all auth-related data from localStorage and IndexedDB.
+ *
+ * Removes every `pilot.*` and `memory_apikey_*` key from localStorage,
+ * then deletes the IndexedDB crypto key store so a fresh encryption key
+ * is generated on the next write.
+ */
+export async function clearAllAuth(): Promise<void> {
+  // Remove all pilot.* and memory_apikey_* keys from localStorage
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("pilot.") || key.startsWith("memory_apikey_")) {
+      localStorage.removeItem(key);
+    }
+  }
+  // Wipe the IndexedDB crypto store
+  await clearCryptoStore();
 }

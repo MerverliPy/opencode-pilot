@@ -13,8 +13,8 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 - [x] **Tunnel routes no auth** — resolved: all /tunnel/* routes protected in server/src/index.ts
 - [x] **Proxy routes no auth** — resolved: all proxy-mounted routes protected; Pilot token stripped before upstream forward in server/src/proxy.ts
 Also protected: /push/* and /memory/* routes.
-- [ ] **Static file path traversal** (`server/src/index.ts`) — serving static files from filesystem root may expose config, .env, DB.
-- [ ] **Browser secret persistence** (`ui/src/services/auth.ts`, related stores) — tokens/credentials persist in browser storage. Exposed to XSS.
+- [x] **Static file path traversal** — resolved: normalize() + resolve() + startsWith() guard in server/src/index.ts setupStatic() (`server/src/index.ts`) — serving static files from filesystem root may expose config, .env, DB.
+- [x] **Browser secret persistence** — resolved: AES-GCM-256 encryption via Web Crypto + IndexedDB in ui/src/services/crypto.ts, wrapping sensitive localStorage keys (`ui/src/services/auth.ts`, related stores) — tokens/credentials persist in browser storage. Exposed to XSS.
 - [ ] **SSE auth inconsistency** — UI `ui/src/services/sse.ts` uses naked `EventSource` without auth headers; auth story inconsistent and likely broken for protected servers.
 - [ ] **Memory embedding tenant isolation gap** — embedding vectors not scoped to tenant/user. Cross-tenant data leak via similarity search.
 

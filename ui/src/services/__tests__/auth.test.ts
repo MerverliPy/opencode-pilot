@@ -26,30 +26,22 @@ describe("auth", () => {
       expect(result).toEqual([]);
     });
 
-    it("parses stored JSON", async () => {
+    it("round-trips servers through encryption", async () => {
       const servers: ServerConfig[] = [
         { id: "s1", name: "Home", url: "http://localhost:4096" },
       ];
-      localStorage.setItem("pilot.servers", JSON.stringify(servers));
+      await saveServers(servers);
       const result = await loadServers();
       expect(result).toEqual(servers);
     });
 
-    it("returns empty array on invalid JSON", async () => {
+    it("returns empty array on corrupted / invalid data", async () => {
+      // Directly placed garbage that can't be decrypted or parsed
       localStorage.setItem("pilot.servers", "not-json");
       const result = await loadServers();
       expect(result).toEqual([]);
     });
 
-    it("saves servers as JSON", async () => {
-      const servers: ServerConfig[] = [
-        { id: "s1", name: "Home", url: "http://localhost:4096" },
-      ];
-      await saveServers(servers);
-      expect(localStorage.getItem("pilot.servers")).toBe(
-        JSON.stringify(servers),
-      );
-    });
   });
 
   describe("loadActiveServerId / saveActiveServerId", () => {
@@ -128,27 +120,19 @@ describe("auth", () => {
       expect(result).toEqual({ url: "", key: "" });
     });
 
-    it("parses stored config", async () => {
-      localStorage.setItem(
-        "pilot.n9router",
-        JSON.stringify({ url: "http://n9router.local", key: "secret" }),
-      );
+    it("round-trips config through encryption", async () => {
+      const cfg = { url: "http://n9router.local", key: "secret" };
+      await saveN9RouterConfig(cfg);
       const result = await loadN9RouterConfig();
-      expect(result).toEqual({ url: "http://n9router.local", key: "secret" });
+      expect(result).toEqual(cfg);
     });
 
-    it("returns defaults on invalid JSON", async () => {
+    it("returns defaults on corrupted / invalid data", async () => {
       localStorage.setItem("pilot.n9router", "bad");
       const result = await loadN9RouterConfig();
       expect(result).toEqual({ url: "", key: "" });
     });
 
-    it("saves config", async () => {
-      await saveN9RouterConfig({ url: "http://n9router.local", key: "secret" });
-      expect(localStorage.getItem("pilot.n9router")).toBe(
-        JSON.stringify({ url: "http://n9router.local", key: "secret" }),
-      );
-    });
   });
 
   describe("basicAuthHeader", () => {

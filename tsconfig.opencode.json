@@ -13,6 +13,7 @@
     "resolveJsonModule": true
   },
   "include": [
+    ".opencode/types/**/*.d.ts",
     ".opencode/plugins/**/*.ts",
     ".opencode/tools/**/*.ts",
     "benchtest/plugins/**/*.ts"

@@ -2,7 +2,7 @@
 
 **Goal:** Fix model outputting XML-style tool calls (`<tool_calls>...`) in response text instead of plain summaries. Two workstreams: (1) strip XML from server response, (2) tune system prompt to prevent it.
 
-**Status:** [x] Task 1 Done  |  [>] Task 2 In Progress  |  [ ] Not started
+**Status:** [x] Task 1 Done  |  [x] Task 2 Done  |  [x] All complete
 
 ---
 
@@ -16,11 +16,11 @@
 ### Subtasks
 
 - [x] **1.1 Identify XML patterns to strip**
-  - [ ] `<tool_calls>...</tool_calls>` blocks (Anthropic format)
-  - [ ] `<invoke name="...">...</invoke>` blocks
-  - [ ] `<use_mcp_tool>...</use_mcp_tool>` blocks (Claude Code format)
-  - [ ] `<search>...</search>`, `<read>...</read>` blocks
-  - [ ] Any `<[a-z_]+>...</[a-z_]+>` block that looks like tool usage
+  - [x] `<tool_calls>...</tool_calls>` blocks (Anthropic format)
+  - [x] `<invoke name="...">...</invoke>` blocks
+  - [x] `<use_mcp_tool>...</use_mcp_tool>` blocks (Claude Code format)
+  - [x] `<search>...</search>`, `<read>...</read>` blocks
+  - [x] Any `<[a-z_]+>...</[a-z_]+>` block that looks like tool usage
 
 - [x] **1.2 Add XML stripping to `server/src/n9routerChat.ts`**
   - Create function: `stripXmlToolBlocks(text: string): string`

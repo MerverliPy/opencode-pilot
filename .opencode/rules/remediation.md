@@ -53,7 +53,7 @@ Also protected: /push/* and /memory/* routes.
 | 2 | Static file traversal protection | Critical | 1h | Path traversal exposes env, DB, config. | `server/src/index.ts` |
 | 3 | Browser secret storage hardening | Critical | 2h | XSS -> token exfiltration. Move to httpOnly cookies or encrypted session store. | `ui/src/services/auth.ts`, auth stores |
 | 4 | SSE auth middleware audit | ✅ RESOLVED | — | UI uses `fetch` + `ReadableStream` with Bearer auth. All SSE/WS routes protected. See `.opencode/codemap/auth-story.md`. | `server/src/index.ts`, `ui/src/services/sse.ts` |
-| 5 | Proxy debug log leak (SSE) | High | 0.5h | `proxy.ts:135-150` logs AI response content metadata (XML debug). Leftover instrumentation. Gate behind `NODE_ENV=development` or remove. | `server/src/proxy.ts` |
+| 5 | Proxy debug log leak (SSE) | ✅ RESOLVED | — | Removed 7 unconditional `console.error` calls at `proxy.ts:134-151`. No production logging of AI response metadata. | `server/src/proxy.ts` |
 | 6 | Memory embedding tenant scoping | Critical | 2h | Cross-tenant data leak via vector similarity search. | Memory embedding service |
 | 7 | Debug log sanitization | High | 1h | Credentials, tokens, file contents in logs. Strip headers, truncate bodies. | Logger config, request middleware |
 | 8 | Duplicate memory schema → shared/ | High | 1h | Two schemas diverge over time. Move canonical types to `shared/src/`. | `ui/src/plugin/memory/db/schema.ts`, `server/src/memory/schema.ts`, `shared/src/types.ts` |
@@ -82,7 +82,7 @@ Also protected: /push/* and /memory/* routes.
 | `server/src/memory/memoryRouter.ts` | Add `serverId` length/format validation on all param-based routes. Deduplicate JSDoc. |
 | `server/src/memory/schema.ts` | This is canonical server schema. Extract shared domain types to `shared/src/` for cross-package imports. |
 | Logger middleware | Sanitize request/response bodies before logging. Strip `authorization`, `cookie`, `x-api-key` headers. Truncate bodies >1KB. |
-| SSE route registration | ✅ Audit complete — `/event` route protected via `protectRoute("/event")` + `requireBearerAuth()`. UI uses `fetch` + `ReadableStream` with Bearer auth. See `.opencode/codemap/auth-story.md`. Open: proxy debug logging leaks AI response metadata (`proxy.ts:135-150`), unbounded PTY sessions (`terminal.ts`), no SSE auth-failure user feedback. |
+| SSE route registration | ✅ Audit complete — `/event` route protected via `protectRoute("/event")` + `requireBearerAuth()`. UI uses `fetch` + `ReadableStream` with Bearer auth. See `.opencode/codemap/auth-story.md`. Open: unbounded PTY sessions (`terminal.ts`), no SSE auth-failure user feedback. |
 | Memory embedding service | Scope embedding vectors to tenant/user ID. Filter similarity searches by owner. |
 
 ### `ui`

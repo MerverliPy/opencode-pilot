@@ -131,24 +131,6 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
                   outLines.push(line);
                   continue;
                 }
-                // DEBUG: capture structure of events with XML content
-                if (line.includes("<")) {
-                  console.error("[proxy-xml-debug] RAW_DATA_LINE:", line.slice(0, 300));
-                  try {
-                    const testParse = JSON.parse(data);
-                    console.error("[proxy-xml-debug] JSON_KEYS:", JSON.stringify(Object.keys(testParse)));
-                    if (testParse.properties) {
-                      console.error("[proxy-xml-debug] PROPERTIES_KEYS:", JSON.stringify(Object.keys(testParse.properties)));
-                      if (testParse.properties.part) {
-                        console.error("[proxy-xml-debug] PART_KEYS:", JSON.stringify(Object.keys(testParse.properties.part)));
-                        console.error("[proxy-xml-debug] PART_TYPE:", testParse.properties.part.type);
-                        console.error("[proxy-xml-debug] PART_TEXT_LEN:", typeof testParse.properties.part.text === "string" ? testParse.properties.part.text.length : "not-string");
-                      } else {
-                        console.error("[proxy-xml-debug] NO_PART:", "properties exists but no .part key");
-                      }
-                    }
-                  } catch { /* ignore parse errors */ }
-                }
                 try {
                   const parsed = JSON.parse(data);
                   let modified = false;

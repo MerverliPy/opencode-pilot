@@ -18,6 +18,7 @@
     "build:server": "npm run build -w server",
     "build:ui": "npm run build -w ui",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w ui && npm run typecheck -w e2e",
+    "check:opencode": "tsc -p tsconfig.opencode.json --noEmit",
     "lint": "npm run lint -w ui",
     "postinstall": "node -e \"try{['workbox-routing','workbox-strategies','workbox-background-sync'].forEach(p=>require('fs').writeFileSync('node_modules/'+p+'/index.mjs','export * from \\'./index.js\\';\\n'))}catch(e){}\"",
     "test": "npm run test -w ui",

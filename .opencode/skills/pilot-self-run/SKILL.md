@@ -40,24 +40,11 @@ ss -tlnp 'sport = :3201' | grep LISTEN && echo "STILL IN USE" || echo "FREE"
 bash scripts/pilot-start.sh
 ```
 
-**Or manual (if script fails):**
-
-```bash
-# Kill anything on the ports first
-kill -9 $(lsof -ti :3201 :5173) 2>/dev/null; sleep 1
-
-# Start Pilot server — requires OPENCODE_URL, NO PILOT_AUTH_TOKEN
-cd /home/calvin/pilot
-OPENCODE_URL=http://100.81.83.98:4096 \
-CORS_ORIGINS="http://localhost:5173,http://100.81.83.98:5173,http://172.24.236.105:5173,http://100.81.83.98:3201,http://172.24.236.105:3201" \
-setsid node server/dist/cli.js --port 3201 &>/tmp/pilot-server.log &
-
-sleep 3
-
-# Start Vite dev server (run from ui/ directory!)
-cd /home/calvin/pilot/ui
-PROXY_TARGET=http://localhost:3201 setsid /home/calvin/pilot/node_modules/.bin/vite --host 0.0.0.0 --port 5173 &>/tmp/pilot-ui.log &
-```
+If the script fails, check common issues:
+- `OPENCODE_URL` is reachable
+- Ports 3201 and 5173 are free (run `bash scripts/pilot-stop.sh`)
+- `server/dist/cli.js` exists (run `npm run build -w server` if not)
+- `ui/node_modules` is installed (run `npm install` if not)
 
 ### 4. Verify and output URLs
 

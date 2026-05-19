@@ -33,6 +33,7 @@ ui/dist/
 .env
 .env.local
 .env.*.local
+docker/.env
 
 # OpenCode config (per-developer, contains local URLs)
 opencode.json

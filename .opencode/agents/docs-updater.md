@@ -1,7 +1,7 @@
 ---
 description: Trusted edit-capable documentation/codemap subagent. Updates existing docs from source-of-truth and avoids documentation sprawl.
 mode: subagent
-model: n9router/docs-updater
+model: n9router/ds/deepseek-v4-flash
 temperature: 0.0
 color: secondary
 permission:

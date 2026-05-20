@@ -214,17 +214,15 @@ function hasToolCalls(chunks: StreamChunk[]): boolean {
 /**
  * Read the full SSE response body and parse it into chunks.
  */
-async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<{ chunks: StreamChunk[]; raw: Uint8Array[] }> {
+async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<StreamChunk[]> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  const raw: Uint8Array[] = [];
   const chunks: StreamChunk[] = [];
   let buffer = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    raw.push(value);
     const text = decoder.decode(value, { stream: true });
     buffer += text;
 
@@ -248,7 +246,7 @@ async function readSSEStream(body: ReadableStream<Uint8Array>): Promise<{ chunks
     }
   }
 
-  return { chunks, raw };
+  return chunks;
 }
 
 /**
@@ -556,7 +554,7 @@ export function setupChatRouter(): Hono {
         method: "POST",
         headers,
         body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.any([AbortSignal.timeout(120_000), c.req.raw.signal]),
       });
 
       // Handle n9router error responses
@@ -579,10 +577,14 @@ export function setupChatRouter(): Hono {
         );
       }
 
-      // Read full SSE to check for tool calls
-      const { chunks, raw } = await readSSEStream(response.body);
+      // Tee the response body: one branch for tool-call detection, one for streaming
+      const [parseBody, streamBody] = response.body.tee();
+      const chunks = await readSSEStream(parseBody);
 
       if (hasToolCalls(chunks)) {
+        // Cancel the unused streaming branch
+        streamBody.cancel().catch(() => {});
+
         // Accumulate tool calls from chunks
         const toolCalls = accumulateToolCalls(chunks);
         logInfo(`model=${model} tool_calls=${toolCalls.size} executing...`);
@@ -612,14 +614,68 @@ export function setupChatRouter(): Hono {
         return streamFromN9router(n9routerUrl, headers, finalRequestBody, c, model, startTime);
       }
 
-      // No tool calls — replay buffered SSE stream
+      // No tool calls — stream through with XML filtering
       const { inputTokens: noTcInput, outputTokens: noTcOutput } = countTokens(chunks);
       logInfo(`model=${model} no tool calls input_tokens=${noTcInput} output_tokens=${noTcOutput} latency=${Date.now() - startTime}ms`);
       c.header("Content-Type", "text/event-stream");
       c.header("Cache-Control", "no-cache");
       c.header("Connection", "keep-alive");
 
-      const stream = rawSSEToResponse(raw);
+      const xmlFilter = createXmlFilter();
+      const decoder = new TextDecoder();
+      const encoder = new TextEncoder();
+      let lineBuffer = "";
+
+      const filterTransform = new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          const text = decoder.decode(chunk, { stream: true });
+          lineBuffer += text;
+          const lines = lineBuffer.split("\n");
+          lineBuffer = lines.pop() ?? "";
+
+          const outLines: string[] = [];
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]" || data.trim() === "[DONE]") {
+                outLines.push(line);
+                continue;
+              }
+              try {
+                const parsed = JSON.parse(data);
+                let modified = false;
+                if (parsed.choices?.[0]?.delta?.content) {
+                  const orig = parsed.choices[0].delta.content;
+                  const filtered = xmlFilter.filter(orig);
+                  if (filtered !== orig) {
+                    modified = true;
+                    if (filtered) {
+                      parsed.choices[0].delta.content = filtered;
+                      outLines.push("data: " + JSON.stringify(parsed));
+                    }
+                  }
+                }
+                if (!modified) outLines.push(line);
+              } catch {
+                outLines.push(line);
+              }
+            } else {
+              outLines.push(line);
+            }
+          }
+          if (outLines.length > 0) {
+            controller.enqueue(encoder.encode(outLines.join("\n")));
+          }
+        },
+        flush(controller) {
+          if (lineBuffer) {
+            const filtered = xmlFilter.filter(lineBuffer);
+            if (filtered) controller.enqueue(encoder.encode(filtered + "\n"));
+          }
+        },
+      });
+
+      const stream = streamBody.pipeThrough(filterTransform);
       return c.newResponse(stream, 200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",

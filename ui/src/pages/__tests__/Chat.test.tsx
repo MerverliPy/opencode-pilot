@@ -36,7 +36,7 @@ jest.mock("react-router-dom", () => ({
 }));
 
 jest.mock("../../store/server", () => ({
-  useServerStore: (selector: (state: { active: () => { id: string; url: string; username?: string; password?: string } | null }) => unknown) =>
+  useServerStore: (selector: (state: Record<string, unknown>) => unknown) =>
     mockUseServerStore(selector),
 }));
 
@@ -113,12 +113,15 @@ describe("Chat title editing", () => {
     mockUseParams.mockReturnValue({});
     mockUseServerStore.mockImplementation((selector) =>
       selector({
-        active: () => ({
-          id: "server-1",
-          url: "http://localhost:3000",
-          username: "user",
-          password: "pass",
-        }),
+        servers: [
+          {
+            id: "server-1",
+            url: "http://localhost:3000",
+            username: "user",
+            password: "pass",
+          },
+        ],
+        activeId: "server-1",
       }),
     );
     mockListMessages.mockResolvedValue([]);

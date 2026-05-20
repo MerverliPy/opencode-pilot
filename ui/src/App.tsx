@@ -4,24 +4,48 @@
  * Provides routes for Chat, Sessions, Files, Terminal, Diff, and Settings.
  * Wraps everything in a responsive Layout with sidebar / bottom nav.
  */
+import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Chat } from "./pages/Chat";
-import { SimpleChat } from "./pages/SimpleChat";
-import { Sessions } from "./pages/Sessions";
-import { Files } from "./pages/Files";
-import { Terminal } from "./pages/Terminal";
-import { Diff } from "./pages/Diff";
-import { Settings } from "./pages/Settings";
-import { Memory } from "./pages/Memory";
+import { colors, fonts } from "./theme";
+
+const Chat = lazy(() => import("./pages/Chat").then((m) => ({ default: m.Chat })));
+const SimpleChat = lazy(() => import("./pages/SimpleChat").then((m) => ({ default: m.SimpleChat })));
+const Sessions = lazy(() => import("./pages/Sessions").then((m) => ({ default: m.Sessions })));
+const Files = lazy(() => import("./pages/Files").then((m) => ({ default: m.Files })));
+const Terminal = lazy(() => import("./pages/Terminal").then((m) => ({ default: m.Terminal })));
+const Diff = lazy(() => import("./pages/Diff").then((m) => ({ default: m.Diff })));
+const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
+const Memory = lazy(() => import("./pages/Memory").then((m) => ({ default: m.Memory })));
+
+function LoadingFallback() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        minHeight: 200,
+        flex: 1,
+        fontFamily: fonts.mono,
+        color: colors.muted,
+        fontSize: 14,
+      }}
+    >
+      loading…
+    </div>
+  );
+}
 
 export function App() {
   return (
     <Layout>
       <InstallBanner />
       <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route
             path="/"
@@ -97,6 +121,7 @@ export function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </ErrorBoundary>
     </Layout>
   );

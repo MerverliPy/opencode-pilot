@@ -76,7 +76,10 @@ export function createProxy(cfg: ProxyConfig): MiddlewareHandler {
     }
 
     try {
-      const upstream = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(30_000) });
+      // Don't timeout SSE requests (chat/agent streaming); keep 30s timeout for others
+      const isSSE = c.req.header("accept")?.includes("text/event-stream");
+      const signal = isSSE ? undefined : AbortSignal.timeout(30_000);
+      const upstream = await fetch(url, { method, headers, body, signal });
 
       // For SSE streams, pipe the response directly
       const contentType = upstream.headers.get("content-type") ?? "";

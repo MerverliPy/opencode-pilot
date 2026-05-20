@@ -9,15 +9,15 @@
 
 ### Security — Fix immediately
 
-- [ ] **C1** `server/src/terminal.ts:39` — PTY inherits full `process.env` → secrets exposed (`env` leak). Filter to safe vars only.
-- [ ] **C2** `server/src/memory/MemoryRepository.ts:106` — SQL injection via LIMIT string interpolation `${opts.limit}`. Parameterize: `LIMIT @limit`.
-- [ ] **C3** `server/src/memory/MemoryRepository.ts:216-226` — No retention enforcement; `maxMemories` never checked. Add purge on insert.
+- [x] **C1** `server/src/terminal.ts:39` — PTY inherits full `process.env` → secrets exposed (`env` leak). Filter to safe vars only.
+- [x] **C2** `server/src/memory/MemoryRepository.ts:106` — SQL injection via LIMIT string interpolation `${opts.limit}`. Parameterize: `LIMIT @limit`.
+- [x] **C3** `server/src/memory/MemoryRepository.ts:216-226` — No retention enforcement; `maxMemories` never checked. Add purge on insert.
 
 ### Streaming — Fix immediately
 
-- [ ] **C4** `server/src/proxy.ts:79` — SSE killed after 30s (`AbortSignal.timeout`). Remove/extend for SSE.
-- [ ] **C5** `server/src/n9routerChat.ts:307-419` — Upstream HTTP connection leak on client disconnect. Wire `c.req.raw.signal`.
-- [ ] **C6** `server/src/n9routerChat.ts:217-252,582-583` — Full SSE body buffered in RAM before forwarding. Stream-through for non-tool-call path.
+- [x] **C4** `server/src/proxy.ts:79` — SSE killed after 30s (`AbortSignal.timeout`). Remove/extend for SSE.
+- [x] **C5** `server/src/n9routerChat.ts:307-419` — Upstream HTTP connection leak on client disconnect. Wire `c.req.raw.signal`.
+- [x] **C6** `server/src/n9routerChat.ts:217-252,582-583` — Full SSE body buffered in RAM before forwarding. Stream-through for non-tool-call path.
 
 ### React Rendering — Fix immediately
 

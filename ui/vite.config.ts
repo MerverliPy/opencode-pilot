@@ -57,5 +57,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+          markdown: ["react-markdown", "remark-gfm", "rehype-pretty-code"],
+        },
+      },
+    },
   },
 });

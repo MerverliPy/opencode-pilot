@@ -29,10 +29,15 @@ import { useMemoryInjection } from "../plugin/memory/hooks/useMemoryInjection";
 
 export function Chat() {
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
-  const server = useServerStore((s) => s.active());
+  // C7: Select primitives to avoid cascade re-renders from computed active()
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId],
+  );
   const client = useMemo(
     () => (server ? new OpencodeClient(server) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [server?.id, server?.url, server?.username, server?.password],
   );
 

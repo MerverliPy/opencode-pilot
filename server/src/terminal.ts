@@ -31,12 +31,17 @@ const sessions = new Map<string, PtySession>();
 export function createPtySession(): string {
   const id = randomUUID();
   const shell = process.env.SHELL ?? "/bin/bash";
+  const safeEnvVars = ["TERM", "SHELL", "PATH", "HOME", "LANG"];
+  const filteredEnv: Record<string, string> = {};
+  for (const key of safeEnvVars) {
+    if (process.env[key]) filteredEnv[key] = process.env[key]!;
+  }
   const proc = pty.spawn(shell, [], {
     name: "xterm-256color",
     cols: 80,
     rows: 24,
     cwd: process.cwd(),
-    env: process.env as Record<string, string>,
+    env: filteredEnv,
   });
 
   const session: PtySession = {

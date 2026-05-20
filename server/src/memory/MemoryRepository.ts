@@ -94,6 +94,22 @@ export function insertMemory(
     created_at: now,
     updated_at: now,
   });
+
+  // Enforce maxMemories retention: purge oldest non-pinned memories if over limit
+  const config = getMemoryConfig(m.serverId);
+  const count = countMemories(m.serverId);
+  if (count > config.maxMemories) {
+    const excess = count - config.maxMemories;
+    db.prepare(`
+      DELETE FROM memories WHERE id IN (
+        SELECT id FROM memories
+        WHERE server_id = @server_id AND is_pinned = 0 AND is_archived = 0
+        ORDER BY created_at ASC
+        LIMIT @excess
+      )
+    `).run({ server_id: m.serverId, excess });
+  }
+
   return { ...m, id, createdAt: now, updatedAt: now };
 }
 
@@ -103,13 +119,13 @@ export function getMemoriesByServer(
 ): Memory[] {
   const db = getMemoryDb();
   const archived = opts.includeArchived ? "" : "AND is_archived = 0";
-  const limit = `LIMIT ${opts.limit ?? -1}`;
+  const limit = "LIMIT @limit";
   const rows = db
     .prepare(
       `SELECT * FROM memories WHERE server_id = @server_id ${archived}
        ORDER BY is_pinned DESC, updated_at DESC ${limit}`,
     )
-    .all({ server_id: serverId }) as MemoryRow[];
+    .all({ server_id: serverId, limit: opts.limit ?? -1 }) as MemoryRow[];
   return rows.map(rowToMemory);
 }
 

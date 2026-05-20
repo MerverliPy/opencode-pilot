@@ -1,7 +1,4 @@
 {
-  "_comment": "Copy this file to opencode.json for local use. Keep opencode.json gitignored and never include provider API keys in shared/audit bundles.",
-  "_plugin_comment": "Project-local plugins in .opencode/plugins/ are auto-loaded by OpenCode. Keep plugin empty unless adding npm plugins.",
-  "_mcp_comment": "MCP servers are defined but disabled by default. Enable only per task/agent when token/security cost is justified.",
   "$schema": "https://opencode.ai/config.json",
   "model": "n9router/ds/deepseek-v4-flash",
   "default_agent": "orchestrator",

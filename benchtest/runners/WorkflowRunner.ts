@@ -14,7 +14,7 @@ import { MetricStore } from '../collector/MetricStore.js';
 import { DetectionEngine } from '../detectors/index.js';
 import { getScenario } from '../scenarios/index.js';
 import type { Scenario } from '../scenarios/index.js';
-import { TOKEN_THRESHOLDS, AGENT_PHASE_MAP } from '../config.js';
+import { TOKEN_THRESHOLDS, AGENT_PHASE_MAP, DETECTOR_THRESHOLDS } from '../config.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -181,11 +181,15 @@ export class WorkflowRunner {
           this.store.recordPhase(phase, agent);
         }
 
-        // Simulate 2-5 tool calls per phase
-        const toolsInPhase = this.scenario.expectedTools.slice(
-          phaseIdx % this.scenario.expectedTools.length,
-          (phaseIdx + 2) % this.scenario.expectedTools.length + 1,
-        );
+        // Simulate tool calls per phase (circular wrap through expectedTools)
+        const toolCount = Math.min(3, this.scenario.expectedTools.length);
+        const offset = (phaseIdx * 2) % this.scenario.expectedTools.length;
+        const toolsInPhase: string[] = [];
+        for (let i = 0; i < toolCount; i++) {
+          toolsInPhase.push(
+            this.scenario.expectedTools[(offset + i) % this.scenario.expectedTools.length]!
+          );
+        }
         if (toolsInPhase.length === 0) continue;
 
         for (const tool of toolsInPhase) {
@@ -246,6 +250,26 @@ export class WorkflowRunner {
     const hasCritical = alerts.some((a) => a.severity === 'critical');
     const hasHigh = alerts.some((a) => a.severity === 'high');
     const overBudget = tokenSummary.total.combined > this.scenario.tokenBudget.maxTotal;
+
+    // RTK compression savings check (realHTTP mode only — simulation data has no real patterns)
+    const isRealHTTP = this.options.realHTTP ?? false;
+    if (isRealHTTP) {
+      const totalToolOutput = this.store.toolCalls.reduce((sum, t) => sum + t.outputChars, 0);
+      const totalRtkSaved = this.store.toolCalls.reduce((sum, t) => sum + (t.rtkSavedBytes ?? 0), 0);
+      if (totalToolOutput > 0) {
+        const savingsRatio = totalRtkSaved / totalToolOutput;
+        if (savingsRatio < DETECTOR_THRESHOLDS.rtkMinSavingsRatio) {
+          alerts.push({
+            detector: 'rtk-savings',
+            severity: 'low',
+            timestamp: Date.now(),
+            message: `RTK compression savings (${(savingsRatio * 100).toFixed(1)}%) below threshold (${(DETECTOR_THRESHOLDS.rtkMinSavingsRatio * 100).toFixed(0)}%)`,
+            threshold: DETECTOR_THRESHOLDS.rtkMinSavingsRatio,
+            actualValue: savingsRatio,
+          });
+        }
+      }
+    }
 
     // Compaction events
     const compactionMetrics = this.store.compactions;

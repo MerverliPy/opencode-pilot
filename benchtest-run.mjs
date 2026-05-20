@@ -67,7 +67,7 @@ const STRESS = parseInt(getArg('--stress') || '0', 10);
 const VERBOSE = hasFlag('--verbose') || !!process.env.BENCHTEST_VERBOSE;
 const BASELINE_FILE = getArg('--baseline') || '';
 
-const SCENARIOS_LIST = ['code-review', 'bug-fix', 'refactor', 'e2e-test', 'docs-update', 'api-throughput', 'proxy-throughput', 'terminal-concurrency'];
+const SCENARIOS_LIST = ['code-review', 'bug-fix', 'refactor', 'e2e-test', 'docs-update', 'api-throughput', 'proxy-throughput', 'terminal-concurrency', 'workflow-routing', 'context-pack-size', 'plugin-hook-overhead', 'rtk-compression-savings', 'verify-plan-accuracy', 'reviewer-fanout-control'];
 
 // ─── ANSI helpers ────────────────────────────────────────────────
 

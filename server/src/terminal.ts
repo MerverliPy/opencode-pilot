@@ -76,7 +76,7 @@ export function createPtySession(): string {
   };
 
   const heartbeatTimer = setInterval(() => {
-    for (const ws of session.clients) {
+    for (const ws of [...session.clients]) {
       if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
         session.clients.delete(ws);
         clientWriteQueues.delete(ws);
@@ -88,7 +88,7 @@ export function createPtySession(): string {
   session.heartbeatTimer = heartbeatTimer;
 
   proc.onData((data: string) => {
-    for (const ws of session.clients) {
+    for (const ws of [...session.clients]) {
       if (ws.readyState !== ws.OPEN) continue;
       if (ws.bufferedAmount < 65536) {
         try {
@@ -102,6 +102,8 @@ export function createPtySession(): string {
         if (queue.length < MAX_QUEUE_SIZE) {
           queue.push(data);
           clientWriteQueues.set(ws, queue);
+        } else {
+          console.warn(`terminal: dropping data for session ${id} — client write queue full (${MAX_QUEUE_SIZE} entries)`);
         }
       }
     }
@@ -109,7 +111,7 @@ export function createPtySession(): string {
 
   proc.onExit(({ exitCode }) => {
     // Notify clients and clean up
-    for (const ws of session.clients) {
+    for (const ws of [...session.clients]) {
       if (ws.readyState === ws.OPEN) {
         // C18: Protected ws.send with try/catch
         try {

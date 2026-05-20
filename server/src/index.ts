@@ -57,11 +57,14 @@ app.use(async (c, next) => {
     await next();
     return;
   }
-  // C16: IP extraction chain with trusted header fallback (avoids spoofed x-forwarded-for bypass)
-  const ip = c.req.header("cf-connecting-ip") 
-    ?? c.req.header("x-real-ip") 
-    ?? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() 
-    ?? "local";
+  // C16: IP extraction chain — cf-connecting-ip is only trusted when CLOUDFLARE=true (behind Cloudflare);
+  // x-real-ip and x-forwarded-for are only trusted when TRUSTED_PROXY is set (behind a known reverse proxy).
+  const cf = process.env.CLOUDFLARE === "1" || process.env.CLOUDFLARE === "true";
+  const trusted = process.env.TRUSTED_PROXY === "1" || process.env.TRUSTED_PROXY === "true";
+  const ip = (cf ? c.req.header("cf-connecting-ip") || undefined : undefined)
+    ?? (trusted ? c.req.header("x-real-ip") || undefined : undefined)
+    ?? (trusted ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || undefined : undefined)
+    ?? "unknown";
   const now = Date.now();
   let entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -74,6 +77,14 @@ app.use(async (c, next) => {
   }
   await next();
 });
+
+// Evict expired rate-limit entries every 5 minutes to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(ip);
+  }
+}, 300_000).unref();
 
 // ─── CORS (P3) ─────────────────────────────────────────────────────────────────
 const corsOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173")

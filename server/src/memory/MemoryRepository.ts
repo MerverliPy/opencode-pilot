@@ -73,43 +73,48 @@ export function insertMemory(
   const db = getMemoryDb();
   const id = newId();
   const now = Date.now();
-  db.prepare(
-    `INSERT INTO memories
-     (id, server_id, content, category, confidence, tags,
-      source_session_id, source_message_id, is_pinned, is_archived,
-      created_at, updated_at)
-     VALUES (@id,@server_id,@content,@category,@confidence,@tags,
-             @source_session_id,@source_message_id,@is_pinned,@is_archived,
-             @created_at,@updated_at)`,
-  ).run({
-    id,
-    server_id: m.serverId,
-    content: m.content,
-    category: m.category,
-    confidence: m.confidence,
-    tags: JSON.stringify(m.tags),
-    source_session_id: m.sourceSessionId ?? null,
-    source_message_id: m.sourceMessageId ?? null,
-    is_pinned: m.isPinned ? 1 : 0,
-    is_archived: m.isArchived ? 1 : 0,
-    created_at: now,
-    updated_at: now,
+
+  const doInsert = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO memories
+       (id, server_id, content, category, confidence, tags,
+        source_session_id, source_message_id, is_pinned, is_archived,
+        created_at, updated_at)
+       VALUES (@id,@server_id,@content,@category,@confidence,@tags,
+               @source_session_id,@source_message_id,@is_pinned,@is_archived,
+               @created_at,@updated_at)`,
+    ).run({
+      id,
+      server_id: m.serverId,
+      content: m.content,
+      category: m.category,
+      confidence: m.confidence,
+      tags: JSON.stringify(m.tags),
+      source_session_id: m.sourceSessionId ?? null,
+      source_message_id: m.sourceMessageId ?? null,
+      is_pinned: m.isPinned ? 1 : 0,
+      is_archived: m.isArchived ? 1 : 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // C23: Atomic retention enforcement — count and delete inside same transaction
+    const config = getMemoryConfig(m.serverId);
+    const count = countMemories(m.serverId);
+    if (count > config.maxMemories) {
+      const excess = count - config.maxMemories;
+      db.prepare(`
+        DELETE FROM memories WHERE id IN (
+          SELECT id FROM memories
+          WHERE server_id = @server_id AND is_pinned = 0 AND is_archived = 0
+          ORDER BY created_at ASC
+          LIMIT @excess
+        )
+      `).run({ server_id: m.serverId, excess });
+    }
   });
 
-  // Enforce maxMemories retention: purge oldest non-pinned memories if over limit
-  const config = getMemoryConfig(m.serverId);
-  const count = countMemories(m.serverId);
-  if (count > config.maxMemories) {
-    const excess = count - config.maxMemories;
-    db.prepare(`
-      DELETE FROM memories WHERE id IN (
-        SELECT id FROM memories
-        WHERE server_id = @server_id AND is_pinned = 0 AND is_archived = 0
-        ORDER BY created_at ASC
-        LIMIT @excess
-      )
-    `).run({ server_id: m.serverId, excess });
-  }
+  doInsert();
 
   return { ...m, id, createdAt: now, updatedAt: now };
 }

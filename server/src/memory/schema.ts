@@ -77,12 +77,6 @@ CREATE TABLE IF NOT EXISTS memory_config (
   max_memories         INTEGER NOT NULL DEFAULT 2000
 )`;
 
-export const CREATE_SCHEMA_VERSION = `
-CREATE TABLE IF NOT EXISTS schema_meta (
-  key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-)`;
-
 export const CREATE_FTS5 = `
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
   content,
@@ -123,7 +117,6 @@ export const INDEXES = [
 
 /** Ordered list of all DDL to run on DB open. */
 export const ALL_MIGRATIONS: string[] = [
-  CREATE_SCHEMA_VERSION,
   CREATE_MEMORIES,
   CREATE_EMBEDDINGS,
   CREATE_PROFILE,

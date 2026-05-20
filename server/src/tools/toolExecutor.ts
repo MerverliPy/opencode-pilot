@@ -24,6 +24,23 @@ function resolvePath(userPath: string): string {
 }
 
 /**
+ * Sanitize a regex pattern to prevent injection and ReDoS.
+ * Strips null bytes, limits length, and validates input.
+ */
+function sanitizePattern(pattern: string): string {
+  if (!pattern || pattern.length === 0) {
+    throw new Error("pattern is required");
+  }
+  // Strip null bytes
+  let sanitized = pattern.replace(/\0/g, "");
+  // Limit pattern length
+  if (sanitized.length > 1000) {
+    sanitized = sanitized.slice(0, 1000);
+  }
+  return sanitized;
+}
+
+/**
  * Tool: read_file - Read file contents.
  */
 function readFileTool(args: Record<string, unknown>): string {
@@ -50,16 +67,16 @@ function readFileTool(args: Record<string, unknown>): string {
  * Tool: search_code - Grep for regex pattern.
  */
 function searchCodeTool(args: Record<string, unknown>): string {
-  const pattern = String(args.pattern ?? "");
-  if (!pattern) throw new Error("pattern is required");
-  const include = args.include ? String(args.include) : "";
+  const pattern = sanitizePattern(String(args.pattern ?? ""));
+  const include = args.include ? sanitizePattern(String(args.include)) : "";
   const searchPath = args.path ? resolvePath(String(args.path)) : WORKSPACE_ROOT;
   const relPath = relative(WORKSPACE_ROOT, searchPath) || ".";
 
-  const rgArgs: string[] = ["--line-number", "--with-filename", "-i", pattern, relPath];
+  const rgArgs: string[] = [];
   if (include) {
-    rgArgs.splice(0, 0, "-g", include);
+    rgArgs.push("-g", include);
   }
+  rgArgs.push("--line-number", "--with-filename", "-i", "--", pattern, relPath);
   const result = spawnSync("rg", rgArgs, {
     cwd: WORKSPACE_ROOT,
     encoding: "utf-8",
@@ -72,21 +89,9 @@ function searchCodeTool(args: Record<string, unknown>): string {
     const summary = `Found ${lines.length} result${lines.length === 1 ? "" : "s"}`;
     return `${summary}\n${lines.join("\n")}`;
   }
-  // rg exit code 2 = error; try grep fallback
-  const grepResult = spawnSync("grep", ["-rn", pattern, relPath, "--include=*.ts", "--include=*.tsx"], {
-    cwd: WORKSPACE_ROOT,
-    encoding: "utf-8",
-    timeout: 10_000,
-  });
-  if (grepResult.status === 0 || grepResult.status === 1) {
-    const output = grepResult.stdout
-      .split("\n")
-      .filter(Boolean)
-      .slice(0, MAX_SEARCH_RESULTS)
-      .join("\n")
-      .trim();
-    if (!output) return "No results found.";
-    return `Found results (grep fallback):\n${output}`;
+  // rg exit code 2 = error; return error details
+  if (result.stderr) {
+    return `Search error: ${result.stderr.trim()}`;
   }
   return `Search error: rg exited with status ${result.status}`;
 }

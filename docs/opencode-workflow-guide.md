@@ -1,6 +1,6 @@
 # Pilot OpenCode Workflow Guide
 
-This document explains the `.opencode` workflow used by Pilot: how OpenCode loads it, what each agent/command/tool/plugin/skill does, and the exact scripts to run for day-to-day work.
+This document explains the `.opencode` workflow used by Pilot: how OpenCode loads it, what each agent, command, tool, plugin, and skill does, and which scripts to run for day-to-day work.
 
 Pilot is a TypeScript monorepo with:
 
@@ -40,7 +40,8 @@ Rules for `opencode.json`:
 - Keep `default_agent` as `orchestrator` unless testing a specific agent.
 - Keep committed config free of secrets.
 - Add provider secrets only to local, gitignored config.
-- Do not list project-local `.opencode/plugins/*` files in the `plugin` array. OpenCode auto-loads project plugins from `.opencode/plugins/`, and listing the same files manually can double-run hooks.
+- Do not list project-local `.opencode/plugins/*` files in the `plugin` array. OpenCode auto-loads project plugins from `.opencode/plugins/`; listing the same files manually can double-run hooks.
+- Keep model entries routed through `n9router/*` unless deliberately testing a direct provider route.
 
 ### 1.3 Start OpenCode
 
@@ -82,7 +83,32 @@ Inside the OpenCode TUI, run:
 
 ---
 
-## 2. Load model: what OpenCode reads
+## 2. Current `.opencode` inventory and drift notes
+
+Current runtime inventory:
+
+| Surface | Current contents | Notes |
+| --- | ---: | --- |
+| Agents | 23 markdown agents | Current guide now tracks the full roster. |
+| Commands | 13 slash commands | No new command is required for the latest skill additions. |
+| Skills | 17 skill playbooks | `audit-tracker` and `pilot-self-run` are now documented. |
+| Tools | 1 TypeScript tool module, 4 exported tools | Exposed as `pilot_*` tools. |
+| Plugins | 6 TypeScript plugin files | `n9router-director.ts` is now explicitly documented. |
+| Rules | `pilot-core.md` | Canonical token/edit/verification/security policy. |
+| Codemap/plans | `codemap/`, `plans/` | Lightweight workflow context and queued task metadata. |
+
+Critical observations from the current `.opencode` review:
+
+- The agent roster in this guide already matched the repository: primary, discovery, repair, and reviewer agents are represented.
+- The skills table was stale. It omitted `audit-tracker` and `pilot-self-run`, even though both are present under `.opencode/skills/`.
+- `audit-tracker` is read-only and intentionally token-minimal. It reads `PILOT_CRITICAL_DEEP_AUDIT.md`, finds the next unresolved audit item by severity/sprint order, and returns only the next actionable target.
+- `pilot-self-run` is operational rather than advisory. It checks ports, stops stale Pilot processes, starts the server/UI stack, verifies health, and returns connection URLs. Treat its IP/URL output as environment-specific and verify it before copying into user-facing material.
+- The plugin section was incomplete. `n9router-director.ts` protects routing hygiene by warning when `opencode.json` edits introduce non-`n9router/*` model entries.
+- `maintainer` is a primary edit-capable agent, but normal automatic routing should still prefer `/docs`, `/implement`, or direct `opencode run --agent maintainer` invocation when maintenance ownership is required.
+
+---
+
+## 3. Load model: what OpenCode reads
 
 OpenCode composes this project workflow from these layers:
 
@@ -101,7 +127,7 @@ The current workflow starts from `orchestrator` by default. The orchestrator is 
 
 ---
 
-## 3. High-level workflow
+## 4. High-level workflow
 
 Use this path for normal engineering work:
 
@@ -112,7 +138,7 @@ triage -> context -> plan -> implement -> verify -> review -> bench/profile when
 Expanded:
 
 1. **Triage**: classify the request or current diff into workspace, risk labels, agents, and verification gates.
-2. **Context pack**: collect only files, symbols, tests, commands, and constraints needed by the next agent.
+2. **Context pack**: collect only files, symbols, tests, commands, constraints, and risks needed by the next agent.
 3. **Plan**: define goal, non-goals, affected files, implementation batches, risks, and gates.
 4. **Implement**: one edit-capable owner makes a minimal coherent diff.
 5. **Verify**: run the narrowest adequate command first.
@@ -133,21 +159,21 @@ Canonical pre-merge gate:
 
 ---
 
-## 4. Agents
+## 5. Agents
 
 Agents are configured in `.opencode/agents/*.md`. Each agent has a mode, permission profile, optional model, and step budget.
 
-### 4.1 Primary agents
+### 5.1 Primary agents
 
 | Agent | Edits files | Main use | Notes |
 | --- | ---: | --- | --- |
-| `orchestrator` | No | Default router and synthesizer | Step budget 10. Starts with classifier/context pack. |
-| `implementer` | Yes | Main TypeScript/React/Hono implementation owner | Step budget 12. Uses context packs and targeted reviewers. |
-| `verifier` | No | Build/type/test/lint gatekeeper | Step budget 8. Uses changed-file-aware verification. |
+| `orchestrator` | No | Default router and synthesizer | Starts with classifier/context pack and delegates narrowly. |
+| `implementer` | Yes | Main TypeScript/React/Hono implementation owner | Uses context packs and targeted reviewers. |
+| `verifier` | No | Build/type/test/lint gatekeeper | Uses changed-file-aware verification. |
 | `planner` | No | Implementation and migration planning | Use when changes are non-trivial. |
-| `maintainer` | Yes | Docs/refactor/workflow maintenance | Use for deliberate workflow/doc upkeep. |
+| `maintainer` | Yes | Docs/refactor/workflow maintenance | Use for deliberate workflow/doc upkeep. Prefer direct invocation when needed. |
 
-### 4.2 Discovery and routing agents
+### 5.2 Discovery and routing agents
 
 | Agent | Edits files | Use when |
 | --- | ---: | --- |
@@ -156,7 +182,7 @@ Agents are configured in `.opencode/agents/*.md`. Each agent has a mode, permiss
 | `context-scout` | No | You need broader repository discovery, but still want bounded output. |
 | `docs-scout` | No | The task requires external/OpenCode/n9router documentation lookup. |
 
-### 4.3 Design, testing, and repair agents
+### 5.3 Design, testing, and repair agents
 
 | Agent | Edits files | Use when |
 | --- | ---: | --- |
@@ -166,7 +192,7 @@ Agents are configured in `.opencode/agents/*.md`. Each agent has a mode, permiss
 | `e2e-runner` | Yes | Playwright specs need to be created, modified, or debugged. |
 | `docs-updater` | Yes | Existing docs/codemaps need source-of-truth updates. |
 
-### 4.4 Reviewer agents
+### 5.4 Reviewer agents
 
 | Agent | Edits files | Trigger |
 | --- | ---: | --- |
@@ -180,75 +206,45 @@ Agents are configured in `.opencode/agents/*.md`. Each agent has a mode, permiss
 | `ui-render-reviewer` | No | React rendering, Zustand subscriptions, xterm/CodeMirror cost. |
 | `workflow-profiler` | No | Benchtest metrics, agent fanout, RTK savings, workflow regressions. |
 
-### 4.5 Direct agent scripts
+### 5.5 Direct agent scripts
 
 Use these when you want to bypass slash commands and start from a known agent:
 
 ```bash
 opencode run --agent orchestrator "Triage this task: add bounded pagination to memory search."
 opencode run --agent verifier "Use changed files to propose and run the narrowest verification gate."
+opencode run --agent maintainer "Update the OpenCode workflow guide after skill changes."
 opencode run --agent performance-reviewer "Review the current diff for UI render and SSE performance risk."
 opencode run --agent workflow-profiler "Analyze the latest benchtest output and identify workflow bottlenecks."
 ```
 
-Prefer slash commands for normal work because they already encode the intended route.
+Prefer slash commands for normal work because they encode the intended route.
 
 ---
 
-## 5. Slash command surface
+## 6. Slash command surface
 
 Commands live under `.opencode/commands/*.md`. In the TUI, type `/` followed by the command name.
 
-### 5.1 Routing and context commands
+| Command | Primary purpose |
+| --- | --- |
+| `/triage` | Classify a task or current diff into workspaces, risk labels, route, verification, and context budget. |
+| `/context` | Build a compact context pack for the next agent. |
+| `/plan` | Create a compact implementation plan without editing. |
+| `/implement` | Run the optimized implementation flow. |
+| `/fix-build` | Use `build-fixer` for TypeScript, build, lint, import, and dependency-resolution failures. |
+| `/docs` | Update existing docs or codemaps from source-of-truth files. |
+| `/verify` | Run targeted or full verification through `verifier`. |
+| `/preflight` | Fast pre-PR check from changed files. |
+| `/review` | Risk-based review fanout. |
+| `/perf` | Focused performance review. |
+| `/e2e` | Create, run, or debug Playwright E2E tests. |
+| `/setup-n9router` | Review or apply n9router setup guidance. |
+| `/bench` | Run or analyze OpenCode workflow benchmark metrics. |
 
-#### `/triage`
+### 6.1 Implementation flow
 
-Classifies a task or current diff into workspaces, file patterns, risk labels, route, verification, and context budget.
-
-```text
-/triage current diff
-/triage add a memory search endpoint with bounded pagination
-/triage review changes to server terminal streaming
-```
-
-Use before implementation when scope is unclear.
-
-#### `/context`
-
-Builds a compact context pack for the next agent. It should return only task, files, symbols, patterns, tests, commands, constraints, risks, and files not to read.
-
-```text
-/context current diff
-/context improve terminal SSE cleanup
-/context add a shared DTO consumed by server and UI
-```
-
-Use this when a task is broad enough that the implementer would otherwise scan too much.
-
-#### `/plan`
-
-Creates a compact implementation plan without editing.
-
-```text
-/plan add authenticated project switching to the UI and server
-/plan migrate memory list APIs to cursor pagination
-```
-
-Required output includes goal/non-goals, files/symbols, agent route, implementation batches, verification gates, risks, and open questions.
-
-### 5.2 Implementation and repair commands
-
-#### `/implement`
-
-Runs the full optimized implementation flow:
-
-```text
-/implement fix stale terminal SSE cleanup when a browser tab closes
-/implement add a typed shared response for memory search results
-/implement reduce Zustand subscription fanout in the terminal page
-```
-
-Flow:
+`/implement` should follow this route:
 
 ```text
 change-classifier -> context-pack-builder -> plan -> implementer -> pilot_verify_plan -> verifier -> risk-based reviewers
@@ -261,145 +257,18 @@ Rules:
 - No broad verification until narrow gates are insufficient.
 - Review only the risk surfaces that changed.
 
-#### `/fix-build`
+### 6.2 Verification modes
 
-Uses `build-fixer` for TypeScript, build, lint, import, and dependency-resolution failures.
-
-```text
-/fix-build npm run check:opencode failed with TS errors
-/fix-build npm run typecheck -w server failed
-/fix-build current failing build output
-```
-
-Use this after a failed command. Paste only the first useful error group when possible.
-
-#### `/docs`
-
-Updates existing docs or codemaps from source-of-truth files.
-
-```text
-/docs update OpenCode workflow documentation after command changes
-/docs refresh codemap for server terminal modules
-```
-
-Rules:
-
-- Update existing docs first.
-- Do not create new markdown files unless requested.
-- Keep docs tied to package scripts and source imports.
-
-### 5.3 Verification and review commands
-
-#### `/verify`
-
-Runs targeted or full verification through `verifier`.
-
-```text
-/verify
-/verify quick
-/verify full
-/verify pre-pr
-```
-
-Modes:
-
-| Argument | Behavior |
+| `/verify` argument | Behavior |
 | --- | --- |
 | empty | Choose narrowest adequate gate from changed files. |
 | `quick` | Root/package typecheck and build only. |
 | `full` | Typecheck, build, lint, unit tests, and E2E when practical. |
 | `pre-pr` | Full verification plus risk-based security/performance review. |
 
-#### `/preflight`
-
-Fast pre-PR check from changed files.
-
-```text
-/preflight
-/preflight current diff before opening a PR
-```
-
-It uses `pilot_changed_files` and `pilot_verify_plan`, then runs the narrowest sequence first. It avoids long E2E suites unless risk labels or the user request justify them.
-
-#### `/review`
-
-Risk-based review fanout.
-
-```text
-/review current diff
-/review changes to shared API response and UI store
-/review terminal proxy changes for security and cleanup
-```
-
-Reviewer routing:
-
-| Risk label / change | Reviewer route |
-| --- | --- |
-| General behavior | `code-reviewer` |
-| TS/React/Hono typing | `typescript-reviewer` |
-| Shared/server/UI contracts | `api-contract-reviewer` |
-| Auth/session/proxy/terminal/SQLite/secrets | `security-auditor` |
-| PTY/SSE/EventSource/WebSocket/proxy/tunnel | `terminal-stream-reviewer` |
-| SQLite/memory/migrations/query bounds | `sqlite-memory-reviewer` |
-| React/Zustand/xterm/CodeMirror | `ui-render-reviewer` |
-| Rendering/streaming/memory/query/bundle | `performance-reviewer` |
-
-#### `/perf`
-
-Focused performance review.
-
-```text
-/perf current diff
-/perf terminal output retention and SSE fanout
-/perf UI store selectors on the terminal page
-```
-
-It checks React render churn, Zustand over-subscription, xterm/CodeMirror cost, streaming fanout, terminal output retention, SQLite bounds, and Vite bundle/build regression.
-
-### 5.4 E2E, setup, and profiling commands
-
-#### `/e2e`
-
-Creates, runs, or debugs Playwright E2E tests.
-
-```text
-/e2e add coverage for terminal reconnect after refresh
-/e2e debug project switcher user flow
-```
-
-Do not start persistent dev servers without explicit approval. Use tmux for long-running dev servers when they are needed.
-
-#### `/setup-n9router`
-
-Reviews or applies n9router setup guidance.
-
-```text
-/setup-n9router explain current model routing
-/setup-n9router check local opencode.json for n9router consistency
-/setup-n9router validate local model list
-```
-
-Never write API keys or provider secrets into committed files.
-
-#### `/bench`
-
-Runs or analyzes OpenCode workflow benchmark metrics.
-
-```text
-/bench latest metrics
-/bench compare reviewer fanout before and after the current change
-/bench analyze RTK compression savings
-```
-
-When a fresh command is needed, the benchmark workflow starts from:
-
-```bash
-BENCHTEST_ENABLED=1 npm run benchtest:quick
-```
-
 ---
 
-## 6. Custom deterministic tools
+## 7. Custom deterministic tools
 
 Custom tools live in `.opencode/tools/pilot.ts`. The file exports multiple tools; OpenCode exposes them as `pilot_<export name>`:
 
@@ -418,14 +287,7 @@ These tools are usually invoked by agents, not by a human shell command. To forc
 /verify use pilot_verify_plan before running commands
 ```
 
-Non-interactive examples:
-
-```bash
-opencode run --agent orchestrator "Use pilot_changed_files and pilot_risk_scan to classify the current diff. Do not edit."
-opencode run --agent verifier "Use pilot_verify_plan and run only the narrowest verification gates."
-```
-
-### 6.1 Risk labels emitted by custom tools
+### 7.1 Risk labels emitted by custom tools
 
 | Risk label | Meaning |
 | --- | --- |
@@ -445,27 +307,29 @@ opencode run --agent verifier "Use pilot_verify_plan and run only the narrowest 
 
 ---
 
-## 7. Skills
+## 8. Skills
 
 Skills are domain-specific playbooks in `.opencode/skills/<name>/SKILL.md`. Agents load them only when relevant.
 
 | Skill | Use when |
 | --- | --- |
-| `workflow-routing` | Choosing agents, reviewers, and verification gates from changed files. |
-| `pilot-architecture` | Navigating Pilot package boundaries and source layout. |
-| `typescript-react-hono` | TypeScript, React, Vite, Hono implementation patterns. |
-| `tdd-verification` | Test-first or behavior-changing work. |
-| `security-review` | General app security review. |
-| `server-boundary-security` | Hono routes, proxy, terminal, filesystem, auth/session, CORS, secrets. |
-| `react-zustand-performance` | React, Zustand, xterm, CodeMirror, effects, selectors. |
-| `sqlite-memory-safety` | SQLite, memory repositories, persistence, migrations, retention. |
-| `terminal-sse-streaming` | Terminal, PTY, SSE, EventSource, WebSocket, proxy, tunnel. |
-| `pilot-performance` | Cross-cutting Pilot performance review. |
+| `audit-tracker` | Finding the next unfinished `PILOT_CRITICAL_DEEP_AUDIT.md` item by sprint/severity and returning the next action in a compact form. |
+| `benchtest-analysis` | Benchmark outputs, workflow metrics, RTK savings, fanout regressions. |
+| `codemap-maintenance` | Codemap/doc updates. |
 | `e2e-playwright` | Browser flows, Playwright traces, screenshots, videos. |
 | `n9router-workflow` | n9router model/provider setup and validation. |
-| `codemap-maintenance` | Codemap/doc updates. |
+| `pilot-architecture` | Navigating Pilot package boundaries and source layout. |
+| `pilot-performance` | Cross-cutting Pilot performance review. |
+| `pilot-self-run` | Starting/stopping the full Pilot stack, verifying server/UI health, and returning connection URLs for local/remote testing. |
 | `plugin-safety` | OpenCode plugin/tool safety and hook behavior. |
-| `benchtest-analysis` | Benchmark outputs, workflow metrics, RTK savings, fanout regressions. |
+| `react-zustand-performance` | React, Zustand, xterm, CodeMirror, effects, selectors. |
+| `security-review` | General app security review. |
+| `server-boundary-security` | Hono routes, proxy, terminal, filesystem, auth/session, CORS, secrets. |
+| `sqlite-memory-safety` | SQLite, memory repositories, persistence, migrations, retention. |
+| `tdd-verification` | Test-first or behavior-changing work. |
+| `terminal-sse-streaming` | Terminal, PTY, SSE, EventSource, WebSocket, proxy, tunnel. |
+| `typescript-react-hono` | TypeScript, React, Vite, Hono implementation patterns. |
+| `workflow-routing` | Choosing agents, reviewers, and verification gates from changed files. |
 
 Prompt examples:
 
@@ -474,15 +338,75 @@ Prompt examples:
 /review terminal SSE diff; use terminal-sse-streaming and server-boundary-security
 /perf UI terminal page; use react-zustand-performance
 /bench latest metrics; use benchtest-analysis
+Use audit-tracker to identify the next unresolved critical audit item.
+Start the full Pilot stack and provide URLs; use pilot-self-run.
 ```
+
+### 8.1 `audit-tracker`
+
+Purpose:
+
+- Read `PILOT_CRITICAL_DEEP_AUDIT.md`.
+- Find the first incomplete `- [ ]` item by sprint priority: Critical, High, Medium, Low.
+- Skip `[~]` in-progress and `[x]` completed items.
+- Return only the next task, file/line, fix hint, and compact remaining-count context.
+
+Use it for audit-driven remediation:
+
+```text
+Use audit-tracker to find the next unfinished audit item. Do not edit yet.
+/implement the next audit-tracker finding with the narrowest verification gate
+```
+
+Verification: none for the skill itself. It is read-only. Verification belongs to the implementation that follows.
+
+### 8.2 `pilot-self-run`
+
+Purpose:
+
+- Detect whether Pilot ports are already occupied.
+- Stop previous Pilot runs through `scripts/pilot-stop.sh` when needed.
+- Start the stack through `scripts/pilot-start.sh`.
+- Verify server/UI health.
+- Return connection URLs and Pilot Settings values for testing.
+
+Use it for local, LAN, Tailscale, or iPhone testing setup:
+
+```text
+Start the full Pilot stack for remote phone testing; use pilot-self-run.
+```
+
+Operational notes:
+
+- The skill can kill stale Pilot processes. Confirm this behavior is appropriate before using it on shared machines.
+- The emitted URLs are environment-specific. If Tailscale or LAN addresses change, update the skill before relying on its output.
+- `OPENCODE_URL` must be configured for proxy routes.
+- `PILOT_AUTH_TOKEN` should remain unset for the current unauthenticated local flow described by the skill.
+- Vite must run from `ui/` when the dev server is used.
+- The Pilot app should point at the Pilot server port, not the raw OpenCode upstream port.
 
 ---
 
-## 8. Plugins
+## 9. Plugins
 
 Plugins live in `.opencode/plugins/*.ts` and are auto-loaded by OpenCode from the project plugin directory.
 
-### 8.1 `tool-guardrails.ts`
+### 9.1 `n9router-director.ts`
+
+Hooks:
+
+- `session.created`
+- `tool.execute.before`
+
+Responsibilities:
+
+- Announce that the workflow director is active when a session starts.
+- Watch edits/writes to `opencode.json` or `opencode.jsonc`.
+- Warn when config edits appear to introduce direct non-`n9router/*` model entries.
+
+Use this as a guardrail, not as a hard policy substitute. Provider routing changes should still be reviewed explicitly.
+
+### 9.2 `tool-guardrails.ts`
 
 Hook: `tool.execute.before`.
 
@@ -501,7 +425,7 @@ tmux new-session -d -s pilot-dev "npm run dev"
 tmux attach -t pilot-dev
 ```
 
-### 8.2 `rtk-compressor.ts`
+### 9.3 `rtk-compressor.ts`
 
 Hook: `tool.execute.after`.
 
@@ -513,7 +437,7 @@ Outputs are annotated like:
 [RTK: <filter> <before>→<after> bytes (-<saved>)]
 ```
 
-### 8.3 `build-log-compressor.ts`
+### 9.4 `build-log-compressor.ts`
 
 Hook: `tool.execute.after`.
 
@@ -532,7 +456,7 @@ Output annotation:
 [RTK: build-log/<filter> <before>→<after> bytes (-<saved>)]
 ```
 
-### 8.4 `benchtest-metrics.ts`
+### 9.5 `benchtest-metrics.ts`
 
 Hooks:
 
@@ -557,11 +481,15 @@ npm run benchtest:quick
 
 Metrics include tool duration, output size, estimated output tokens, RTK filter, RTK before/after bytes, and compaction context size.
 
+### 9.6 `index.ts`
+
+`index.ts` is a plugin export barrel. It re-exports the n9router director, tool guardrails, RTK compressor, and the benchtest plugin entry point. Do not treat it as a separate policy surface unless the runtime explicitly loads the barrel.
+
 ---
 
-## 9. Verification scripts
+## 10. Verification scripts
 
-### 9.1 Full local verification
+### 10.1 Full local verification
 
 Use this before merging workflow or TypeScript changes:
 
@@ -574,9 +502,7 @@ npm run benchtest:quick
 BENCHTEST_ENABLED=1 npm run benchtest:quick
 ```
 
-### 9.2 Shell script version
-
-Copy/paste this when validating a PR:
+### 10.2 Shell script version
 
 ```bash
 #!/usr/bin/env bash
@@ -590,7 +516,7 @@ npm run benchtest:quick
 BENCHTEST_ENABLED=1 npm run benchtest:quick
 ```
 
-### 9.3 Changed-file-aware manual verification
+### 10.3 Changed-file-aware manual verification
 
 Use the OpenCode command first:
 
@@ -610,7 +536,7 @@ Then run the commands it recommends. Common mappings:
 | `benchtest/**` | `npm run build -w benchtest && npm run benchtest:quick` |
 | Cross-package | `npm run typecheck && npm run build` |
 
-### 9.4 Build failure repair loop
+### 10.4 Build failure repair loop
 
 ```bash
 npm run check:opencode
@@ -633,60 +559,6 @@ Then:
 ```text
 /fix-build npm run typecheck -w server failed with: <paste first useful error group>
 ```
-
----
-
-## 10. Benchtest workflows
-
-Benchtest requires compiled benchtest files:
-
-```bash
-npm run build -w benchtest
-```
-
-Quick benchmark:
-
-```bash
-npm run benchtest:quick
-```
-
-Quick benchmark with instrumentation:
-
-```bash
-BENCHTEST_ENABLED=1 npm run benchtest:quick
-```
-
-Custom metrics file:
-
-```bash
-BENCHTEST_ENABLED=1 \
-BENCHTEST_METRICS_OUT=/tmp/pilot-opencode-metrics.jsonl \
-BENCHTEST_SESSION_ID="manual-$(date +%Y%m%d-%H%M%S)" \
-npm run benchtest:quick
-```
-
-OpenCode analysis command:
-
-```text
-/bench latest metrics
-```
-
-Relevant benchmark scenarios include:
-
-- `workflow-routing`
-- `context-pack-size`
-- `plugin-hook-overhead`
-- `rtk-compression-savings`
-- `verify-plan-accuracy`
-- `reviewer-fanout-control`
-
-Relevant thresholds include:
-
-- routing classification latency
-- context pack line budget
-- plugin hook overhead
-- RTK minimum savings ratio
-- reviewer fanout maximum
 
 ---
 
@@ -806,6 +678,42 @@ npm run benchtest:quick
 BENCHTEST_ENABLED=1 npm run benchtest:quick
 ```
 
+### 11.6 Audit-driven remediation
+
+```text
+Use audit-tracker to identify the next unresolved audit finding.
+/plan implement the returned audit finding with minimal scope
+/implement implement the returned audit finding with minimal scope
+/preflight
+/review current diff
+```
+
+Expected behavior:
+
+- The first prompt is read-only and returns the next target from `PILOT_CRITICAL_DEEP_AUDIT.md`.
+- Implementation follows normal single-owner edit policy.
+- Verification is based on the files touched by the fix, not on the audit tracker itself.
+
+### 11.7 Start Pilot for local or remote testing
+
+```text
+Start the full Pilot stack and return testing URLs; use pilot-self-run.
+```
+
+Expected behavior:
+
+- Checks whether Pilot ports are already occupied.
+- Stops stale Pilot processes when appropriate.
+- Starts the stack using repository scripts.
+- Verifies server/UI health.
+- Returns the current URLs and Pilot Settings values.
+
+Safety notes:
+
+- Do not use this on a shared environment without accepting that stale Pilot processes may be stopped.
+- Verify the returned Tailscale/LAN/local URLs before sending them to another tester.
+- For persistent manual dev servers, prefer tmux.
+
 ---
 
 ## 12. Safety model
@@ -910,6 +818,17 @@ When adding a new command:
 4. Document exact examples in this guide.
 5. Run `npm run check:opencode`.
 
+When adding a new skill:
+
+1. Add `.opencode/skills/<name>/SKILL.md`.
+2. Include frontmatter with `name`, `description`, and `compatibility: opencode`.
+3. Keep the playbook narrow enough that agents load it only when relevant.
+4. State whether the skill is read-only or operational.
+5. Document any commands it may run and whether it can stop processes, write files, or touch networked services.
+6. Update the skills table, prompt examples, and recipes in this guide.
+7. If automatic selection is desired, update the relevant agent operating rules.
+8. Run `npm run check:opencode`.
+
 When adding a new custom tool:
 
 1. Add or update `.opencode/tools/<namespace>.ts`.
@@ -925,7 +844,8 @@ When adding a new plugin:
 2. Keep hooks cheap. Hooks run around tool calls and can affect every interaction.
 3. Make metric/logging plugins gated by environment variables.
 4. Avoid duplicate plugin loading from both config and `.opencode/plugins/`.
-5. Run `npm run check:opencode`.
+5. Document hooks, warnings/blocks, and environment gates in this guide.
+6. Run `npm run check:opencode`.
 
 ---
 
@@ -982,11 +902,19 @@ npm run test:e2e
 /bench latest metrics
 ```
 
+### Skill prompts
+
+```text
+Use audit-tracker to identify the next unresolved critical audit item.
+Start the full Pilot stack and return testing URLs; use pilot-self-run.
+```
+
 ### Non-interactive OpenCode
 
 ```bash
 opencode run --agent orchestrator "Use pilot_changed_files and pilot_risk_scan to classify the current diff. Do not edit."
 opencode run --agent context-pack-builder "Build a context pack for improving terminal SSE cleanup."
 opencode run --agent verifier "Use pilot_verify_plan, then run the narrowest verification gates."
+opencode run --agent maintainer "Update the OpenCode workflow guide after skill changes."
 opencode run --agent workflow-profiler "Analyze latest benchtest output and report reviewer fanout regressions."
 ```

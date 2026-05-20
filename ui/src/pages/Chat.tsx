@@ -46,6 +46,7 @@ export function Chat() {
   const turns = useSessionStore((s) => s.turns);
   const permissions = useSessionStore((s) => s.permissions);
   const setSession = useSessionStore((s) => s.setSession);
+  const updateTitle = useSessionStore((s) => s.updateTitle);
   const setStatus = useSessionStore((s) => s.setStatus);
   const hydrateTurns = useSessionStore((s) => s.hydrateTurns);
   const upsertMessage = useSessionStore((s) => s.upsertMessage);
@@ -247,6 +248,8 @@ export function Chat() {
       return;
     }
 
+    const previousTitle = session.title;
+    updateTitle(nextTitle);
     setIsSavingTitle(true);
     setTitleError(null);
     try {
@@ -255,6 +258,8 @@ export function Chat() {
       setTitleDraft(updatedSession.title);
       setIsEditingTitle(false);
     } catch (err) {
+      updateTitle(previousTitle);
+      setTitleDraft(previousTitle);
       setTitleError(friendlyError(err));
       log.error("chat", "session title update failed", err);
     } finally {

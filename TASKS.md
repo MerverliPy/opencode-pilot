@@ -100,7 +100,7 @@ Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`. Next: Tier 2 items.
 | P12 | [x] Implement rich Markdown rendering      | 3h     | —    | react-markdown + remark-gfm + rehype-highlight |
 | P13 | [x] Display cost and token counts          | 2h     | —    | MessageCostFooter in TurnView, 6 tests        |
 | P14 | [x] Implement light theme (system-aware)   | 4h     | —    | CSS vars + prefers-color-scheme + targeted tests |
-| P15 | [ ] Session title editing (inline edit)    | 2h     | —    | TBD                                            |
+| P15 | [x] Session title editing (inline edit)    | 2h     | —    | Optimistic update + rollback, 576 tests, tsc clean |
 | P16 | [ ] Message retry / resend UX              | 3h     | —    | TBD                                            |
 | P17 | [ ] Add offline indicator                  | 1h     | —    | TBD                                            |
 | P18 | [ ] Session deep linking from push          | 2h     | —    | TBD                                            |
@@ -112,6 +112,7 @@ Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`. Next: Tier 2 items.
 | 1    | P12  | `MarkdownContent.tsx` wraps react-markdown + remark-gfm + rehype-highlight. MessageList renders text parts via MarkdownContent. Jest mocks for ESM packages. 429 tests passing, tsc clean, lint clean. |
 | 2    | P13  | `MessageCostFooter` component in `MessageList.tsx` shows `$cost · Xk in · Yk out · Zk reason` below assistant bubbles. `formatTokenCount` helper for ≥1000 abbreviation. 6 new tests. 435 tests passing, tsc clean, lint clean. |
 | 3    | P14  | System-aware light theme via CSS custom properties in `index.css` + `theme.ts`, HTML theme-color updates, xterm/CodeMirror/Diff light-theme coverage, and stronger Markdown renderer tests. 440 tests passing, tsc clean. |
+| 4    | P15  | Session title inline editing with optimistic update + rollback on failure. `Chat.tsx` — added `updateTitle` selector, optimistic `updateTitle()` before API call, rollback on catch. `Chat.test.tsx` — added `updateTitle` to mock store. 576 tests passing, tsc clean. |
 
 ### Post-Migration Backlog (Moved to Tier 2-3)
 

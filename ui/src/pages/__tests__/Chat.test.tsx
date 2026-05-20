@@ -57,6 +57,7 @@ jest.mock("../../store/session", () => ({
       pushPermission: mockPushPermission,
       resolvePermission: mockResolvePermission,
       reset: mockReset,
+      updateTitle: jest.fn(),
     }),
 }));
 

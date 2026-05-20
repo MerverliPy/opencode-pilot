@@ -23,6 +23,8 @@ interface PtySession {
   pty: pty.IPty;
   created: number;
   clients: Set<WebSocket>;
+  writeQueues?: Map<WebSocket, string[]>;  // C17
+  heartbeatTimer?: ReturnType<typeof setInterval>;  // C19
 }
 
 const sessions = new Map<string, PtySession>();
@@ -52,22 +54,54 @@ export function createPtySession(): string {
   };
 
   const HEARTBEAT_INTERVAL = 30_000;
+
+  // C17: Per-client write queues to prevent silent data loss under backpressure
+  const MAX_QUEUE_SIZE = 100;
+  const clientWriteQueues = new Map<WebSocket, string[]>();
+  session.writeQueues = clientWriteQueues;
+
+  const flushWriteQueue = (ws: WebSocket) => {
+    const queue = clientWriteQueues.get(ws);
+    if (!queue || queue.length === 0) return;
+    while (queue.length > 0 && ws.readyState === ws.OPEN && ws.bufferedAmount < 65536) {
+      const next = queue.shift()!;
+      try {
+        ws.send(next);
+      } catch {
+        session.clients.delete(ws);
+        clientWriteQueues.delete(ws);
+        return;
+      }
+    }
+  };
+
   const heartbeatTimer = setInterval(() => {
     for (const ws of session.clients) {
       if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
         session.clients.delete(ws);
+        clientWriteQueues.delete(ws);
+      } else {
+        flushWriteQueue(ws);  // C17: drain queued writes
       }
     }
   }, HEARTBEAT_INTERVAL);
+  session.heartbeatTimer = heartbeatTimer;
 
-  // Broadcast pty output to all connected clients
   proc.onData((data: string) => {
     for (const ws of session.clients) {
-      if (ws.readyState === ws.OPEN && ws.bufferedAmount < 65536) {
+      if (ws.readyState !== ws.OPEN) continue;
+      if (ws.bufferedAmount < 65536) {
         try {
           ws.send(data);
         } catch {
           session.clients.delete(ws);
+          clientWriteQueues.delete(ws);
+        }
+      } else {
+        const queue = clientWriteQueues.get(ws) ?? [];
+        if (queue.length < MAX_QUEUE_SIZE) {
+          queue.push(data);
+          clientWriteQueues.set(ws, queue);
         }
       }
     }
@@ -77,11 +111,16 @@ export function createPtySession(): string {
     // Notify clients and clean up
     for (const ws of session.clients) {
       if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({ type: "exit", code: exitCode }));
-        ws.close();
+        // C18: Protected ws.send with try/catch
+        try {
+          ws.send(JSON.stringify({ type: "exit", code: exitCode }));
+        } catch { /* client gone */ }
+        try {
+          ws.close();
+        } catch { /* already closing */ }
       }
     }
-    clearInterval(heartbeatTimer);
+    clearInterval(session.heartbeatTimer);
     sessions.delete(id);
   });
 
@@ -101,6 +140,10 @@ export function listSessions(): Array<{ id: string; created: number }> {
 export function killSession(id: string): boolean {
   const session = sessions.get(id);
   if (!session) return false;
+  // C19: Clear heartbeat timer to prevent leak
+  if (session.heartbeatTimer) {
+    clearInterval(session.heartbeatTimer);
+  }
   try {
     session.pty.kill();
   } catch {
@@ -156,15 +199,23 @@ export function attachTerminalWS(
 
     const session = sessions.get(sessionId);
     if (!session) {
-      ws.send(JSON.stringify({ type: "error", message: "Session not found" }));
-      ws.close();
+      // C18: Protected ws.send with try/catch
+      try {
+        ws.send(JSON.stringify({ type: "error", message: "Session not found" }));
+      } catch { /* client gone */ }
+      try {
+        ws.close();
+      } catch { /* already closing */ }
       return;
     }
 
     session.clients.add(ws);
 
     // Send session ID so client knows which session was created
-    ws.send(JSON.stringify({ type: "session", id: sessionId }));
+    // C18: Protected ws.send with try/catch
+    try {
+      ws.send(JSON.stringify({ type: "session", id: sessionId }));
+    } catch { /* client gone */ }
 
     ws.on("message", (raw: Buffer | string) => {
       const msg = raw.toString();
@@ -197,11 +248,13 @@ export function attachTerminalWS(
 
     ws.on("close", () => {
       session.clients.delete(ws);
+      session.writeQueues?.delete(ws);  // C17: clean up write queue
     });
 
     ws.on("error", (err) => {
       console.error("[terminal] WebSocket error:", err);
       session.clients.delete(ws);
+      session.writeQueues?.delete(ws);  // C17: clean up write queue
     });
   });
 }

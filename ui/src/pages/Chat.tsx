@@ -156,7 +156,11 @@ export function Chat() {
     }
   };
 
-  useEventStream(server, handleEvent);
+  // C13: Pass stable primitives to SSE hook
+  const serverId = server?.id ?? null;
+  const serverUrl = server?.url ?? null;
+  const serverAuthToken = server?.authToken ?? null;
+  useEventStream(serverId, serverUrl, serverAuthToken, handleEvent);
 
   // ── Session bootstrap ────────────────────────────────────────────────────────
   useEffect(() => {

@@ -3,6 +3,7 @@
  */
 import { getMemoryDb, newId } from "./memoryDb.js";
 import type { Memory, MemoryCategory, MemoryConfig } from "./schema.js";
+import { safeJsonParse } from "./jsonHelpers.js";
 
 // ── Row shapes ───────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ export function rowToMemory(r: MemoryRow): Memory {
     content: r.content,
     category: r.category as MemoryCategory,
     confidence: r.confidence,
-    tags: JSON.parse(r.tags) as string[],
+    tags: safeJsonParse<string[]>(r.tags, []),
     sourceSessionId: r.source_session_id ?? undefined,
     sourceMessageId: r.source_message_id ?? undefined,
     isPinned: r.is_pinned === 1,

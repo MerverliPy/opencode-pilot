@@ -6,7 +6,7 @@
  * Auto-reconnects with exponential backoff.
  */
 import { useEffect, useRef } from "react";
-import type { ServerConfig, ServerEvent } from "@pilot-shared/types";
+import type { ServerEvent } from "@pilot-shared/types";
 import { log } from "./logger";
 
 type Handler = (event: ServerEvent) => void;
@@ -61,7 +61,12 @@ async function* readSSEEvents(
  * When `server.authToken` is set, sends `Authorization: Bearer <token>`
  * so the Pilot server's auth middleware allows the request.
  */
-export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
+export function useEventStream(
+  serverId: string | null,
+  serverUrl: string | null,
+  authToken: string | null,
+  onEvent: Handler,
+) {
   const handlerRef = useRef(onEvent);
 
   // Keep ref in sync with the latest handler on every render so the connection
@@ -71,7 +76,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
   handlerRef.current = onEvent;
 
   useEffect(() => {
-    if (!server) return;
+    if (!serverId || !serverUrl) return;
     let stopped = false;
     let controller: AbortController | null = null;
     let backoff = 500;
@@ -79,10 +84,10 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
     const connect = async () => {
       if (stopped) return;
 
-      const url = `${server.url.replace(/\/$/, "")}/event`;
+      const url = `${serverUrl.replace(/\/$/, "")}/event`;
       const headers: Record<string, string> = { Accept: "text/event-stream" };
-      if (server.authToken) {
-        headers.Authorization = `Bearer ${server.authToken}`;
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
       }
 
       controller = new AbortController();
@@ -101,7 +106,7 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
           throw new Error(`HTTP ${status}`);
         }
 
-        log.info("sse", `connected → ${server.name ?? server.url}`);
+        log.info("sse", `connected → ${serverUrl}`);
         backoff = 500; // reset backoff on successful connection
 
         const reader = response.body?.getReader();
@@ -135,8 +140,8 @@ export function useEventStream(server: ServerConfig | null, onEvent: Handler) {
       stopped = true;
       controller?.abort();
     };
-    // Depend on individual properties so a new server object with identical
-    // values does not trigger an unnecessary reconnect.
+    // Depend on individual primitives so identical values
+    // do not trigger an unnecessary reconnect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [server?.id, server?.url, server?.username, server?.password, server?.authToken]);
+  }, [serverId, serverUrl, authToken]);
 }

@@ -64,6 +64,7 @@ export function Terminal() {
 
   // Maintain tabs as a ref to avoid stale closures in effects
   const tabsRef = useRef<TermTab[]>([]);
+  const openedTabsRef = useRef<Set<string>>(new Set());
   const [tabs, setTabs] = useState<Array<{ id: string; label: string }>>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
 
@@ -132,27 +133,17 @@ export function Terminal() {
     const tab: TermTab = { ...tabData, containerRef: ref };
 
     containerRefs.current.set(id, ref);
+    // C15: Dispose any stale xterm at same tab position before creating new one
+    for (const existing of tabsRef.current) {
+      if (existing.id === id) {
+        existing.ws?.close();
+        existing.term.dispose();
+      }
+    }
+    tabsRef.current = tabsRef.current.filter((t) => t.id !== id);
     tabsRef.current.push(tab);
     setTabs((prev) => [...prev, { id, label: tab.label }]);
     setActiveTabId(id);
-
-    // Connect after state update (container div will be created)
-    setTimeout(() => {
-      const stillExists = tabsRef.current.some((t) => t.id === tab.id);
-      if (!stillExists) return;
-      const container = ref.current;
-      if (container && !container.hasChildNodes()) {
-        tab.term.open(container);
-        tab.fitAddon.fit();
-        connectTab(tab);
-
-        // Send initial resize
-        if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
-          const { cols, rows } = tab.term;
-          tab.ws.send(JSON.stringify({ type: "resize", cols, rows }));
-        }
-      }
-    }, 50);
   }, [connectTab]);
 
   /** Close a terminal tab. */
@@ -178,6 +169,26 @@ export function Terminal() {
       return remaining;
     });
   }, []);
+
+  // C14: Connect tabs via useEffect instead of setTimeout (avoids DOM race)
+  useEffect(() => {
+    for (const tab of tabsRef.current) {
+      if (openedTabsRef.current.has(tab.id)) continue;
+      const container = tab.containerRef.current;
+      if (!container || container.hasChildNodes()) continue;
+
+      tab.term.open(container);
+      tab.fitAddon.fit();
+      connectTab(tab);
+      openedTabsRef.current.add(tab.id);
+
+      // Send initial resize after connection
+      if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
+        const { cols, rows } = tab.term;
+        tab.ws.send(JSON.stringify({ type: "resize", cols, rows }));
+      }
+    }
+  });
 
   // Fit active terminal on resize
   useEffect(() => {
@@ -231,6 +242,7 @@ export function Terminal() {
         tab.term.dispose();
       }
       tabsRef.current = [];
+      openedTabsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

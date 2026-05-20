@@ -21,17 +21,25 @@ export function getMemoryDb(): Database.Database {
   _db.pragma("journal_mode = WAL");
   _db.pragma("foreign_keys = ON");
 
-  // Run all DDL migrations (all are idempotent CREATE IF NOT EXISTS)
-  for (const ddl of ALL_MIGRATIONS) {
-    _db.exec(ddl);
-  }
+  // Read stored schema version
+  const storedVersionRow = _db
+    .prepare(`SELECT value FROM schema_meta WHERE key = 'version'`)
+    .get() as { value: string } | undefined;
+  const storedVersion = storedVersionRow ? parseInt(storedVersionRow.value, 10) : 0;
 
-  // Record schema version
-  _db
-    .prepare(
-      `INSERT OR IGNORE INTO schema_meta(key, value) VALUES('version', ?)`,
-    )
-    .run(String(SCHEMA_VERSION));
+  // Run migrations only when schema version has increased
+  if (storedVersion < SCHEMA_VERSION) {
+    for (const ddl of ALL_MIGRATIONS) {
+      _db.exec(ddl);
+    }
+
+    // Record new schema version
+    _db
+      .prepare(
+        `INSERT OR REPLACE INTO schema_meta(key, value) VALUES('version', ?)`,
+      )
+      .run(String(SCHEMA_VERSION));
+  }
 
   return _db;
 }

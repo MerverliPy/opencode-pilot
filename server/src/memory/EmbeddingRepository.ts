@@ -5,6 +5,7 @@ import { getMemoryDb, newId } from "./memoryDb.js";
 import type { MemoryEmbedding, Memory } from "./schema.js";
 import { type MemoryRow, rowToMemory } from "./MemoryRepository.js";
 import { cosineSimilarity } from "./similarity.js";
+import { safeJsonParse } from "./jsonHelpers.js";
 
 type EmbeddingRow = {
   id: string;
@@ -19,7 +20,7 @@ function rowToEmbedding(r: EmbeddingRow): MemoryEmbedding {
     id: r.id,
     memoryId: r.memory_id,
     modelId: r.model_id,
-    vector: JSON.parse(r.vector) as number[],
+    vector: safeJsonParse<number[]>(r.vector, []),
     createdAt: r.created_at,
   };
 }
@@ -126,7 +127,7 @@ export function searchSimilarMemories(
   })[];
 
   const scored = rows.map((row) => {
-    const vector = JSON.parse(row.embedding_vector) as number[];
+    const vector = safeJsonParse<number[]>(row.embedding_vector, []);
     const score = cosineSimilarity(queryVector, vector);
     return { memory: rowToMemory(row), score };
   });

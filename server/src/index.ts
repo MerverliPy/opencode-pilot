@@ -57,7 +57,11 @@ app.use(async (c, next) => {
     await next();
     return;
   }
-  const ip = c.req.header("x-forwarded-for") ?? "local";
+  // C16: IP extraction chain with trusted header fallback (avoids spoofed x-forwarded-for bypass)
+  const ip = c.req.header("cf-connecting-ip") 
+    ?? c.req.header("x-real-ip") 
+    ?? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() 
+    ?? "local";
   const now = Date.now();
   let entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {

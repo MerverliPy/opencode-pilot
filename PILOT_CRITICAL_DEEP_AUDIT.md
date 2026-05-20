@@ -1,3 +1,8 @@
+# REFERENCE-ONLY ARCHIVE
+
+This document is no longer the agent task source of truth. Use `TASKS.md` for the human-maintained agenda and `.opencode/plans/next-task.json` only as a generated machine pointer. Use this file only when the user explicitly asks for historical deep-audit remediation context.
+
+
 # PILOT CRITICAL DEEP AUDIT — STATUS TRACKER
 
 **Date:** 2026-05-19 | **Reviewers:** 8 agents, 3 waves + 3 follow-ups  
@@ -271,3 +276,69 @@ npm run typecheck && npm run build && npm run test:coverage && npm run test:e2e
 ---
 
 *Invoke `/` in any opencode session to read this tracker and find the next unfinished task.*
+
+---
+
+## WAVE 5 — 14-Agent Deep Audit (2026-05-20)
+
+**Reviewers:** orchestrator, api-contract-reviewer, architect, code-reviewer, context-scout, docs-scout, e2e-runner, performance-reviewer, security-auditor, sqlite-memory-reviewer, terminal-stream-reviewer, test-strategist, typescript-reviewer, ui-render-reviewer, workflow-profiler
+
+### New Critical (5 — add to SPRINT 1)
+
+- [ ] **C20** `.opencode/plugins/build-log-compressor.ts:79-86` — BuildLogCompressor fires on non-bash READ outputs matching Playwright keywords → destroys agent .md definitions (orchestrator.md compressed to RTK stub). Gate: `if (input.tool !== "bash") return null;`
+- [ ] **C21** `.opencode/plugins/rtk-compressor.ts:18` — COMPRESS_THRESHOLD=500 too low → unnecessary compression of small files. Raise to 2000 + exclude .opencode/agents/rules/*.md.
+- [ ] **C22** `server/src/tools/toolExecutor.ts:59-92` — Command injection via `spawnSync("rg")` with user-controlled pattern. `--include=*.env` could leak secrets. Sanitize pattern + use `--` separator. Remove grep fallback entirely.
+- [ ] **C23** `server/src/memory/MemoryRepository.ts:104-111` — Race condition: retention delete is non-atomic read-then-delete. Wrap in `db.transaction()`.
+- [ ] **C24** `server/src/terminal.ts:90-108` — PTY `onData` iterates `session.clients` Set while `ws.send()` can trigger `ws.on("close")` mutation during iteration. Snapshot before iterating: `[...session.clients]`.
+
+### New High (6 — add to SPRINT 2)
+
+- [ ] **H49** `server/src/proxy.ts:82` — SSRF via upstream proxy: `openCodeUrl` not validated. Attacker-controlled env var → open SSRF proxy. Validate scheme (https only), reject RFC1918/loopback.
+- [ ] **H50** `server/src/auth.ts:55-65` — Timing attack on bearer token: `===` comparison not constant-time. Use `crypto.timingSafeEqual()`.
+- [ ] **H51** `server/src/terminal.ts:203-208` — PTY process NOT killed after "Session not found" path. Auto-created session leaks with zero clients.
+- [ ] **H52** `server/src/proxy.ts:80-81` — SSE streams have NO timeout → connection hangs forever if upstream stops responding. Add 300s idle timeout.
+- [ ] **H53** `server/src/proxy.ts:203-207` — Stream pipe error silently swallowed → client left hanging. Close readable on error.
+- [ ] **H54** `ui/src/services/api.ts:86` vs `server/src/index.ts:91` — UI calls GET /global/health but server registers GET /health. Health check unreachable when upstream unavailable.
+
+### New Medium (10 — add to SPRINT 3)
+
+- [ ] **M51** `server/src/memory/MemoryRepository.ts:209-227` — FTS5 query injection: sanitization strips only `'` and `"`. FTS5 operators (AND, OR, NOT, NEAR) pass through → potential DoS via expensive queries.
+- [ ] **M52** `server/src/memory/MemoryRepository.ts:122-123` — Unbounded list: `opts.limit ?? -1` → full table scan. Hard-cap at 1000.
+- [ ] **M53** `server/src/memory/EmbeddingRepository.ts:109-138` — Semantic search hard-capped at 100 embeddings → silent recall loss for large servers.
+- [ ] **M54** `server/src/memory/memoryRouter.ts:51-57` — `parseInt(limitQ, 10)` → NaN for non-numeric input passes through as undefined → returns ALL records.
+- [ ] **M55** `server/src/memory/memoryRouter.ts:162-184` — Export `limit: 999999` unbounded. Cap or paginate.
+- [ ] **M56** `server/src/index.ts:33-36` — Error detail leak in global handler: `detail: message` exposes internal paths/DB errors to client.
+- [ ] **M57** `server/src/index.ts:165-172` — Error detail leak in terminal/sessions handler. Same pattern.
+- [ ] **M58** `ui/src/services/api.ts:81` — `return (await res.text()) as unknown as T` — unsafe double-cast, zero type safety.
+- [ ] **M59** `tsconfig.opencode.json:9` — `noImplicitAny: false` overrides `strict: true` in plugin layer.
+- [ ] **M60** `ui/tsconfig.test.json:4-5` — `strict: false` + `noImplicitAny: false` → test files have zero type safety.
+
+### New Low (8 — add to SPRINT 4)
+
+- [ ] **L30** `server/src/db.ts:12` — DB connection created at module import with no error handling. Lazy init like memoryDb.ts.
+- [ ] **L31** `server/src/memory/memoryDb.ts:17-18` — No `closeMemoryDb()` export. Add for testing.
+- [ ] **L32** `server/src/memory/MemoryRepository.ts:100-101` — Archived memories never counted for retention → accumulate forever.
+- [ ] **L33** `server/src/index.ts:193-220` — Symlink path traversal in static file serving. Use `realpathSync`.
+- [ ] **L34** `server/src/terminal.ts:220-247` — No WebSocket message rate limiting. Floodable.
+- [ ] **L35** `ui/src/store/connectivity.ts:14` — Module-level event listeners never cleaned up (HMR leak).
+- [ ] **L36** `ui/src/components/Layout.tsx:108` — Two separate useServerStore selectors → 2+ re-renders per change.
+- [ ] **L37** `ui/src/sw.ts:9` — No `skipWaiting()` → SW activation waits for next navigation.
+
+---
+
+## UPDATED STATS
+
+| Wave | Reviewers | Critical | High | Medium | Low |
+|------|-----------|----------|------|--------|-----|
+| 1 — Security | security-auditor, sqlite-memory, terminal-stream | 6 | 19 | 19 | 14 |
+| 2 — Quality | ui-render, api-contract, typescript | 11 | 18 | 12 | 10 |
+| 3 — Coverage/Perf | test-strategist, performance-reviewer | 0 | 11 | 16 | 14 |
+| 4 — Follow-ups | api-contract, typescript-ui, perf-selective | 0 | 2 | 7 | 5 |
+| **5 — 14-Agent Deep** | orchestrator + 13 specialists | **5** | **6** | **10** | **8** |
+| **GRAND TOTAL** | 15 agents | **24** | **56** | **64** | **51** |
+| **FIXED (prev)** | | 6 | 0 | 0 | 0 |
+| **REMAINING** | | **18** | **56** | **64** | **51** |
+
+---
+
+*See EXECUTION_FIXIT_PLAN.md for step-by-step agent-friendly fix instructions with exact code snippets and verification commands.*

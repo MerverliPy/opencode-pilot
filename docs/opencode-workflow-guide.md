@@ -40,6 +40,7 @@ Rules for `opencode.json`:
 - Keep `default_agent` as `orchestrator` unless testing a specific agent.
 - Keep committed config free of secrets.
 - Add provider secrets only to local, gitignored config.
+- Do not include local `opencode.json`, `*.db`, `*.db-shm`, or `*.db-wal` files in audit bundles.
 - Do not list project-local `.opencode/plugins/*` files in the `plugin` array. OpenCode auto-loads project plugins from `.opencode/plugins/`; listing the same files manually can double-run hooks.
 - Keep model entries routed through `n9router/*` unless deliberately testing a direct provider route.
 
@@ -89,21 +90,24 @@ Current runtime inventory:
 
 | Surface | Current contents | Notes |
 | --- | ---: | --- |
-| Agents | 23 markdown agents | Current guide now tracks the full roster. |
-| Commands | 13 slash commands | No new command is required for the latest skill additions. |
-| Skills | 17 skill playbooks | `audit-tracker` and `pilot-self-run` are now documented. |
+| Agents | 37 markdown agents (6 primary, 31 subagents) | Generated inventory is tracked in `docs/opencode-inventory.md`. |
+| Commands | 26 slash commands | Generated inventory is tracked in `docs/opencode-inventory.md`. |
+| Skills | 30 skill playbooks | Generated inventory is tracked in `docs/opencode-inventory.md`. |
 | Tools | 1 TypeScript tool module, 4 exported tools | Exposed as `pilot_*` tools. |
 | Plugins | 6 TypeScript plugin files | `n9router-director.ts` is now explicitly documented. |
 | Rules | `pilot-core.md` | Canonical token/edit/verification/security policy. |
 | Codemap/plans | `codemap/`, `plans/` | Lightweight workflow context and queued task metadata. |
 
+
+Run `npm run write:opencode-inventory` after adding/removing agents, commands, skills, plugins, tools, or rules. Run `npm run check:opencode-inventory` in CI/preflight to catch drift between the filesystem and generated docs.
+
 Critical observations from the current `.opencode` review:
 
-- The agent roster in this guide already matched the repository: primary, discovery, repair, and reviewer agents are represented.
-- The skills table was stale. It omitted `audit-tracker` and `pilot-self-run`, even though both are present under `.opencode/skills/`.
-- `audit-tracker` is read-only and intentionally token-minimal. It reads `PILOT_CRITICAL_DEEP_AUDIT.md`, finds the next unresolved audit item by severity/sprint order, and returns only the next actionable target.
-- `pilot-self-run` is operational rather than advisory. It checks ports, stops stale Pilot processes, starts the server/UI stack, verifies health, and returns connection URLs. Treat its IP/URL output as environment-specific and verify it before copying into user-facing material.
-- The plugin section was incomplete. `n9router-director.ts` protects routing hygiene by warning when `opencode.json` edits introduce non-`n9router/*` model entries.
+- The generated inventory is the authoritative runtime count for agents, commands, skills, plugins, tools, and rules.
+- `audit-tracker` is read-only and intentionally token-minimal. It reads `TASKS.md`, compares `.opencode/plans/next-task.json` only as a generated pointer, and reports mismatches instead of overriding the agenda.
+- Legacy deep-audit trackers are reference-only unless the user explicitly asks for historical remediation context.
+- `pilot-self-run` is operational rather than advisory. It checks ports, stops stale Pilot processes, starts the server/UI stack, verifies health, and returns connection URLs.
+- `n9router-director` is loaded as a project-local plugin. It currently warns on `session.created` and emits a warning when `opencode.json` edits introduce non-`n9router/*` model entries.
 - `maintainer` is a primary edit-capable agent, but normal automatic routing should still prefer `/docs`, `/implement`, or direct `opencode run --agent maintainer` invocation when maintenance ownership is required.
 
 ---
@@ -300,7 +304,7 @@ These tools are usually invoked by agents, not by a human shell command. To forc
 | `zustand-state` | Zustand selector/store/subscription risk. |
 | `bundle-build` | Vite/Rollup/package/tsconfig/eslint/workbox risk. |
 | `e2e-user-flow` | Playwright or user-journey risk. |
-| `opencode-workflow` | Agent/command/plugin/skill/config risk. |
+| `opencode-workflow` | Agent/command/plugin/skill/config risk. Run `npm run check:opencode-inventory` when surfaces change. |
 | `secrets` | Secret-path or credential handling risk. |
 | `docs-only` | Documentation-only change. |
 | `low-risk` | No specific high-risk surface detected. |
@@ -313,7 +317,7 @@ Skills are domain-specific playbooks in `.opencode/skills/<name>/SKILL.md`. Agen
 
 | Skill | Use when |
 | --- | --- |
-| `audit-tracker` | Finding the next unfinished `PILOT_CRITICAL_DEEP_AUDIT.md` item by sprint/severity and returning the next action in a compact form. |
+| `audit-tracker` | Finding the next unfinished canonical `TASKS.md` item and returning the next action in a compact form. Legacy deep-audit files are reference-only. |
 | `benchtest-analysis` | Benchmark outputs, workflow metrics, RTK savings, fanout regressions. |
 | `codemap-maintenance` | Codemap/doc updates. |
 | `e2e-playwright` | Browser flows, Playwright traces, screenshots, videos. |
@@ -346,15 +350,15 @@ Start the full Pilot stack and provide URLs; use pilot-self-run.
 
 Purpose:
 
-- Read `PILOT_CRITICAL_DEEP_AUDIT.md`.
-- Find the first incomplete `- [ ]` item by sprint priority: Critical, High, Medium, Low.
-- Skip `[~]` in-progress and `[x]` completed items.
-- Return only the next task, file/line, fix hint, and compact remaining-count context.
+- Read `TASKS.md` as the canonical agenda.
+- Find the first incomplete item in the active work area.
+- Compare `.opencode/plans/next-task.json` only as a generated pointer; prefer `TASKS.md` on disagreement.
+- Return only the next task, likely route, verification gates, and compact risk notes.
 
 Use it for audit-driven remediation:
 
 ```text
-Use audit-tracker to find the next unfinished audit item. Do not edit yet.
+Use audit-tracker to identify the next unfinished TASKS.md item. Do not edit yet.
 /implement the next audit-tracker finding with the narrowest verification gate
 ```
 
@@ -495,6 +499,7 @@ Use this before merging workflow or TypeScript changes:
 
 ```bash
 npm run check:opencode
+npm run check:opencode-inventory
 npm run typecheck
 npm run build
 npm run build -w benchtest
@@ -509,6 +514,7 @@ BENCHTEST_ENABLED=1 npm run benchtest:quick
 set -euo pipefail
 
 npm run check:opencode
+npm run check:opencode-inventory
 npm run typecheck
 npm run build
 npm run build -w benchtest
@@ -528,7 +534,7 @@ Then run the commands it recommends. Common mappings:
 
 | Changed files | Narrow gate |
 | --- | --- |
-| `.opencode/**` | `npm run check:opencode` |
+| `.opencode/**` | `npm run check:opencode && npm run check:opencode-inventory` |
 | `shared/src/**` | `npm run typecheck -w shared` |
 | `server/**` | `npm run typecheck -w server` |
 | `ui/**` | `npm run typecheck -w ui && npm run test -w ui` |
@@ -690,7 +696,7 @@ Use audit-tracker to identify the next unresolved audit finding.
 
 Expected behavior:
 
-- The first prompt is read-only and returns the next target from `PILOT_CRITICAL_DEEP_AUDIT.md`.
+- The first prompt is read-only and returns the next target from `TASKS.md`.
 - Implementation follows normal single-owner edit policy.
 - Verification is based on the files touched by the fix, not on the audit tracker itself.
 
@@ -866,6 +872,7 @@ opencode run "Triage the current diff and propose verification gates."
 
 # verification
 npm run check:opencode
+npm run check:opencode-inventory
 npm run typecheck
 npm run build
 npm run build -w benchtest

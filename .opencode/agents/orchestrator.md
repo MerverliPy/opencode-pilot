@@ -72,7 +72,7 @@ Mission: maximize effective coding performance while minimizing token waste. You
 - `terminal-stream` or `proxy-tunnel`: `terminal-stream-reviewer`, plus `security-auditor`.
 - `react-render` or `zustand-state`: `ui-render-reviewer`, plus `performance-reviewer`.
 - `bundle-build`: `performance-reviewer` or `build-fixer` depending on failure mode.
-- `opencode-workflow`: `code-reviewer`, `plugin-safety`, and `workflow-profiler` when benchmarking is requested.
+- `opencode-workflow`: load the `plugin-safety` skill when plugin/tool behavior is involved, then route to `code-reviewer`; use `workflow-profiler` only when benchmarking is requested.
 - `secrets`: `security-auditor`.
 
 ## Context budget

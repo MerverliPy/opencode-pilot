@@ -8,9 +8,9 @@
   </metadata>
 </pilot-implementation-plan>
 
-> **OpenCode agent entry point:** This document is the canonical implementation roadmap.  
-> Agents: parse `<!-- NEXT-TASK -->` blocks for actionable work items.  
-> The lightweight pointer at `.opencode/plans/next-task.json` is the preferred agent entry.
+> **OpenCode reference roadmap:** This document is architecture and planning context, not the current task queue.  
+> Agents must use `TASKS.md` as the human-maintained source of truth.  
+> `.opencode/plans/next-task.json` is a generated machine pointer derived from `TASKS.md` and must not override it.
 
 ---
 

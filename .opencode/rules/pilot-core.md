@@ -9,7 +9,8 @@
 
 ## Edit policy
 
-- Only `implementer`, `maintainer`, `build-fixer`, `e2e-runner`, and `docs-updater` should edit files.
+- Normal edit ownership belongs to `implementer` or `maintainer`.
+- The only edit-capable subagent by default is `minimal-change-implementer`; other specialist subagents must ask before edits and should receive narrow failure/context handoffs.
 - Reviewers and scouts are read-only.
 - Never run destructive commands (`rm -rf`, force push, reset hard, database deletion) without explicit user approval.
 - Do not change provider/model IDs away from `n9router/*` without explicit instruction.

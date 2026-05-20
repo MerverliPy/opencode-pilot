@@ -62,3 +62,7 @@ pilot.db-wal
 
 # Dogfood QA output
 dogfood-output/
+
+*.db
+*.db-shm
+*.db-wal

@@ -31,7 +31,9 @@
     "benchtest:quick": "node benchtest-run.mjs --scenario all --quick",
     "benchtest:report": "echo \"HTML reports in benchtest-out-*/\"",
     "qa:agent-full": "bash scripts/agent-browser-full-suite.sh",
-    "qa:exploratory": "bash scripts/dogfood-qa.sh"
+    "qa:exploratory": "bash scripts/dogfood-qa.sh",
+    "check:opencode-inventory": "node scripts/check-opencode-inventory.mjs",
+    "write:opencode-inventory": "node scripts/check-opencode-inventory.mjs --write"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^19.0.0",

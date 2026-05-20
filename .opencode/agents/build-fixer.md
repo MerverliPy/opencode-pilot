@@ -11,8 +11,8 @@ permission:
   grep: allow
   lsp: allow
   skill: allow
-  edit: allow
-  write: allow
+  edit: ask
+  write: ask
   bash:
     "*": ask
     git diff*: allow

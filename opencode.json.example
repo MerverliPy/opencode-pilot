@@ -1,6 +1,7 @@
 {
-  "_comment": "Copy this file to opencode.json. Set baseURL to your n9router instance. Do NOT commit apiKey — add it only to local opencode.json (gitignored). Options: http://localhost:20128/v1 (local Docker) or any n9router URL.",
-  "_plugin_comment": "Project-local plugins in .opencode/plugins/ are auto-loaded by OpenCode. Do not list those same files here or hooks may run twice.",
+  "_comment": "Copy this file to opencode.json for local use. Keep opencode.json gitignored and never include provider API keys in shared/audit bundles.",
+  "_plugin_comment": "Project-local plugins in .opencode/plugins/ are auto-loaded by OpenCode. Keep plugin empty unless adding npm plugins.",
+  "_mcp_comment": "MCP servers are defined but disabled by default. Enable only per task/agent when token/security cost is justified.",
   "$schema": "https://opencode.ai/config.json",
   "model": "n9router/ds/deepseek-v4-flash",
   "default_agent": "orchestrator",
@@ -17,7 +18,7 @@
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ],
-      "enabled": true
+      "enabled": false
     },
     "github": {
       "type": "local",
@@ -26,10 +27,10 @@
         "-y",
         "@modelcontextprotocol/server-github"
       ],
-      "env": {
-        "GITHUB_TOKEN": "<your_github_token_here>"
-      },
-      "enabled": true
+      "enabled": false,
+      "environment": {
+        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
+      }
     },
     "memory": {
       "type": "local",
@@ -58,24 +59,55 @@
         "chrome-devtools-mcp@latest",
         "--headless"
       ],
-      "enabled": true
+      "enabled": false
     }
   },
   "permission": {
     "*": "ask",
-    "read": "allow",
+    "read": {
+      "*": "allow",
+      ".env": "deny",
+      ".env.*": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      ".env.example": "allow",
+      "**/.env.example": "allow",
+      "*.env.example": "allow"
+    },
     "list": "allow",
     "glob": "allow",
     "grep": "allow",
     "lsp": "allow",
-    "skill": "allow",
+    "skill": {
+      "*": "ask",
+      "workflow-routing": "allow",
+      "tdd-verification": "allow",
+      "typescript-react-hono": "allow",
+      "security-review": "ask",
+      "server-boundary-security": "ask",
+      "react-zustand-performance": "ask",
+      "sqlite-memory-safety": "ask",
+      "terminal-sse-streaming": "ask",
+      "plugin-safety": "ask",
+      "benchtest-analysis": "ask",
+      "codemap-maintenance": "ask",
+      "pilot-architecture": "ask",
+      "pilot-performance": "ask",
+      "pilot-self-run": "ask"
+    },
     "webfetch": "ask",
     "websearch": "ask",
     "edit": "ask",
     "write": "ask",
     "bash": {
-      "curl *": "ask",
       "*": "ask",
+      "rm -rf*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -fd*": "deny",
+      "git push --force*": "deny",
+      "curl *": "ask",
       "git status*": "allow",
       "git diff*": "allow",
       "git ls-files*": "allow",
@@ -84,7 +116,9 @@
       "npm run lint*": "allow",
       "npm run test*": "allow",
       "npm run test:e2e*": "allow"
-    }
+    },
+    "doom_loop": "ask",
+    "external_directory": "ask"
   },
   "watcher": {
     "ignore": [
@@ -115,16 +149,16 @@
           "name": "DeepSeek Reasoner"
         },
         "build-fixer": {
-          "name": "Build Fixer"
+          "name": "Build Fixer \u2192 ds/deepseek-v4-flash"
         },
         "scout": {
-          "name": "Scout"
+          "name": "Scout \u2192 ds/deepseek-v4-flash"
         },
         "docs-updater": {
-          "name": "Docs Updater"
+          "name": "Docs \u2192 ds/deepseek-v4-flash"
         },
         "e2e-runner": {
-          "name": "E2E Runner"
+          "name": "E2E \u2192 ds/deepseek-v4-flash"
         }
       }
     }

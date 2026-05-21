@@ -105,6 +105,7 @@ Critical observations from the current `.opencode` review:
 
 - The generated inventory is the authoritative runtime count for agents, commands, skills, plugins, tools, and rules.
 - `audit-tracker` is read-only and intentionally token-minimal. It reads `TASKS.md`, compares `.opencode/plans/next-task.json` only as a generated pointer, and reports mismatches instead of overriding the agenda.
+- Current active work is the `TASKS.md` **Tailscale Security Readiness v0.4.1 — Tier 0** queue; it supersedes feature-completeness tasks until P26-P36 are complete or explicitly deferred.
 - Legacy deep-audit trackers are reference-only unless the user explicitly asks for historical remediation context.
 - `pilot-self-run` is operational rather than advisory. It checks ports, stops stale Pilot processes, starts the server/UI stack, verifies health, and returns connection URLs.
 - `n9router-director` is loaded as a project-local plugin. It currently warns on `session.created` and emits a warning when `opencode.json` edits introduce non-`n9router/*` model entries.

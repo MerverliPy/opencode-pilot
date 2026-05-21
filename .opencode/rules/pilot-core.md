@@ -27,6 +27,9 @@ Choose the cheapest verification that proves the change:
 
 ## Security policy
 
+- Treat Pilot as Tailscale-exposable remote admin software unless a task explicitly proves loopback-only scope.
+- Tailscale is not an auth replacement: terminal, git push, tunnel, proxy, model file tools, and memory routes still require app-level auth by default.
+- Dangerous features may be enabled/visible by default, but execution must be bound to authenticated sessions and use explicit confirmations for remote mutation.
 - Treat Hono route params, request bodies, query strings, SSE payloads, terminal input, and browser storage as untrusted.
 - Validate and normalize inputs at boundaries.
 - Use parameterized SQLite queries.

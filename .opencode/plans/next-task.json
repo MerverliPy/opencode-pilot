@@ -5,42 +5,63 @@
   "agent_type": "implementer",
   "source": "TASKS.md",
   "task": {
-    "id": "P15",
-    "title": "Session title editing (inline edit)",
+    "id": "P26",
+    "title": "Require auth by default",
     "status": "open",
-    "priority": "high",
-    "phase": "feature-completeness-v0.4.0-tier-2",
+    "priority": "critical",
+    "phase": "tailscale-security-readiness-v0.4.1-tier-0",
     "depends_on": [],
     "files": [
-      "ui/src/pages/Chat.tsx",
-      "ui/src/components/MessageList.tsx",
-      "ui/src/stores/sessionStore.ts"
+      "server/src/auth.ts",
+      "server/src/index.ts",
+      "server/src/cli.ts",
+      ".env.example",
+      "README.md",
+      "SELF_RUN.md"
     ],
     "risk_labels": [
-      "react-render",
-      "zustand-state",
-      "api-contract"
+      "security",
+      "api-contract",
+      "proxy-tunnel",
+      "terminal-stream"
     ],
     "skills": [
       "workflow-routing",
-      "typescript-react-hono",
+      "server-boundary-security",
+      "security-review",
       "tdd-verification"
     ],
     "verification": [
-      "npm run typecheck -w ui",
-      "npm run test -w ui"
+      "npm run typecheck -w server",
+      "npm run test -w server -- auth",
+      "npm run lint"
     ],
     "reviewers": [
-      "ui-render-reviewer",
+      "security-auditor",
+      "api-contract-reviewer",
+      "terminal-stream-reviewer",
       "typescript-reviewer"
     ],
-    "description": "Implement inline session-title editing. Confirm exact UI/store/API files during context discovery before editing.",
+    "description": "Make Pilot require authentication by default for Tailscale-exposed admin use. Only allow an explicit dev-only loopback auth bypass.",
     "context_files": [
       "TASKS.md",
-      "ui/src/pages/Chat.tsx"
+      "server/src/auth.ts",
+      "server/src/index.ts",
+      ".env.example",
+      ".opencode/rules/remediation.md"
     ]
   },
   "queue": [
+    "P27",
+    "P28",
+    "P29",
+    "P30",
+    "P31",
+    "P32",
+    "P33",
+    "P34",
+    "P35",
+    "P36",
     "P16",
     "P17",
     "P18",
@@ -54,6 +75,7 @@
   "completed": [
     "P12",
     "P13",
-    "P14"
+    "P14",
+    "P15"
   ]
 }

@@ -89,6 +89,48 @@ Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`. Next: Tier 2 items.
 
 ---
 
+## Active Work Area: Tailscale Security Readiness v0.4.1 — Tier 0
+
+**Triggered by:** 2026-05-20 critical audit follow-up. Pilot may be exposed over Tailscale, terminal/git push/tunnel are product features enabled by default, model file tools should be policy-scoped, npm publishing is not recommended until packaging is cleaned, and `.opencode` assets are development-repo only.
+
+### Tier 0 — Critical (Tailscale-exposed admin surface)
+
+| #   | Task                                                     | Effort | Deps | Validation |
+| --- | -------------------------------------------------------- | ------ | ---- | ---------- |
+| P26 | [ ] Require auth by default                              | 2h     | —    | Missing token fails outside explicit dev-only bypass; protected routes reject unauthenticated requests |
+| P27 | [ ] Add browser login + httpOnly session cookie auth      | 4h     | P26  | Login/logout tests; mutating routes accept session cookie and reject missing/expired sessions |
+| P28 | [ ] Add terminal WebSocket ticket auth                    | 3h     | P27  | WS without ticket fails; ticket is short-lived and single-use |
+| P29 | [ ] Bind terminal sessions to authenticated users         | 3h     | P28  | Unknown session IDs fail; cross-session attach rejected; idle/absolute timeouts tested |
+| P30 | [ ] Replace `git.add(".")` with explicit selected paths   | 2h     | P27  | Commit requires validated path list; ignored/secret-like files are not staged by default |
+| P31 | [ ] Add git push confirmation and audit logging           | 2h     | P30  | Push requires confirmation phrase; audit record written without secrets |
+| P32 | [ ] Harden Tailscale web/session boundaries               | 3h     | P27  | Strict CORS, WS Origin validation, CSRF protection, auth/rate-limit tests |
+| P33 | [ ] Isolate proxy auth and redact upstream error details  | 2h     | P26  | Client Authorization is never forwarded by default; upstream error body is sanitized |
+| P34 | [ ] Scope model file tools with allowlist/denylist policy | 3h     | P26  | `.env`, `.git`, DB, key files denied; source/docs allowlist covered by tests |
+| P35 | [ ] Sanitize or replace diff HTML rendering               | 2h     | —    | XSS payloads in diff content cannot execute |
+| P36 | [ ] Clean release/package boundaries                      | 2h     | —    | npm publish disabled or package allowlist added; `.opencode` and audit artifacts excluded from app package |
+
+### Detail — Tier 0 Tasks
+
+| Step | Task | Summary |
+| ---- | ---- | ------- |
+| 1 | P26 | Treat Pilot as a Tailscale-exposable remote admin app. Auth must be required by default; only an explicit dev-only loopback bypass may disable auth. Update `server/src/auth.ts`, startup wiring, `.env.example`, and docs. |
+| 2 | P27 | Replace browser bearer-token dependence with login/session-cookie auth. Use secure httpOnly cookies, session expiry, logout, and CSRF-aware mutation handling. Keep bearer auth only for CLI/API automation if needed. |
+| 3 | P28 | Fix terminal WebSocket authentication with a short-lived ticket or cookie-authenticated upgrade flow. Browser `new WebSocket()` must not depend on an `Authorization` header. |
+| 4 | P29 | Bind PTY sessions to the authenticated user/session. Remove auto-create behavior for unknown IDs, enforce idle and absolute lifetimes, and reject cross-session attach attempts. |
+| 5 | P30 | Replace broad `git.add(".")` behavior with explicit selected path staging. Validate paths against `git status`; do not stage ignored, generated, or secret-like files by default. |
+| 6 | P31 | Keep git push visible as a product feature, but require a confirmation phrase and audit logging for remote mutation. Do not log credentials or full command payloads. |
+| 7 | P32 | Add Tailscale-safe web controls: strict CORS allowlist, WebSocket Origin validation, CSRF protection for mutating routes, and rate limits around auth/terminal/git/chat/proxy. |
+| 8 | P33 | Split Pilot auth from upstream auth. Never forward arbitrary client `Authorization` upstream by default. Redact upstream error bodies before returning them to the browser. |
+| 9 | P34 | Default model tools to a source/docs allowlist and deny `.env`, `.git`, database, key, generated, dependency, coverage, and audit-bundle paths. Full-workspace mode must be explicit admin opt-in. |
+| 10 | P35 | Remove raw trust in diff-generated HTML. Prefer a React diff renderer; otherwise sanitize diff2html output and add XSS regression tests for malicious filenames and lines. |
+| 11 | P36 | Release via GitHub Releases/Docker first. Disable npm publish until a package allowlist exists. Ensure `.opencode/`, `.opencode-plugin-dev/`, audit bundles, test reports, and local artifacts are excluded. |
+
+### Deferred by Tier 0 Security Override
+
+Feature Completeness v0.4.0 remains valid, but P16-P18 resume only after P26-P36 are completed or explicitly deferred by the owner.
+
+---
+
 ## Active Work Area: Feature Completeness v0.4.0 — Tier 2
 
 **Triggered by:** Completion of Tier 1 on 2026-05-13. P12 markdown rendering in progress.
@@ -166,5 +208,6 @@ Final state before migration: **498 tests passing, 0 failing. tsc --noEmit passe
 | **v1.0.0** | 2026-08-01 | M5 complete — memory plugin ported, full parity  | `[x]`  |
 | **v0.3.0** | 2026-05-26 | Tier 1 — production hardening, server tests      | `[x]`  |
 | **v0.4.0** | 2026-06-09 | Tier 2 — feature completeness                    | `[ ]`  |
+| **v0.4.1** | 2026-06-12 | Tier 0 — Tailscale security readiness            | `[ ]`  |
 | **v0.5.0** | 2026-06-23 | Tier 3 — memory plugin completion                | `[ ]`  |
 | **v1.0.0** | 2026-07-14 | Tier 4 — polish & deployment                     | `[ ]`  |

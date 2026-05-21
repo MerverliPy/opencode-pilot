@@ -2,7 +2,7 @@
   <metadata>
     <title>Pilot — Implementation Plan & Critical Architecture Analysis</title>
     <version>1.0.0</version>
-    <updated>2026-05-19</updated>
+    <updated>2026-05-20</updated>
     <status>active</status>
     <package>@MerverliPy/pilot</package>
   </metadata>
@@ -11,6 +11,37 @@
 > **OpenCode reference roadmap:** This document is architecture and planning context, not the current task queue.  
 > Agents must use `TASKS.md` as the human-maintained source of truth.  
 > `.opencode/plans/next-task.json` is a generated machine pointer derived from `TASKS.md` and must not override it.
+
+---
+
+## 2026-05-20 Critical Audit Follow-Up — Tailscale Security Readiness
+
+**Production stance:** Pilot may be exposed over Tailscale and must be treated as a remotely reachable admin tool. Tailscale is not a replacement for app-level authentication.
+
+**Task source of truth:** The current top-priority queue is in `TASKS.md` under **Tailscale Security Readiness v0.4.1 — Tier 0**. `.opencode/plans/next-task.json` should point to P26 until that item is complete.
+
+### Updated top-priority fixes
+
+| Task | Priority | Goal | Primary files |
+|------|----------|------|---------------|
+| P26 | Critical | Require authentication by default; allow only explicit dev-only loopback bypass | `server/src/auth.ts`, `server/src/index.ts`, `server/src/cli.ts`, `.env.example` |
+| P27 | Critical | Add browser login and httpOnly session cookie auth | `server/src/auth.ts`, `ui/src/services/auth.ts`, UI/auth tests |
+| P28 | Critical | Add terminal WebSocket ticket auth | `server/src/terminal.ts`, `ui/src/pages/Terminal.tsx` |
+| P29 | Critical | Bind terminal sessions to authenticated users and enforce lifetimes | `server/src/terminal.ts` |
+| P30 | High | Replace broad git staging with explicit selected paths | `server/src/git.ts`, `ui/src/pages/Diff.tsx` |
+| P31 | High | Require git push confirmation phrase and redacted audit logging | `server/src/git.ts`, audit/logging layer |
+| P32 | High | Harden Tailscale web/session boundaries with CORS, Origin, CSRF, and rate limits | `server/src/index.ts`, `server/src/auth.ts`, `server/src/terminal.ts` |
+| P33 | High | Isolate proxy auth and redact upstream error details | `server/src/proxy.ts`, `server/src/n9routerChat.ts`, `server/src/debugLog.ts` |
+| P34 | High | Scope model file tools with allowlist/denylist policy | `server/src/tools/toolExecutor.ts`, `server/src/tools/toolDefinitions.ts` |
+| P35 | High | Sanitize or replace diff HTML rendering | `ui/src/pages/Diff.tsx` |
+| P36 | Medium | Clean release/package boundaries before npm publishing | `.releaserc.json`, `package.json`, `.npmignore` or package `files` |
+
+### Architecture decisions
+
+- Terminal, git push, and tunnel features may remain enabled/visible by default, but execution must require authenticated session ownership and explicit confirmation for remote mutation.
+- Browser WebSocket auth must not depend on an `Authorization` header.
+- Model file tools should default to selected source/docs paths, not whole-repo access.
+- `.opencode/` assets are development-repo workflow assets and should not ship in app runtime packages.
 
 ---
 

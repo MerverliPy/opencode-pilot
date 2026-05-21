@@ -4,6 +4,36 @@ Actionable fix plan for coding agents. Fix security holes first, then architectu
 
 ---
 
+## 2026-05-20 Tailscale Security Readiness Override
+
+Pilot may be exposed over Tailscale and terminal/git push/tunnel are product features enabled by default. Treat Pilot as a remotely reachable admin surface. This section supersedes any older resolved checklist item that assumed bearer-auth route wrapping was sufficient.
+
+### Critical top-priority fixes
+
+| Rank | Task | Priority | Primary files | Validation |
+|------|------|----------|---------------|------------|
+| 1 | **P26 Require auth by default** | Critical | `server/src/auth.ts`, `server/src/index.ts`, `server/src/cli.ts`, `.env.example` | Missing token fails outside explicit dev-only loopback bypass |
+| 2 | **P27 Browser login + httpOnly session cookie auth** | Critical | `server/src/auth.ts`, `ui/src/services/auth.ts`, auth/session tests | Login/logout works; mutating routes reject missing/expired sessions |
+| 3 | **P28 Terminal WebSocket ticket auth** | Critical | `server/src/terminal.ts`, `ui/src/pages/Terminal.tsx` | WS without valid short-lived single-use ticket fails |
+| 4 | **P29 Terminal session ownership binding** | Critical | `server/src/terminal.ts` | Unknown IDs fail; cross-session attach rejected; session lifetime enforced |
+| 5 | **P30 Explicit-path git staging** | High | `server/src/git.ts`, `ui/src/pages/Diff.tsx` | Commit requires validated selected paths; no broad `git.add(".")` |
+| 6 | **P31 Git push confirmation + audit log** | High | `server/src/git.ts`, audit/logging layer | Push requires confirmation phrase and writes redacted audit record |
+| 7 | **P32 Tailscale web/session boundaries** | High | `server/src/index.ts`, `server/src/auth.ts`, `server/src/terminal.ts` | Strict CORS, WS Origin validation, CSRF, rate-limit coverage |
+| 8 | **P33 Proxy auth isolation + upstream error redaction** | High | `server/src/proxy.ts`, `server/src/n9routerChat.ts`, `server/src/debugLog.ts` | Client `Authorization` is not forwarded; upstream error body is sanitized |
+| 9 | **P34 Model file-tool allowlist/denylist** | High | `server/src/tools/toolExecutor.ts`, `server/src/tools/toolDefinitions.ts` | `.env`, `.git`, DB, key, generated, dependency paths denied |
+| 10 | **P35 Diff HTML sanitization/replacement** | High | `ui/src/pages/Diff.tsx` | Malicious diff payloads cannot execute |
+| 11 | **P36 Release/package boundary cleanup** | Medium | `.releaserc.json`, `package.json`, `.npmignore` or `files` allowlist | npm publish disabled or package allowlist excludes dev/audit/OpenCode assets |
+
+### Execution rules for this override
+
+1. `TASKS.md` is canonical. Start with P26 and do not resume P16-P18 feature work until P26-P36 are complete or explicitly deferred.
+2. Tailscale is not an authentication replacement. App-level auth must remain required by default.
+3. Browser WebSocket auth must not rely on an `Authorization` header.
+4. Dangerous features may remain visible/enabled by default, but execution must require authenticated user/session ownership and explicit confirmation where mutation occurs.
+5. Do not ship `.opencode/`, `.opencode-plugin-dev/`, audit bundles, reports, or local artifacts in runtime packages.
+
+---
+
 ## Issue-ready checklist
 
 ### Critical

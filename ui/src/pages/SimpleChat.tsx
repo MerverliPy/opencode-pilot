@@ -16,6 +16,8 @@ import {
 import { useChatStream } from "../services/useChatStream";
 import { ChatMessage as ChatMessageBubble } from "../components/ChatMessage";
 import { DebugPanel } from "../components/DebugPanel";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 import { classifyError } from "../lib/errorClassifier";
 import { colors, fonts, fontSizes } from "../theme";
 
@@ -104,7 +106,12 @@ function convTitle(messages: ChatMessage[]): string {
 // --- Component ---
 
 export function SimpleChat() {
-  const server = useServerStore((s) => s.active());
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId]
+  );
   const n9routerUrl = useN9RouterStore((s) => s.url);
   const n9routerKey = useN9RouterStore((s) => s.key);
 
@@ -121,7 +128,13 @@ export function SimpleChat() {
   const { streaming, streamError, startStream, cancelStream, clearError } =
     useChatStream();
 
+  const messagesRef = useRef(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Sync ref after render so callbacks see latest messages
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Fetch available models on mount
   useEffect(() => {
@@ -131,10 +144,15 @@ export function SimpleChat() {
     });
   }, [n9routerUrl, n9routerKey]);
 
-  // Persist messages
+  // Persist messages (throttled to every 500ms during streaming)
+  const lastSaveRef = useRef(0);
   useEffect(() => {
-    saveMessages(messages);
-  }, [messages]);
+    const now = Date.now();
+    if (!streaming || now - lastSaveRef.current > 500) {
+      saveMessages(messages);
+      lastSaveRef.current = now;
+    }
+  }, [messages, streaming]);
 
   // Persist model
   useEffect(() => {
@@ -193,7 +211,7 @@ export function SimpleChat() {
     };
     setMessages((prev) => [...prev, assistantMsg]);
 
-    const chatMessages = [...messages, userMsg].map((m) => ({
+    const chatMessages = [...messagesRef.current, userMsg].map((m) => ({
       role: m.role === "user" ? "user" as const : "assistant" as const,
       content: m.content,
     }));
@@ -253,7 +271,7 @@ export function SimpleChat() {
         );
       }
     }
-  }, [input, client, streaming, messages, model, startStream, clearError]);
+  }, [input, client, streaming, model, startStream, clearError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -269,10 +287,11 @@ export function SimpleChat() {
     setError(null);
     clearError();
 
+    const msgs = messagesRef.current;
     // Find last assistant message with error
     let lastFailedIdx = -1;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "assistant" && messages[i].error) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === "assistant" && msgs[i].error) {
         lastFailedIdx = i;
         break;
       }
@@ -282,20 +301,20 @@ export function SimpleChat() {
     // Find preceding user message
     let lastUserIdx = -1;
     for (let i = lastFailedIdx - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
+      if (msgs[i].role === "user") {
         lastUserIdx = i;
         break;
       }
     }
 
     if (lastUserIdx >= 0) {
-      const userContent = messages[lastUserIdx].content;
+      const userContent = msgs[lastUserIdx].content;
       setMessages((prev) =>
         prev.filter((_, i) => i !== lastUserIdx && i !== lastFailedIdx),
       );
       setInput(userContent);
     }
-  }, [messages, clearError]);
+  }, [clearError]);
 
   const handleClear = useCallback(() => {
     setMessages([]);
@@ -416,21 +435,9 @@ export function SimpleChat() {
             >
               Conversations
             </span>
-            <button
-              onClick={handleNewConversation}
-              style={{
-                background: "none",
-                border: `1px solid ${colors.border}`,
-                color: colors.accent,
-                cursor: "pointer",
-                padding: "2px 10px",
-                borderRadius: 6,
-                fontFamily: fonts.sans,
-                fontSize: fontSizes.xs,
-              }}
-            >
+            <Button variant="secondary" size="sm" onClick={handleNewConversation}>
               + New
-            </button>
+            </Button>
           </div>
 
           {/* Conversation list */}
@@ -489,23 +496,17 @@ export function SimpleChat() {
                     {new Date(conv.timestamp).toLocaleDateString()}
                   </div>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteConversation(conv.id);
                   }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: colors.muted,
-                    cursor: "pointer",
-                    padding: "4px",
-                    fontSize: fontSizes.sm,
-                    opacity: 0.6,
-                  }}
+                  aria-label={`Delete conversation ${conv.title}`}
                 >
                   ✕
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -543,22 +544,14 @@ export function SimpleChat() {
           }}
         >
           {/* Sidebar toggle (mobile) */}
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={toggleSidebar}
-            style={{
-              background: "none",
-              border: `1px solid ${colors.border}`,
-              color: colors.muted,
-              cursor: "pointer",
-              padding: "4px 8px",
-              borderRadius: 6,
-              fontFamily: fonts.sans,
-              fontSize: fontSizes.sm,
-              display: window.innerWidth <= 768 ? "block" : "none",
-            }}
+            style={{ display: window.innerWidth <= 768 ? "block" : "none" }}
           >
             ☰
-          </button>
+          </Button>
 
           <span
             style={{
@@ -613,21 +606,9 @@ export function SimpleChat() {
               Debug
             </button>
 
-            <button
-              onClick={handleClear}
-              style={{
-                background: "none",
-                border: `1px solid ${colors.border}`,
-                color: colors.muted,
-                cursor: "pointer",
-                padding: "4px 10px",
-                borderRadius: 6,
-                fontFamily: fonts.sans,
-                fontSize: fontSizes.sm,
-              }}
-            >
+            <Button variant="secondary" size="sm" onClick={handleClear}>
               Clear
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -704,21 +685,9 @@ export function SimpleChat() {
             }}
           >
             <span style={{ flex: 1 }}>⚠ {error}</span>
-            <button
-              onClick={handleRetry}
-              style={{
-                background: "none",
-                border: `1px solid ${colors.error}`,
-                color: colors.error,
-                cursor: "pointer",
-                padding: "4px 10px",
-                borderRadius: 6,
-                fontFamily: fonts.sans,
-                fontSize: fontSizes.sm,
-              }}
-            >
+            <Button variant="danger" size="sm" onClick={handleRetry}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
 
@@ -732,7 +701,7 @@ export function SimpleChat() {
             borderTop: `1px solid ${colors.borderSubtle}`,
           }}
         >
-          <input
+          <Input
             data-testid="prompt-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -749,52 +718,29 @@ export function SimpleChat() {
               flex: 1,
               padding: "10px 14px",
               borderRadius: 8,
-              border: `1px solid ${colors.border}`,
               backgroundColor: colors.surface,
               color: colors.text,
-              fontFamily: fonts.sans,
               fontSize: fontSizes.md,
-              outline: "none",
             }}
           />
           {streaming ? (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
               onClick={cancelStream}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor: colors.error,
-                color: colors.accentText,
-                cursor: "pointer",
-                fontFamily: fonts.sans,
-                fontSize: fontSizes.md,
-                fontWeight: 600,
-              }}
+              style={{ backgroundColor: colors.error, color: colors.accentText, border: "none" }}
             >
               Stop
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleSubmit}
               disabled={!input.trim() || !server}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor:
-                  !input.trim() || !server ? colors.surfaceAlt : colors.accent,
-                color:
-                  !input.trim() || !server ? colors.muted : colors.accentText,
-                cursor:
-                  !input.trim() || !server ? "not-allowed" : "pointer",
-                fontFamily: fonts.sans,
-                fontSize: fontSizes.md,
-                fontWeight: 600,
-              }}
             >
               Send
-            </button>
+            </Button>
           )}
         </div>
 

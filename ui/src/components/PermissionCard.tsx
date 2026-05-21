@@ -3,6 +3,8 @@
  */
 import { colors, fonts, fontSizes } from "../theme";
 import type { PermissionRequest } from "@pilot-shared/types";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 
 type Props = {
   permission: PermissionRequest;
@@ -11,13 +13,11 @@ type Props = {
 
 export function PermissionCard({ permission, onRespond }: Props) {
   return (
-    <div
+    <Card
       data-testid="permission-card"
       style={{
-        border: `1px solid ${colors.border}`,
-        borderRadius: 8,
-        padding: "12px 14px",
         backgroundColor: colors.bg,
+        borderRadius: 8,
       }}
     >
       <div
@@ -43,38 +43,12 @@ export function PermissionCard({ permission, onRespond }: Props) {
         </div>
       )}
       <div style={{ display: "flex", gap: 8 }}>
-        <button
-          data-testid="permission-approve-button"
-          onClick={() => onRespond("always")}
-          style={{
-            backgroundColor: colors.success,
-            color: "#000",
-            border: "none",
-            borderRadius: 4,
-            padding: "5px 12px",
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.xs,
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="primary" size="sm" onClick={() => onRespond("always")}>
           Always
-        </button>
-        <button
-          data-testid="permission-once-button"
-          onClick={() => onRespond("once")}
-          style={{
-            backgroundColor: colors.accent,
-            color: "#000",
-            border: "none",
-            borderRadius: 4,
-            padding: "5px 12px",
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.xs,
-            cursor: "pointer",
-          }}
-        >
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onRespond("once")}>
           Once
-        </button>
+        </Button>
         <button
           data-testid="permission-reject-button"
           onClick={() => onRespond("reject")}
@@ -92,6 +66,6 @@ export function PermissionCard({ permission, onRespond }: Props) {
           Reject
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

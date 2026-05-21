@@ -266,6 +266,10 @@ const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
       {!isUser && <MessageCostFooter message={turn.message} />}
     </div>
   );
+}, (prev, next) => {
+  return prev.turn.message.id === next.turn.message.id &&
+    prev.turn.parts.length === next.turn.parts.length &&
+    prev.turn.parts.every((p, i) => p.id === next.turn.parts[i]?.id);
 });
 
 export function MessageList({ turns }: { turns: Turn[] }) {

@@ -22,7 +22,7 @@ const mockSession = (id: string, title: string) => ({
 function setup(server: unknown = null) {
   mockedUseServerStore.mockImplementation(
     (selector: (state: unknown) => unknown) => {
-      const state = { active: () => server };
+      const state = { servers: server ? [server as Record<string, unknown>] : [], activeId: (server as Record<string, unknown> | null)?.id ?? null, active: () => server };
       return selector(state);
     },
   );

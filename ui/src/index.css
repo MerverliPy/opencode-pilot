@@ -19,6 +19,17 @@
   --pilot-selection-background: rgba(79, 195, 247, 0.3);
   --pilot-error-tint: rgba(229, 115, 115, 0.1);
   --pilot-success-tint: rgba(129, 199, 132, 0.1);
+  --pilot-space-1: 4px;
+  --pilot-space-2: 8px;
+  --pilot-space-3: 12px;
+  --pilot-space-4: 16px;
+  --pilot-space-5: 24px;
+  --pilot-space-6: 32px;
+  --pilot-space-7: 48px;
+  --pilot-space-8: 64px;
+  --pilot-radius-sm: 4px;
+  --pilot-radius-md: 6px;
+  --pilot-radius-lg: 10px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -123,4 +134,15 @@ a {
 .hljs-subst,
 .hljs-deletion {
   color: var(--pilot-error);
+}
+
+/* Focus ring for all interactive elements */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--pilot-accent);
+  outline-offset: 2px;
 }

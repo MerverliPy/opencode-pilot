@@ -43,11 +43,11 @@ describe("fonts", () => {
 });
 
 describe("fontSizes", () => {
-  it("has expected size values", () => {
-    expect(fontSizes.xs).toBe(11);
-    expect(fontSizes.sm).toBe(13);
-    expect(fontSizes.md).toBe(15);
-    expect(fontSizes.lg).toBe(18);
-    expect(fontSizes.xl).toBe(22);
+  it("has expected rem values", () => {
+    expect(fontSizes.xs).toBe("0.6875rem");
+    expect(fontSizes.sm).toBe("0.8125rem");
+    expect(fontSizes.md).toBe("0.9375rem");
+    expect(fontSizes.lg).toBe("1.125rem");
+    expect(fontSizes.xl).toBe("1.375rem");
   });
 });

@@ -8,6 +8,8 @@ import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { colors, fonts } from "../theme";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
 
 export function Login() {
   const navigate = useNavigate();
@@ -94,7 +96,7 @@ export function Login() {
           >
             Username
           </label>
-          <input
+          <Input
             id="login-username"
             type="text"
             autoFocus
@@ -104,14 +106,10 @@ export function Login() {
             disabled={loading}
             autoComplete="username"
             style={{
-              fontFamily: fonts.mono,
-              fontSize: 14,
-              color: colors.text,
+              fontFamily: fonts.sans,
               backgroundColor: colors.bg,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 6,
+              fontSize: 14,
               padding: "10px 12px",
-              outline: "none",
             }}
           />
         </div>
@@ -128,7 +126,7 @@ export function Login() {
           >
             Password
           </label>
-          <input
+          <Input
             id="login-password"
             type="password"
             value={password}
@@ -137,14 +135,10 @@ export function Login() {
             disabled={loading}
             autoComplete="current-password"
             style={{
-              fontFamily: fonts.mono,
-              fontSize: 14,
-              color: colors.text,
+              fontFamily: fonts.sans,
               backgroundColor: colors.bg,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 6,
+              fontSize: 14,
               padding: "10px 12px",
-              outline: "none",
             }}
           />
         </div>
@@ -166,24 +160,14 @@ export function Login() {
           </div>
         )}
 
-        <button
+        <Button
+          variant="primary"
+          size="md"
           type="submit"
           disabled={loading}
-          style={{
-            fontFamily: fonts.mono,
-            fontSize: 14,
-            color: colors.accentText,
-            backgroundColor: colors.accent,
-            border: "none",
-            borderRadius: 6,
-            padding: "10px 16px",
-            cursor: loading ? "default" : "pointer",
-            opacity: loading ? 0.7 : 1,
-            fontWeight: 600,
-          }}
         >
           {loading ? "signing in…" : "sign in"}
-        </button>
+        </Button>
       </form>
     </div>
   );

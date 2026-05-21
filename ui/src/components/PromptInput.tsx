@@ -78,7 +78,6 @@ export function PromptInput({ onSubmit, disabled }: Props) {
             fontSize: fontSizes.md,
             lineHeight: 1.45,
             resize: "none",
-            outline: "none",
             minHeight: 22,
             maxHeight: 160,
             padding: 0,

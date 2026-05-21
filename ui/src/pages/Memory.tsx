@@ -17,6 +17,7 @@ import type { FilterCategory } from "../plugin/memory/ui/components/CategoryFilt
 import { createProviderFromConfig } from "../plugin/memory/embeddings/EmbeddingProviderFactory";
 import { colors, fonts, fontSizes } from "../theme";
 import { friendlyError } from "../lib/errors";
+import { Input } from "../components/ui/Input";
 
 export function Memory() {
   const servers = useServerStore((s) => s.servers);
@@ -435,7 +436,7 @@ export function Memory() {
           </button>
 
           {/* Search */}
-          <input
+          <Input
             data-testid="memory-search"
             type="search"
             aria-label="Search memories"
@@ -443,16 +444,10 @@ export function Memory() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={searchMode === "semantic" ? "semantic search…" : "search memories…"}
             style={{
+              fontFamily: fonts.mono,
               flex: 1,
               maxWidth: 300,
-              backgroundColor: colors.surfaceAlt,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 6,
               padding: "6px 10px",
-              color: colors.text,
-              fontFamily: fonts.mono,
-              fontSize: fontSizes.sm,
-              outline: "none",
             }}
           />
         </div>

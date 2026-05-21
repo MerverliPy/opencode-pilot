@@ -34,6 +34,7 @@ function NavLink({
   return (
     <Link
       to={path}
+      aria-label={label}
       style={{
         display: "flex",
         alignItems: "center",
@@ -78,6 +79,7 @@ function MobileNavLink({
   return (
     <Link
       to={path}
+      aria-label={label}
       style={{
         display: "flex",
         flexDirection: "column",

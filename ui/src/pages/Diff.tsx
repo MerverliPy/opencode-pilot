@@ -7,14 +7,16 @@
  *
  * Allows staging + committing via POST /git/commit.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { html as diff2html } from "diff2html";
 import "diff2html/bundles/css/diff2html.min.css";
 import { useServerStore } from "../store/server";
-import { colors, fonts, fontSizes } from "../theme";
+import { colors, fonts, fontSizes, radii } from "../theme";
 import { log } from "../services/logger";
 import { csrfHeaders } from "../services/auth";
 import { friendlyError } from "../lib/errors";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 
 interface GitStatus {
   branch: string;
@@ -33,7 +35,6 @@ const BLOCKED_DIFF_TAGS = new Set([
   "AUDIO",
   "BUTTON",
   "EMBED",
-  "FORM",
   "IFRAME",
   "IMG",
   "INPUT",
@@ -175,7 +176,12 @@ function DiffBlock({ fileDiff }: { fileDiff: GitFileDiff }) {
 }
 
 export function Diff() {
-  const server = useServerStore((s) => s.active());
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId]
+  );
 
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [diffs, setDiffs] = useState<GitFileDiff[]>([]);
@@ -348,25 +354,17 @@ export function Diff() {
           </span>
         )}
 
-        <button data-testid="diff-refresh-button"
+        <Button
+          variant="secondary"
+          size="sm"
+          data-testid="diff-refresh-button"
           onClick={() => {
             void refresh();
             void loadDiffs();
           }}
-          style={{
-            marginLeft: "auto",
-            backgroundColor: "transparent",
-            border: `1px solid ${colors.border}`,
-            color: colors.text,
-            borderRadius: 4,
-            padding: "4px 12px",
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.xs,
-            cursor: "pointer",
-          }}
         >
-          refresh
-        </button>
+          Refresh
+        </Button>
       </div>
 
       {/* Error */}
@@ -398,7 +396,7 @@ export function Diff() {
             alignItems: "center",
           }}
         >
-          <input
+          <Input
             data-testid="commit-message-input"
             type="text"
             placeholder="Commit message…"
@@ -408,37 +406,22 @@ export function Diff() {
               if (e.key === "Enter" && !committing) void handleCommit();
             }}
             style={{
-              flex: 1,
-              padding: "6px 12px",
-              backgroundColor: colors.surfaceAlt,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 4,
-              color: colors.text,
               fontFamily: fonts.mono,
+              flex: 1,
               fontSize: fontSizes.sm,
-              outline: "none",
+              padding: "6px 12px",
+              borderRadius: radii.sm,
             }}
           />
-          <button
-            data-testid="commit-button"
+          <Button
+            variant="primary"
+            size="md"
+            data-testid="diff-commit-button"
             onClick={() => void handleCommit()}
             disabled={committing || !commitMessage.trim()}
-            style={{
-              padding: "6px 16px",
-              backgroundColor: colors.accent,
-              border: "none",
-              borderRadius: 4,
-              color: colors.accentText,
-              fontFamily: fonts.sans,
-              fontSize: fontSizes.sm,
-              fontWeight: 600,
-              cursor:
-                committing || !commitMessage.trim() ? "default" : "pointer",
-              opacity: committing || !commitMessage.trim() ? 0.5 : 1,
-            }}
           >
-            {committing ? "committing…" : "commit"}
-          </button>
+            Commit
+          </Button>
         </div>
       )}
 

@@ -3,6 +3,10 @@
  *
  * Toggle with Ctrl+D keyboard shortcut.
  * Shows request method, path, status, latency, model, tokens.
+*
+ * NOTE: This component intentionally uses borderTop instead of full border,
+ * because it is a sliding bottom panel, not a card surface.
+ * Do NOT migrate to Card component — the visual structure would degrade.
  */
 
 import { useEffect } from "react";
@@ -83,6 +87,7 @@ export function DebugPanel({ visible, onToggle }: Props) {
           </button>
           <button
             onClick={onToggle}
+            aria-label="Close debug panel"
             style={{
               background: "none",
               border: "none",

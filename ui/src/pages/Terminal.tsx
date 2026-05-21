@@ -4,7 +4,7 @@
  * Supports multiple terminal tabs, each backed by an independent PTY session.
  * Tabs are kept alive (display: none) between switches to preserve scroll buffer.
  */
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -60,7 +60,12 @@ function nextTabId(): string {
 }
 
 export function Terminal() {
-  const server = useServerStore((s) => s.active());
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId]
+  );
 
   // Maintain tabs as a ref to avoid stale closures in effects
   const tabsRef = useRef<TermTab[]>([]);

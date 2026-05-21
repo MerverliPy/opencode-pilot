@@ -25,7 +25,7 @@ const mockedUseServerStore = useServerStore as unknown as jest.Mock;
 function setup(server: unknown = null) {
   mockedUseServerStore.mockImplementation(
     (selector: (state: any) => unknown) => {
-      const state = { active: () => server };
+      const state = { servers: server ? [server as Record<string, unknown>] : [], activeId: (server as Record<string, unknown> | null)?.id ?? null, active: () => server };
       return selector(state);
     },
   );

@@ -121,9 +121,32 @@ export const fonts = {
 } as const;
 
 export const fontSizes = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 18,
-  xl: 22,
+  xs: "0.6875rem",
+  sm: "0.8125rem",
+  md: "0.9375rem",
+  lg: "1.125rem",
+  xl: "1.375rem",
+} as const;
+
+export const lineHeights = {
+  tight: "1.25",
+  normal: "1.5",
+  relaxed: "1.75",
+} as const;
+
+export const spacing = {
+  px1: "var(--pilot-space-1)",
+  px2: "var(--pilot-space-2)",
+  px3: "var(--pilot-space-3)",
+  px4: "var(--pilot-space-4)",
+  px5: "var(--pilot-space-5)",
+  px6: "var(--pilot-space-6)",
+  px7: "var(--pilot-space-7)",
+  px8: "var(--pilot-space-8)",
+} as const;
+
+export const radii = {
+  sm: "var(--pilot-radius-sm)",
+  md: "var(--pilot-radius-md)",
+  lg: "var(--pilot-radius-lg)",
 } as const;

@@ -7,7 +7,7 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 ┌─────────────────────┐     HTTP + SSE      ┌──────────────────────┐      ┌──────────────────────┐
 │  Browser (PWA)      │ ──────────────────▶ │  Pilot Hono Server   │ ───▶ │  OpenCode Server     │
 │  React + Vite       │  :5173 → :3201     │  proxy · auth · push │      │  :4096               │
-│  shadcn/ui          │ ◀────────────────── │  tunnel · memory     │      │  (opencode serve)    │
+│  theme tokens       │ ◀────────────────── │  tunnel · memory     │      │  (opencode serve)    │
 └─────────────────────┘   events/responses  │  chat completions    │      └──────────────────────┘
                                              └──────────┬───────────┘
                                                         │                           ┌──────────────────────┐
@@ -49,6 +49,7 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 - **Direct n9router chat** — streaming chat UI that bypasses OpenCode agent protocol for simple conversations
 - **Memory plugin** — server-side semantic extraction and injection across sessions
 - **Dark + light themes** — system-aware via `prefers-color-scheme`; indigo-500 accent
+- **Design system** — reusable Button, Input, Card components extracted with theme tokens (rem-based spacing, radii, font sizes)
 
 ## Tech Stack
 
@@ -56,8 +57,8 @@ A web PWA for [OpenCode](https://opencode.ai) — connects to `opencode serve` o
 | ------------------ | ---------------------------------------------------- |
 | Frontend framework | React 19 + Vite 6                                    |
 | Language           | TypeScript                                           |
-| Components         | shadcn/ui + Radix UI primitives                      |
-| Styling            | Tailwind CSS v4                                      |
+| Components         | Custom UI components (`ui/src/components/ui/`)       |
+| Styling            | Theme tokens + CSS custom properties + inline styles |
 | State              | Zustand                                              |
 | SSE                | Native `EventSource`                                 |
 | Terminal           | xterm.js + node-pty (server-side PTY)                |

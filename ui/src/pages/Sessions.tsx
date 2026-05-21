@@ -6,12 +6,20 @@ import { Link } from "react-router-dom";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
 import type { Session } from "@pilot-shared/types";
-import { colors, fonts, fontSizes } from "../theme";
+import { colors, fonts, fontSizes, radii } from "../theme";
 import { log } from "../services/logger";
 import { friendlyError } from "../lib/errors";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Card } from "../components/ui/Card";
 
 export function Sessions() {
-  const server = useServerStore((s) => s.active());
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId]
+  );
   const client = useMemo(
     () => (server ? new OpencodeClient(server) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,22 +199,9 @@ export function Sessions() {
         >
           Sessions
         </h1>
-        <button
-          data-testid="new-session-button"
-          onClick={handleCreate}
-          style={{
-            backgroundColor: colors.accent,
-            color: "#000",
-            border: "none",
-            borderRadius: 6,
-            padding: "8px 16px",
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.sm,
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="primary" size="md" data-testid="new-session-button" onClick={handleCreate}>
           + New Session
-        </button>
+        </Button>
       </div>
 
       {Object.keys(tagsMap).length > 0 && (
@@ -278,38 +273,31 @@ export function Sessions() {
         <div data-testid="session-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filteredSessions.map((sess) => (
             <Fragment key={sess.id}>
-            <div
-              key={sess.id}
+            <Card
               data-testid={`session-row-${sess.id}`}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "6px 10px",
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 6,
               }}
             >
               {editingId === sess.id ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <input
-                    ref={inputRef}
+                  <Input
+                    inputRef={inputRef}
                     data-testid={`rename-input-${sess.id}`}
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => void handleRenameSave()}
                     onKeyDown={handleRenameKeyDown}
                     style={{
-                      width: "100%",
                       fontFamily: fonts.mono,
                       fontSize: fontSizes.xs,
-                      color: colors.text,
-                      backgroundColor: colors.surfaceAlt,
-                      border: `1px solid ${colors.accent}`,
-                      borderRadius: 4,
+                      width: "100%",
                       padding: "2px 4px",
-                      outline: "none",
+                      borderRadius: radii.sm,
+                      backgroundColor: colors.surfaceAlt,
                     }}
                   />
                 </div>
@@ -365,43 +353,26 @@ export function Sessions() {
                   )}
                 </Link>
               )}
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 data-testid={`rename-session-${sess.id}`}
                 onClick={() => handleRenameStart(sess)}
                 disabled={editingId !== null && editingId !== sess.id}
-                style={{
-                  backgroundColor: "transparent",
-                  border: `1px solid ${colors.muted}`,
-                  color: colors.muted,
-                  borderRadius: 4,
-                  padding: "2px 6px",
-                  fontFamily: fonts.mono,
-                  fontSize: fontSizes.xs,
-                  cursor: editingId !== null && editingId !== sess.id ? "not-allowed" : "pointer",
-                  marginLeft: 8,
-                  opacity: editingId !== null && editingId !== sess.id ? 0.4 : 1,
-                }}
               >
                 rename
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
                 data-testid={`delete-session-${sess.id}`}
                 onClick={() => void handleDelete(sess.id)}
-                style={{
-                  backgroundColor: "transparent",
-                  border: `1px solid ${colors.error}`,
-                  color: colors.error,
-                  borderRadius: 4,
-                  padding: "2px 6px",
-                  fontFamily: fonts.mono,
-                  fontSize: fontSizes.xs,
-                  cursor: "pointer",
-                  marginLeft: 8,
-                }}
               >
                 delete
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 data-testid={`edit-tags-${sess.id}`}
                 onClick={() => {
                   const existing = tagsMap[sess.id];
@@ -410,16 +381,10 @@ export function Sessions() {
                   setFolderInput(existing?.folder ?? "");
                 }}
                 disabled={editingId !== null || editingTagsId !== null}
-                style={{
-                  backgroundColor: "transparent", border: `1px solid ${colors.accent}`,
-                  color: colors.accent, borderRadius: 4, padding: "2px 6px",
-                  fontFamily: fonts.mono, fontSize: fontSizes.xs, cursor: "pointer",
-                  marginLeft: 8,
-                }}
               >
                 tags
-              </button>
-            </div>
+              </Button>
+            </Card>
             {editingTagsId === sess.id && (
               <div style={{
                 padding: "8px 12px", backgroundColor: colors.surfaceAlt,
@@ -428,7 +393,7 @@ export function Sessions() {
               }}>
                 <div style={{ marginBottom: 6 }}>
                   <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Tags (comma-separated)</label>
-                  <input
+                  <Input
                     data-testid={`tag-input-${sess.id}`}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -442,50 +407,46 @@ export function Sessions() {
                     }}
                     placeholder="important, bug, feature"
                     style={{
-                      width: "100%", padding: "4px 8px", borderRadius: 4,
-                      border: `1px solid ${colors.border}`, backgroundColor: colors.surface,
-                      color: colors.text, fontFamily: fonts.mono, fontSize: fontSizes.xs,
-                      outline: "none",
+                      width: "100%",
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                      padding: "4px 8px",
+                      backgroundColor: colors.surface,
                     }}
                   />
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Folder</label>
-                  <input
+                  <Input
                     data-testid={`folder-input-${sess.id}`}
                     value={folderInput}
                     onChange={(e) => setFolderInput(e.target.value)}
                     placeholder="Project A"
                     style={{
-                      width: "100%", padding: "4px 8px", borderRadius: 4,
-                      border: `1px solid ${colors.border}`, backgroundColor: colors.surface,
-                      color: colors.text, fontFamily: fonts.mono, fontSize: fontSizes.xs,
-                      outline: "none",
+                      width: "100%",
+                      fontFamily: fonts.mono,
+                      fontSize: fontSizes.xs,
+                      padding: "4px 8px",
+                      backgroundColor: colors.surface,
                     }}
                   />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     data-testid={`save-tags-${sess.id}`}
                     onClick={() => saveTags(sess.id)}
-                    style={{
-                      backgroundColor: colors.accent, color: "#000", border: "none",
-                      borderRadius: 4, padding: "4px 12px", fontFamily: fonts.mono,
-                      fontSize: fontSizes.xs, cursor: "pointer",
-                    }}
                   >
                     Save
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setEditingTagsId(null)}
-                    style={{
-                      backgroundColor: "transparent", border: `1px solid ${colors.muted}`,
-                      color: colors.muted, borderRadius: 4, padding: "4px 12px",
-                      fontFamily: fonts.mono, fontSize: fontSizes.xs, cursor: "pointer",
-                    }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

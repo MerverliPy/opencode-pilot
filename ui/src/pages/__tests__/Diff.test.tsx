@@ -23,6 +23,20 @@ import { html as mockDiff2html } from "diff2html";
 const mockedUseServerStore = useServerStore as unknown as jest.Mock;
 const mockedDiff2html = mockDiff2html as unknown as jest.Mock;
 
+const mockServer = { id: "s1", url: "http://localhost:3000", name: "Local" };
+
+function mockServerStore(server: typeof mockServer | null) {
+  mockedUseServerStore.mockImplementation(
+    (selector: (state: Record<string, unknown>) => unknown) => {
+      const state = {
+        servers: server ? [server] : [],
+        activeId: server?.id ?? null,
+      };
+      return selector(state);
+    },
+  );
+}
+
 const mockStatus = {
   branch: "main",
   modified: ["src/index.ts"],
@@ -54,17 +68,13 @@ describe("Diff", () => {
   });
 
   it("shows 'no server configured' when no active server", () => {
-    mockedUseServerStore.mockReturnValue(null);
+    mockServerStore(null);
     render(<Diff />);
     expect(screen.getByText(/no server configured/)).toBeInTheDocument();
   });
 
   it("renders branch name from git status", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
@@ -74,11 +84,7 @@ describe("Diff", () => {
   });
 
   it("shows modified file count badge", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
@@ -88,42 +94,30 @@ describe("Diff", () => {
   });
 
   it("shows commit form when there are changes", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
     await waitFor(() => {
       expect(screen.getByTestId("commit-message-input")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("commit-button")).toBeInTheDocument();
+    expect(screen.getByTestId("diff-commit-button")).toBeInTheDocument();
   });
 
   it("commit button is disabled when message is empty", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("commit-button")).toBeInTheDocument();
+      expect(screen.getByTestId("diff-commit-button")).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("commit-button")).toBeDisabled();
+    expect(screen.getByTestId("diff-commit-button")).toBeDisabled();
   });
 
   it("enables commit button when message is entered", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
@@ -135,15 +129,11 @@ describe("Diff", () => {
       target: { value: "feat: add tests" },
     });
 
-    expect(screen.getByTestId("commit-button")).not.toBeDisabled();
+    expect(screen.getByTestId("diff-commit-button")).not.toBeDisabled();
   });
 
   it("shows 'working tree clean' when no changes", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
     server.use(
       http.get("*/git/status", () =>
         HttpResponse.json({
@@ -165,11 +155,7 @@ describe("Diff", () => {
   });
 
   it("shows commit result after successful commit", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     render(<Diff />);
 
@@ -181,7 +167,7 @@ describe("Diff", () => {
       target: { value: "feat: add feature" },
     });
 
-    fireEvent.click(screen.getByTestId("commit-button"));
+    fireEvent.click(screen.getByTestId("diff-commit-button"));
 
     await waitFor(() => {
       expect(screen.getByText(/committed abc1234/)).toBeInTheDocument();
@@ -189,11 +175,7 @@ describe("Diff", () => {
   });
 
   it("shows error when fetch fails", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
     server.use(
       http.get("*/git/status", () =>
         new HttpResponse("Internal Server Error", { status: 500 }),
@@ -208,11 +190,7 @@ describe("Diff", () => {
   });
 
   it("refresh button triggers reload", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     let requestCount = 0;
     server.use(
@@ -229,7 +207,7 @@ describe("Diff", () => {
     });
 
     const callCountBefore = requestCount;
-    fireEvent.click(screen.getByText("refresh"));
+    fireEvent.click(screen.getByTestId("diff-refresh-button"));
 
     await waitFor(() => {
       expect(requestCount).toBeGreaterThan(callCountBefore);
@@ -237,11 +215,7 @@ describe("Diff", () => {
   });
 
   it("renders theme-aware diff2html override styles", async () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     const { container } = render(<Diff />);
 
@@ -263,11 +237,7 @@ describe("Diff", () => {
     mockedDiff2html.mockReturnValueOnce(
       "<div class='d2h-wrapper'><script>alert(1)</script><img src='https://evil.invalid/x'><a href='javascript:alert(1)' onclick='alert(1)'>bad</a></div>",
     );
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore(mockServer);
 
     const { container } = render(<Diff />);
 

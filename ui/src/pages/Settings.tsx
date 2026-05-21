@@ -310,7 +310,6 @@ export function Settings() {
                     color: colors.text,
                     fontFamily: fonts.mono,
                     fontSize: fontSizes.sm,
-                    outline: "none",
                   }}
                 />
               </label>
@@ -342,7 +341,6 @@ export function Settings() {
                     color: colors.text,
                     fontFamily: fonts.mono,
                     fontSize: fontSizes.sm,
-                    outline: "none",
                   }}
                 />
               </label>
@@ -373,7 +371,6 @@ export function Settings() {
                     color: colors.text,
                     fontFamily: fonts.mono,
                     fontSize: fontSizes.sm,
-                    outline: "none",
                   }}
                 />
               </label>
@@ -405,7 +402,6 @@ export function Settings() {
                     color: colors.text,
                     fontFamily: fonts.mono,
                     fontSize: fontSizes.sm,
-                    outline: "none",
                   }}
                 />
               </label>

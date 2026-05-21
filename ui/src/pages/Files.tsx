@@ -4,7 +4,7 @@
  * Left pane: directory tree (click to navigate, click file to preview).
  * Right pane: read-only CodeMirror viewer for the selected file.
  */
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useServerStore } from "../store/server";
 import { OpencodeClient } from "../services/api";
 import type { FileNode } from "@pilot-shared/types";
@@ -20,7 +20,12 @@ interface SelectedFile {
 }
 
 export function Files() {
-  const server = useServerStore((s) => s.active());
+  const servers = useServerStore((s) => s.servers);
+  const activeId = useServerStore((s) => s.activeId);
+  const server = useMemo(
+    () => servers.find((s) => s.id === activeId) ?? null,
+    [servers, activeId]
+  );
   const client = server ? new OpencodeClient(server) : null;
   const [path, setPath] = useState("");
   const [files, setFiles] = useState<FileNode[]>([]);

@@ -5,6 +5,7 @@
  * Assistant content rendered as markdown with code block copy buttons.
  */
 
+import { memo } from "react";
 import { colors, fonts, fontSizes } from "../theme";
 import type { ChatMessage as ChatMessageType } from "../services/n9routerChat";
 import { MarkdownContent } from "./MarkdownContent";
@@ -19,7 +20,7 @@ function formatTime(ts: number): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export function ChatMessage({ message, onRetry }: Props) {
+export const ChatMessage = memo(function ChatMessage({ message, onRetry }: Props) {
   const isUser = message.role === "user";
   const sender = isUser ? "You" : message.model ?? "Assistant";
 
@@ -127,4 +128,4 @@ export function ChatMessage({ message, onRetry }: Props) {
       )}
     </div>
   );
-}
+});

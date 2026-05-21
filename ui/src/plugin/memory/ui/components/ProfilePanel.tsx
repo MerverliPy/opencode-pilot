@@ -10,6 +10,7 @@ import type { ServerConfig } from "../../../../services/auth";
 import type { ProfileEntry } from "../../db/schema";
 import { colors, fonts, fontSizes } from "../../../../theme";
 import { friendlyError } from "../../../../lib/errors";
+import { Card } from "../../../../components/ui/Card";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -153,12 +154,14 @@ export function ProfilePanel({ serverId, server }: Props) {
       {entries.map((entry) => {
         const barColor = confidenceColor(entry.confidence);
         return (
-          <div
+          <Card
             key={entry.id}
             data-testid={`profile-entry-${entry.id}`}
             style={{
-              padding: "12px 16px",
+              border: "none",
               borderBottom: `1px solid ${colors.borderSubtle}`,
+              borderRadius: 0,
+              padding: "12px 16px",
             }}
           >
             {/* Key */}
@@ -253,7 +256,7 @@ export function ProfilePanel({ serverId, server }: Props) {
                 {relativeTime(entry.updatedAt)}
               </span>
             </div>
-          </div>
+          </Card>
         );
       })}
     </div>

@@ -3,6 +3,7 @@
  * Ported from React Native to HTML/CSS (M5).
  */
 import { colors, fonts, fontSizes } from "../../../../theme";
+import { Card } from "../../../../components/ui/Card";
 import type { Memory, MemoryCategory } from "../../db/schema";
 
 const CATEGORY_COLOR: Record<MemoryCategory, string> = {
@@ -31,10 +32,12 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
   const catLabel = CATEGORY_LABEL[memory.category] ?? memory.category;
 
   return (
-    <div
+    <Card
       data-testid="memory-card"
       style={{
+        border: "none",
         borderBottom: `1px solid ${colors.borderSubtle}`,
+        borderRadius: 0,
         padding: "12px 16px",
         backgroundColor: memory.isPinned ? colors.surface : "transparent",
       }}
@@ -175,6 +178,6 @@ export function MemoryCard({ memory, onPin, onArchive, onDelete }: Props) {
           delete
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

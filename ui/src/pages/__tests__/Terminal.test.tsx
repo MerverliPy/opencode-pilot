@@ -56,6 +56,18 @@ import { Terminal } from "../Terminal";
 
 const mockedUseServerStore = useServerStore as unknown as jest.Mock;
 
+function mockServerStore(server: { id: string; url: string; name: string } | null) {
+  mockedUseServerStore.mockImplementation(
+    (selector: (state: Record<string, unknown>) => unknown) => {
+      const state = {
+        servers: server ? [server] : [],
+        activeId: server?.id ?? null,
+      };
+      return selector(state);
+    },
+  );
+}
+
 describe("Terminal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,17 +93,13 @@ describe("Terminal", () => {
   });
 
   it("shows 'no server configured' when no active server", () => {
-    mockedUseServerStore.mockReturnValue(null);
+    mockServerStore(null);
     render(<Terminal />);
     expect(screen.getByText(/no server configured/)).toBeInTheDocument();
   });
 
   it("renders tab bar with '+ New' button when server is configured", () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore({ id: "s1", url: "http://localhost:3000", name: "Local" });
     render(<Terminal />);
     expect(
       screen.getByRole("button", { name: /New terminal tab/ }),
@@ -99,11 +107,7 @@ describe("Terminal", () => {
   });
 
   it("renders the terminal container area", () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore({ id: "s1", url: "http://localhost:3000", name: "Local" });
     const { container } = render(<Terminal />);
     // Tab bar is rendered
     expect(
@@ -112,11 +116,7 @@ describe("Terminal", () => {
   });
 
   it("updates open terminal theme when system theme changes", () => {
-    mockedUseServerStore.mockReturnValue({
-      id: "s1",
-      url: "http://localhost:3000",
-      name: "Local",
-    });
+    mockServerStore({ id: "s1", url: "http://localhost:3000", name: "Local" });
 
     render(<Terminal />);
 

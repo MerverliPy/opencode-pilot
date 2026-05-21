@@ -26,6 +26,8 @@ import { colors, fonts } from "../theme";
 import { friendlyError } from "../lib/errors";
 import { useMemoryExtraction } from "../plugin/memory/hooks/useMemoryExtraction";
 import { useMemoryInjection } from "../plugin/memory/hooks/useMemoryInjection";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 
 export function Chat() {
   const { sessionId: urlSessionId } = useParams<{ sessionId?: string }>();
@@ -399,7 +401,7 @@ export function Chat() {
                 minWidth: 0,
               }}
             >
-              <input
+              <Input
                 aria-label="Session title"
                 data-testid="session-title-input"
                 value={titleDraft}
@@ -412,38 +414,22 @@ export function Chat() {
                 }}
                 disabled={isSavingTitle}
                 style={{
-                  fontFamily: fonts.mono,
+                  fontFamily: fonts.sans,
                   fontSize: 14,
-                  color: colors.text,
                   backgroundColor: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 6,
                   padding: "6px 8px",
                   minWidth: 0,
                   flex: 1,
                 }}
               />
-              <button
-                type="button"
-                data-title-action="true"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  void saveTitle();
-                }}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void saveTitle()}
                 disabled={isSavingTitle}
-                style={{
-                  fontFamily: fonts.mono,
-                  fontSize: 12,
-                  color: colors.text,
-                  backgroundColor: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 6,
-                  padding: "6px 8px",
-                  cursor: isSavingTitle ? "default" : "pointer",
-                }}
               >
-                save
-              </button>
+                Save
+              </Button>
               <button
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
@@ -484,26 +470,16 @@ export function Chat() {
               >
                 {session?.title ?? "new session"}
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 aria-label="Edit session title"
                 data-testid="session-title-edit"
                 onClick={startTitleEdit}
                 disabled={!session}
-                style={{
-                  fontFamily: fonts.mono,
-                  fontSize: 12,
-                  color: colors.muted,
-                  backgroundColor: "transparent",
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 6,
-                  padding: "4px 8px",
-                  cursor: session ? "pointer" : "default",
-                  flexShrink: 0,
-                }}
               >
                 edit
-              </button>
+              </Button>
             </div>
           )}
           {titleError && (

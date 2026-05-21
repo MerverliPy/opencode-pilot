@@ -31,7 +31,7 @@ Built with React + Vite and served by a Hono Node.js server.
 ```
 ┌────────────────────────────────────────────────────────┐
 │                    Browser / PWA                        │
-│   React + Vite  ·  shadcn/ui  ·  Tailwind              │
+│   React + Vite  ·  theme tokens + CSS custom properties │
 │   xterm.js  ·  CodeMirror 6  ·  diff2html              │
 └──────────────────────┬─────────────────────────────────┘
                        │  HTTP + SSE + WebSocket
@@ -78,8 +78,8 @@ The Pilot server is the single backend process. It:
 | ------------- | ------------------------------------------- | --------------------------------------------- |
 | Framework     | React 19 + TypeScript                       | Preserves Zustand stores + services layer     |
 | Bundler       | Vite 6                                      | Fast HMR, native ESM, PWA plugin              |
-| Components    | shadcn/ui + Radix UI                        | Accessible unstyled primitives, full Tailwind |
-| Styling       | Tailwind CSS v4                             | CSS variables for theme tokens                |
+| Components    | Custom UI components (`ui/src/components/ui/`) | Button, Input, Card extracted from inline patterns |
+| Styling       | Theme tokens + CSS custom properties + inline styles | CSS vars in `index.css`, tokens in `theme.ts` |
 | State         | Zustand (existing stores transfer ~95%)     |                                               |
 | Routing       | React Router v7                             | Replaces Expo Router                          |
 | Virtual lists | @tanstack/react-virtual                     | Replaces FlatList                             |
@@ -137,6 +137,7 @@ pilot/
 │   │   │   ├── Memory.tsx
 │   │   │   └── Settings.tsx
 │   │   ├── components/      # Shared UI components
+│   │   │   ├── ui/           # Design system: Button, Input, Card (Phase 2)
 │   │   │   ├── ChatMessage.tsx  # Streaming chat message bubble
 │   │   ├── store/           # Zustand stores (ported from store/)
 │   │   ├── services/        # API + SSE clients (ported from services/)
@@ -163,7 +164,7 @@ pilot/
 
 ### 5.1 Color Tokens
 
-All tokens are CSS custom properties defined on `:root` and overridden in `[data-theme="light"]`.
+All tokens are CSS custom properties defined on `:root` and overridden in `@media (prefers-color-scheme: light)`.
 
 ```css
 /* Dark (default) */
@@ -194,7 +195,7 @@ All tokens are CSS custom properties defined on `:root` and overridden in `[data
 }
 ```
 
-Theme is applied via `data-theme` attribute on `<html>`, initialized from `localStorage` with `prefers-color-scheme` fallback. No flash-of-unstyled-content: inline script in `<head>` sets the attribute before paint.
+Theme is applied via `@media (prefers-color-scheme)` in CSS. JS reads `window.matchMedia("(prefers-color-scheme: light)")` via `getSystemTheme()`. No flash-of-unstyled-content — CSS vars change instantly with the media query.
 
 ### 5.2 Typography
 
@@ -205,15 +206,19 @@ Theme is applied via `data-theme` attribute on `<html>`, initialized from `local
 | Code / terminal | `ui-monospace, 'Cascadia Code', 'Source Code Pro', ...` | 400, 500 | All code blocks, terminal, editor |
 | Inline code     | `ui-monospace, 'Cascadia Code', 'Source Code Pro', ...` | 400      | `backtick` spans in messages      |
 
-Base size: 14px. Line height: 1.5. Fonts are defined in `ui/src/theme.ts` as CSS font-family stacks.
+Base size: `fontSizes.md` = `"0.9375rem"` (15px at 16px browser default). `lineHeights.normal`: `"1.5"`. Fonts are defined in `ui/src/theme.ts` — `fonts.sans` for UI text, `fonts.mono` for code/terminal.
 
 ### 5.3 Spacing & Radius
 
-- Base unit: 4px (Tailwind default)
+Token exports in `ui/src/theme.ts`:
+
+- **`spacing`**: `px1`–`px8`, mapping to CSS vars `--pilot-space-1` (4px) through `--pilot-space-8` (64px). Scale: 4, 8, 12, 16, 24, 32, 48, 64.
+- **`radii`**: `sm` (4px, `--pilot-radius-sm`), `md` (6px, `--pilot-radius-md`), `lg` (10px, `--pilot-radius-lg`).
+
+Layout:
 - Sidebar width: 240px (collapsed: 56px icon-only)
 - Panel min-width: 320px
-- Border radius: `rounded-md` (6px) for inputs/buttons, `rounded-lg` (8px) for cards/panels, `rounded-xl` (12px) for modals
-- Scrollbars: thin, `--bg-elevated` track, `--border` thumb
+- Scrollbars: thin, `--pilot-surface-alt` track, `--pilot-border` thumb
 
 ---
 
@@ -618,4 +623,37 @@ Ported `plugin/memory/` to `server/src/memory/`. Replaced `expo-sqlite` with `be
 
 ---
 
-_Last updated: 2026-05-13_
+---
+
+## 11. Post-Migration Polish — Design System Extraction (2026-05-21)
+
+After the M1–M5 migration completed, three phases of design-system work were executed:
+
+### Phase 0 — Token Foundation
+
+- Converted `fontSizes` from px to rem for accessibility
+- Added `lineHeights`, `spacing` scale (4–64px), and `radii` tokens
+- CSS custom properties `--pilot-space-*` and `--pilot-radius-*` in `index.css`
+- Token objects in `ui/src/theme.ts`
+
+### Phase 1 — Accessibility & Render Performance
+
+- Global focus-visible ring via CSS (WCAG 2.4.7)
+- `aria-label` on emoji nav links + close buttons
+- Replaced `active()` selector (new-object-per-render) with primitive selects + `useMemo`
+- `memo()` on ChatMessage and TurnView with custom comparator
+- Throttled localStorage persist in SimpleChat
+
+### Phase 2 — Component Extraction
+
+- **Button** (`ui/src/components/ui/Button.tsx`): 4 variants (primary/secondary/ghost/danger), 2 sizes (sm/md), memo'd
+- **Input** (`ui/src/components/ui/Input.tsx`): theme-token styling, focus ring via CSS, style overrides
+- **Card** (`ui/src/components/ui/Card.tsx`): reusable surface with border + radius + bg
+- Migrated all pages (SimpleChat, Sessions, Diff, Login, Chat, Memory, Files) to use extracted components
+- DebugPanel intentionally NOT migrated to Card (sliding panel, not a card surface)
+
+### Remaining phases (not started)
+
+Phases 3–7 from [EXECUTION-PLAN.md](./EXECUTION-PLAN.md): mono→sans migration, responsive/PWA, spacing audit, hover polish, static style extraction.
+
+_Last updated: 2026-05-21_

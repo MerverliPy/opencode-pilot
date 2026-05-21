@@ -35,14 +35,17 @@ const mockedUseN9RouterStore = useN9RouterStore as unknown as jest.Mock;
 const mockedUseChatStream = useChatStream as unknown as jest.Mock;
 
 function setup() {
+  const mockServer = {
+    id: "s1",
+    url: "http://localhost:4096",
+    name: "Home",
+  };
   mockedUseServerStore.mockImplementation(
     (selector: (state: unknown) => unknown) => {
       const state = {
-        active: () => ({
-          id: "s1",
-          url: "http://localhost:4096",
-          name: "Home",
-        }),
+        servers: [mockServer],
+        activeId: "s1",
+        active: () => mockServer,
       };
       return selector(state);
     },
@@ -67,29 +70,23 @@ function setup() {
 }
 
 describe("SimpleChat", () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("renders empty state", () => {
+  it("renders sidebar with conversation header", () => {
     setup();
     render(
       <MemoryRouter>
         <SimpleChat />
       </MemoryRouter>,
     );
-    expect(
-      screen.getByText(/Send a message to start chatting/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Conversations")).toBeInTheDocument();
   });
 
-  it("renders prompt input", () => {
+  it("renders prompt input with placeholder", () => {
     setup();
     render(
       <MemoryRouter>
         <SimpleChat />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("prompt-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ask opencode/)).toBeInTheDocument();
   });
 });

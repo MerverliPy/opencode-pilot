@@ -13,7 +13,7 @@ import { cors } from "hono/cors";
 import { resolve, dirname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
-import { getConfiguredAuthToken, requireBearerAuth, isAuthDisabled, isAuthEnabled } from "./auth.js";
+import { getConfiguredAuthToken, requireAuth, handleLogin, handleLogout, handleAuthStatus, isAuthDisabled, isAuthEnabled } from "./auth.js";
 import { shouldRateLimitRequest } from "./rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -94,14 +94,19 @@ app.use(
   cors({
     origin: corsOrigins,
     credentials: true,
-    allowHeaders: ["Authorization", "Content-Type"],
+    allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
   }),
 );
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (c) => c.json({ healthy: true, version: "0.2.0" }));
 
-const authMiddleware = requireBearerAuth();
+// ─── Auth routes (unprotected) ──────────────────────────────────────────────────
+app.post("/auth/login", handleLogin);
+app.post("/auth/logout", handleLogout);
+app.get("/auth/status", handleAuthStatus);
+
+const authMiddleware = requireAuth();
 
 function protectRoute(path: string) {
   app.use(path, authMiddleware);

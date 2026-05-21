@@ -1,4 +1,4 @@
-import { basicAuthHeader, ServerConfig } from "./auth";
+import { basicAuthHeader, ServerConfig, csrfHeaders } from "./auth";
 import { log } from "./logger";
 import type {
   Agent,
@@ -58,10 +58,15 @@ export class OpencodeClient {
       ...basicAuthHeader(this.server),
     };
     if (init?.body !== undefined) headers["Content-Type"] = "application/json";
+    // Include CSRF header on mutating methods for cookie auth
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      Object.assign(headers, csrfHeaders());
+    }
 
     const res = await fetch(this.url(path, init?.query), {
       method,
       headers,
+      credentials: "include",
       body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
     });
     if (!res.ok) {

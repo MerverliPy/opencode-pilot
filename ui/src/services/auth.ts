@@ -8,7 +8,7 @@
  * via the Web Crypto API before being written to localStorage.  Plaintext
  * keys (activeServer, lastSession, pushToken, workdir) are NOT encrypted.
  */
-import type { ServerConfig, N9RouterConfig } from "@pilot-shared/types";
+import type { ServerConfig, N9RouterConfig, LoginResponse, AuthStatusResponse } from "@pilot-shared/types";
 import { encrypt, decrypt, clearCryptoStore } from "./crypto";
 
 const KEY_SERVERS = "pilot.servers";
@@ -134,4 +134,42 @@ export async function clearAllAuth(): Promise<void> {
   }
   // Wipe the IndexedDB crypto store
   await clearCryptoStore();
+}
+
+// ─── Session cookie auth (P27) ────────────────────────────────────────────
+
+export async function login(
+  serverUrl: string,
+  username: string,
+  password: string,
+): Promise<LoginResponse> {
+  const res = await fetch(`${serverUrl.replace(/\/$/, "")}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ username, password }),
+  });
+  return (await res.json()) as LoginResponse;
+}
+
+export async function logout(serverUrl: string): Promise<void> {
+  await fetch(`${serverUrl.replace(/\/$/, "")}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
+export async function checkAuthStatus(
+  serverUrl: string,
+): Promise<AuthStatusResponse> {
+  const res = await fetch(`${serverUrl.replace(/\/$/, "")}/auth/status`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return (await res.json()) as AuthStatusResponse;
+}
+
+/** CSRF sentinel header for mutating requests when using cookie auth. */
+export function csrfHeaders(): Record<string, string> {
+  return { "X-Requested-With": "PilotPWA" };
 }

@@ -1,9 +1,35 @@
-import type { MiddlewareHandler } from "hono";
+import type { MiddlewareHandler, Context } from "hono";
 import type { IncomingMessage } from "node:http";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 
 const AUTH_ENV_NAME = "PILOT_AUTH_TOKEN";
 const BEARER_PREFIX = "Bearer ";
 const AUTH_DISABLE_ENV_NAME = "PILOT_AUTH_DISABLE";
+
+// ─── Session constants ──────────────────────────────────────────────────────────
+export const SESSION_COOKIE_NAME = "pilot_session";
+const SESSION_IDLE_MS = 24 * 60 * 60 * 1000; // 24h
+const SESSION_ABSOLUTE_MS = 7 * 24 * 60 * 60 * 1000; // 7d
+const SESSION_PURGE_INTERVAL_MS = 600_000; // 10 min
+
+interface SessionData {
+  username: string;
+  createdAt: number;
+  expiresAt: number; // absolute expiry (idle-resettable, capped at createdAt + SESSION_ABSOLUTE_MS)
+}
+
+// ─── In-memory session store ────────────────────────────────────────────────────
+const sessions = new Map<string, SessionData>();
+
+// Clean up expired sessions on an interval (don't keep the process alive).
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, s] of sessions) {
+    if (now > s.expiresAt) sessions.delete(id);
+  }
+}, SESSION_PURGE_INTERVAL_MS).unref();
+
+// ─── Bearer auth (existing, unchanged) ──────────────────────────────────────────
 
 export function getConfiguredAuthToken(): string | null {
   const token = process.env[AUTH_ENV_NAME]?.trim();
@@ -70,4 +96,169 @@ export function requireBearerAuth(): MiddlewareHandler {
 
     await next();
   };
+}
+
+// ─── Session cookie helpers ─────────────────────────────────────────────────────
+
+/** Validate a session cookie value against the in-memory store.
+ *  Returns the session data if valid, null otherwise. */
+export function validateSession(cookieValue: string | null | undefined): SessionData | null {
+  if (!cookieValue) return null;
+  const session = sessions.get(cookieValue);
+  if (!session) return null;
+  if (Date.now() > session.expiresAt) {
+    sessions.delete(cookieValue);
+    return null;
+  }
+  return session;
+}
+
+/** Extend the idle expiry of a valid session. */
+function extendSession(sessionId: string): void {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  session.expiresAt = Math.min(
+    Date.now() + SESSION_IDLE_MS,
+    session.createdAt + SESSION_ABSOLUTE_MS,
+  );
+}
+
+/** Check whether the CSRF sentinel header is present for mutating requests. */
+export function isCsrfValid(c: Context): boolean {
+  return c.req.header("x-requested-with") === "PilotPWA";
+}
+
+/** Cookie options applied to every new session cookie. */
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: Math.floor(SESSION_IDLE_MS / 1000),
+  };
+}
+
+/** Create and return a 401 JSON response consistent with the bearer flow. */
+function unauthorizedResponse(c: Context): Response {
+  return c.json({ error: "Unauthorized" }, 401, { "WWW-Authenticate": "Bearer" });
+}
+
+// ─── Unified auth middleware ────────────────────────────────────────────────────
+
+/**
+ * Middleware that accepts EITHER a valid session cookie OR a valid bearer token.
+ *
+ * When cookie auth is used on a mutating method (POST/PUT/PATCH/DELETE), the
+ * request must also include the CSRF sentinel header `X-Requested-With: PilotPWA`.
+ */
+export function requireAuth(): MiddlewareHandler {
+  return async (c, next) => {
+    // 1 — Bearer token (backward compat for CLI/API automation)
+    if (isAuthorizedHeaderValue(c.req.header("authorization"))) {
+      await next();
+      return;
+    }
+
+    // 2 — Session cookie
+    const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+    if (!sessionCookie) {
+      return unauthorizedResponse(c);
+    }
+    const session = validateSession(sessionCookie);
+
+    if (session) {
+      // CSRF protection for mutating requests authenticated via cookie
+      const method = c.req.method;
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+        if (!isCsrfValid(c)) {
+          return c.json({ error: "Invalid or missing CSRF header" }, 403);
+        }
+      }
+      // Extend session idle time
+      extendSession(sessionCookie);
+      await next();
+      return;
+    }
+
+    // 3 — Neither valid
+    return unauthorizedResponse(c);
+  };
+}
+
+// ─── Auth route handlers ────────────────────────────────────────────────────────
+
+export async function handleLogin(c: Context): Promise<Response> {
+  let body: { username?: string; password?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: "Invalid JSON body" }, 400);
+  }
+
+  const username = body.username?.trim();
+  const password = body.password ?? "";
+
+  if (!username) {
+    return c.json({ ok: false, error: "Username is required" }, 400);
+  }
+
+  // Dev bypass
+  if (isAuthDisabled()) {
+    const sessionId = crypto.randomUUID();
+    const now = Date.now();
+    sessions.set(sessionId, {
+      username,
+      createdAt: now,
+      expiresAt: Math.min(now + SESSION_IDLE_MS, now + SESSION_ABSOLUTE_MS),
+    });
+    setCookie(c, SESSION_COOKIE_NAME, sessionId, sessionCookieOptions());
+    return c.json({ ok: true, username });
+  }
+
+  // Auth token must be configured
+  const configuredToken = getConfiguredAuthToken();
+  if (!configuredToken) {
+    return c.json({ ok: false, error: "Server auth is not configured" }, 401);
+  }
+
+  // Validate password against configured token (constant-time)
+  if (typeof password !== "string" || !configuredToken) {
+    return c.json({ ok: false, error: "Invalid credentials" }, 401);
+  }
+  const { timingSafeEqual } = await import("node:crypto");
+  const pwBuf = Buffer.from(password);
+  const tokBuf = Buffer.from(configuredToken);
+  if (pwBuf.length !== tokBuf.length || !timingSafeEqual(pwBuf, tokBuf)) {
+    return c.json({ ok: false, error: "Invalid credentials" }, 401);
+  }
+
+  // Create session
+  const sessionId = crypto.randomUUID();
+  const now = Date.now();
+  sessions.set(sessionId, {
+    username,
+    createdAt: now,
+    expiresAt: Math.min(now + SESSION_IDLE_MS, now + SESSION_ABSOLUTE_MS),
+  });
+  setCookie(c, SESSION_COOKIE_NAME, sessionId, sessionCookieOptions());
+  return c.json({ ok: true, username });
+}
+
+export async function handleLogout(c: Context): Promise<Response> {
+  const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+  if (sessionCookie) {
+    sessions.delete(sessionCookie);
+  }
+  deleteCookie(c, SESSION_COOKIE_NAME, { path: "/" });
+  return c.json({ ok: true });
+}
+
+export async function handleAuthStatus(c: Context): Promise<Response> {
+  const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+  const session = validateSession(sessionCookie);
+  if (session) {
+    return c.json({ authenticated: true, username: session.username });
+  }
+  return c.json({ authenticated: false });
 }

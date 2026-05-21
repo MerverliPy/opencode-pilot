@@ -1,4 +1,5 @@
 const rateLimitedPrefixes = [
+  "/auth",
   "/api",
   "/event",
   "/session",

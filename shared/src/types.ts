@@ -228,3 +228,21 @@ export type ProviderSummary = {
   promptTokens: number;
   completionTokens: number;
 };
+
+// ─── Auth (P27) ──────────────────────────────────────────────────────────────────
+
+export type LoginRequest = {
+  username: string;
+  password: string;
+};
+
+export type LoginResponse = {
+  ok: boolean;
+  username?: string;
+  error?: string;
+};
+
+export type AuthStatusResponse = {
+  authenticated: boolean;
+  username?: string;
+};

@@ -436,7 +436,7 @@ export function Chat() {
                 onClick={cancelTitleEdit}
                 disabled={isSavingTitle}
                 style={{
-                  fontFamily: fonts.mono,
+                  fontFamily: fonts.sans,
                   fontSize: 12,
                   color: colors.muted,
                   backgroundColor: "transparent",
@@ -460,7 +460,7 @@ export function Chat() {
             >
               <div
                 style={{
-                  fontFamily: fonts.mono,
+                  fontFamily: fonts.sans,
                   fontSize: 14,
                   color: colors.text,
                   overflow: "hidden",
@@ -485,7 +485,7 @@ export function Chat() {
           {titleError && (
             <div
               style={{
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: 11,
                 color: colors.error,
               }}

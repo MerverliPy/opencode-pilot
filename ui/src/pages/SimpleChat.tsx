@@ -171,14 +171,10 @@ export function SimpleChat() {
     }
   }, [streamError]);
 
-  // Responsive sidebar
-  useEffect(() => {
-    const handler = () => {
-      setSidebarOpen(window.innerWidth > 768);
-    };
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, []);
+  // Sidebar visibility controlled via CSS media queries
+  // Sidebar visibility controlled via CSS media queries
+  // Sidebar visibility controlled via CSS media queries
+  // Sidebar visibility controlled via CSS media queries
 
   const client = useMemo(() => {
     if (!server) return null;
@@ -404,7 +400,7 @@ export function SimpleChat() {
     >
       {/* Sidebar */}
       {sidebarOpen && (
-        <div
+        <div className="simplechat-sidebar"
           style={{
             width: 260,
             minWidth: 260,
@@ -548,7 +544,7 @@ export function SimpleChat() {
             variant="secondary"
             size="sm"
             onClick={toggleSidebar}
-            style={{ display: window.innerWidth <= 768 ? "block" : "none" }}
+            className="simplechat-sidebar-toggle"
           >
             ☰
           </Button>

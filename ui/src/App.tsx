@@ -1,16 +1,10 @@
-/**
- * Pilot UI — Root application component with routing.
- *
- * Provides routes for Chat, Sessions, Files, Terminal, Diff, and Settings.
- * Wraps everything in a responsive Layout with sidebar / bottom nav.
- */
 import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useServerStore } from "./store/server";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { colors, fonts } from "./theme";
+import { Skeleton } from "./components/ui/Skeleton";
 
 const Chat = lazy(() => import("./pages/Chat").then((m) => ({ default: m.Chat })));
 const SimpleChat = lazy(() => import("./pages/SimpleChat").then((m) => ({ default: m.SimpleChat })));
@@ -21,23 +15,26 @@ const Diff = lazy(() => import("./pages/Diff").then((m) => ({ default: m.Diff })
 const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
 const Memory = lazy(() => import("./pages/Memory").then((m) => ({ default: m.Memory })));
 const Login = lazy(() => import("./pages/Login").then((m) => ({ default: m.Login })));
-
 function LoadingFallback() {
   return (
     <div
       style={{
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "column",
+        gap: 16,
+        padding: 24,
         height: "100%",
         minHeight: 200,
         flex: 1,
-        fontFamily: fonts.mono,
-        color: colors.muted,
-        fontSize: 14,
       }}
     >
-      loading…
+      <div className="skeleton-pulse" style={{ width: "40%", height: 24, borderRadius: 4, backgroundColor: "var(--pilot-surface-alt)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+      <div className="skeleton-pulse" style={{ width: "100%", height: 12, borderRadius: 4, backgroundColor: "var(--pilot-surface-alt)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+      <div className="skeleton-pulse" style={{ width: "80%", height: 12, borderRadius: 4, backgroundColor: "var(--pilot-surface-alt)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+      <div className="skeleton-pulse" style={{ width: "60%", height: 12, borderRadius: 4, backgroundColor: "var(--pilot-surface-alt)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+      <div style={{ marginTop: 24 }}>
+        <div className="skeleton-pulse" style={{ width: "100%", height: 200, borderRadius: 8, backgroundColor: "var(--pilot-surface-alt)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+      </div>
     </div>
   );
 }

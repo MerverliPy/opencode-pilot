@@ -259,7 +259,7 @@ export function Diff() {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.md,
         }}
       >
@@ -345,7 +345,7 @@ export function Diff() {
         {loadingStatus && (
           <span data-testid="diff-refreshing"
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               color: colors.muted,
             }}
@@ -448,7 +448,7 @@ export function Diff() {
           <div data-testid="diff-loading"
             style={{
               color: colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.md,
               textAlign: "center",
               padding: 40,
@@ -460,7 +460,7 @@ export function Diff() {
           <div data-testid="diff-clean"
             style={{
               color: colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.md,
               textAlign: "center",
               padding: 40,
@@ -474,7 +474,7 @@ export function Diff() {
               <div data-testid="diff-loading-diffs"
                 style={{
                   color: colors.muted,
-                  fontFamily: fonts.mono,
+                  fontFamily: fonts.sans,
                   fontSize: fontSizes.sm,
                   marginBottom: 12,
                 }}

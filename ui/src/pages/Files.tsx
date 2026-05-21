@@ -119,7 +119,7 @@ export function Files() {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.md,
         }}
       >
@@ -236,7 +236,7 @@ export function Files() {
               data-testid="file-loading"
               style={{
                 color: colors.muted,
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: fontSizes.sm,
                 textAlign: "center",
                 padding: 24,
@@ -313,7 +313,7 @@ export function Files() {
                     padding: 20,
                     textAlign: "center",
                     color: colors.muted,
-                    fontFamily: fonts.mono,
+                    fontFamily: fonts.sans,
                     fontSize: fontSizes.sm,
                   }}
                 >
@@ -401,7 +401,7 @@ export function Files() {
               justifyContent: "center",
               height: "100%",
               color: colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.sm,
             }}
           >

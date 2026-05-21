@@ -230,7 +230,7 @@ export function Memory() {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.sm,
         }}
       >
@@ -269,7 +269,7 @@ export function Memory() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.md,
               color: colors.text,
               fontWeight: 600,
@@ -280,7 +280,7 @@ export function Memory() {
           <span
             data-testid="memory-count"
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               color: colors.muted,
               backgroundColor: colors.surfaceAlt,
@@ -294,7 +294,7 @@ export function Memory() {
             <span
               data-testid="memory-extracting"
               style={{
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: fontSizes.xs,
                 color: colors.accent,
               }}
@@ -315,7 +315,7 @@ export function Memory() {
               border: `1px solid ${colors.border}`,
               borderRadius: 4,
               color: viewMode === "memories" ? "#000" : colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               cursor: "pointer",
             }}
@@ -331,7 +331,7 @@ export function Memory() {
               border: `1px solid ${colors.border}`,
               borderRadius: 4,
               color: viewMode === "timeline" ? "#000" : colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               cursor: "pointer",
             }}
@@ -347,7 +347,7 @@ export function Memory() {
               border: `1px solid ${colors.border}`,
               borderRadius: 4,
               color: viewMode === "profile" ? "#000" : colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               cursor: "pointer",
             }}
@@ -368,7 +368,7 @@ export function Memory() {
                 border: `1px solid ${colors.border}`,
                 borderRadius: 4,
                 color: colors.muted,
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: fontSizes.xs,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
@@ -386,7 +386,7 @@ export function Memory() {
                 border: `1px solid ${colors.border}`,
                 borderRadius: 4,
                 color: colors.muted,
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: fontSizes.xs,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
@@ -409,7 +409,7 @@ export function Memory() {
               border: `1px solid ${colors.border}`,
               borderRadius: 4,
               color: searchMode === "text" ? "#000" : colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               cursor: "pointer",
             }}
@@ -425,7 +425,7 @@ export function Memory() {
               border: `1px solid ${colors.border}`,
               borderRadius: 4,
               color: searchMode === "semantic" ? "#000" : colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.xs,
               cursor: "pointer",
             }}
@@ -481,7 +481,7 @@ export function Memory() {
           style={{
             padding: "8px 16px",
             color: colors.success,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: fontSizes.xs,
             flexShrink: 0,
           }}
@@ -499,7 +499,7 @@ export function Memory() {
               style={{
                 padding: 24,
                 color: colors.muted,
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: fontSizes.sm,
                 textAlign: "center",
               }}

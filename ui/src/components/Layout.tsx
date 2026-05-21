@@ -181,7 +181,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {!sidebarCollapsed && (
             <span
               style={{
-                fontFamily: fonts.mono,
+                fontFamily: fonts.sans,
                 fontSize: 16,
                 fontWeight: 600,
                 color: colors.text,

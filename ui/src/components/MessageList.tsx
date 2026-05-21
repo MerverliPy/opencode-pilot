@@ -63,7 +63,7 @@ const TurnView = memo(function TurnView({ turn }: { turn: Turn }) {
       {/* Role label */}
       <div
         style={{
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.xs,
           color: colors.muted,
           marginBottom: 4,
@@ -310,7 +310,7 @@ export function MessageList({ turns }: { turns: Turn[] }) {
         <div
           style={{
             color: colors.accent,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: 28,
             marginBottom: 8,
           }}
@@ -320,7 +320,7 @@ export function MessageList({ turns }: { turns: Turn[] }) {
         <div
           style={{
             color: colors.text,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: fontSizes.md,
           }}
         >
@@ -329,7 +329,7 @@ export function MessageList({ turns }: { turns: Turn[] }) {
         <div
           style={{
             color: colors.muted,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: fontSizes.xs,
             marginTop: 8,
             lineHeight: 1.6,

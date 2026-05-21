@@ -262,7 +262,7 @@ export function Terminal() {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.md,
         }}
       >
@@ -387,7 +387,7 @@ export function Terminal() {
               justifyContent: "center",
               height: "100%",
               color: colors.muted,
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: fontSizes.sm,
             }}
           >

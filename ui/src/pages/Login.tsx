@@ -74,7 +74,7 @@ export function Login() {
       >
         <h1
           style={{
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: 18,
             color: colors.text,
             margin: 0,
@@ -88,7 +88,7 @@ export function Login() {
           <label
             htmlFor="login-username"
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: 11,
               color: colors.muted,
               textTransform: "uppercase",
@@ -118,7 +118,7 @@ export function Login() {
           <label
             htmlFor="login-password"
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: 11,
               color: colors.muted,
               textTransform: "uppercase",
@@ -147,7 +147,7 @@ export function Login() {
           <div
             role="alert"
             style={{
-              fontFamily: fonts.mono,
+              fontFamily: fonts.sans,
               fontSize: 12,
               color: colors.error,
               textAlign: "center",

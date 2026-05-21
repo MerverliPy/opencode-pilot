@@ -467,7 +467,7 @@ Rationale for each:
 - **Form labels, button text, navigation items, page headings, modals** → sans
 - **Code blocks, terminal, git output, model IDs, timestamps, file paths, inline code, debug output, permission details** → keep mono
 
-- [ ] task: run through all components, change fonts.mono → fonts.sans for non-code elements per table above
+- [x] task: run through all components, change fonts.mono → fonts.sans for non-code elements per table above
 
 **Verify**: `npm run typecheck -w ui && npm run test -w ui`
 
@@ -496,7 +496,7 @@ Then add `<style>` tag with:
 
 And add `className="simplechat-sidebar"` to sidebar div, `className="simplechat-sidebar-toggle"` to toggle button.
 
-- [ ] task: replace JS breakpoint with CSS breakpoint in SimpleChat
+- [x] task: replace JS breakpoint with CSS breakpoint in SimpleChat
 
 **Verify**: `npm run typecheck -w ui`
 
@@ -531,9 +531,9 @@ Add `@keyframes skeleton-pulse` to `index.css`.
 
 **Update**: `ui/src/App.tsx` — replace `LoadingFallback` with skeleton matching each page layout.
 
-- [ ] task: create Skeleton component
-- [ ] task: add skeleton animation to index.css
-- [ ] task: update App.tsx LoadingFallback to use skeleton
+- [x] task: create Skeleton component
+- [x] task: add skeleton animation to index.css
+- [x] task: update App.tsx LoadingFallback to use skeleton
 
 **Verify**: `npm run typecheck -w ui && npm run test -w ui`
 
@@ -726,8 +726,8 @@ npm run test
 Phase 0: Token foundation          [x] 4/4 tasks
 Phase 1: Critical a11y + perf     [x] 6/6 tasks
 Phase 2: Component extraction      [x] 3/3 tasks
-Phase 3: Mono → Sans migration    [ ] 0/1 tasks
-Phase 4: Responsive + PWA         [ ] 0/3 tasks
+Phase 3: Mono → Sans migration    [x] 1/1 tasks
+Phase 4: Responsive + PWA         [ ] 2/3 tasks
 Phase 5: Spacing audit            [ ] 0/2 tasks
 Phase 6: Hover + interactions     [ ] 0/1 tasks
 Phase 7: Static style extraction  [ ] 0/1 tasks

@@ -40,7 +40,7 @@ export function DebugPanel({ visible, onToggle }: Props) {
       style={{
         borderTop: `1px solid ${colors.borderSubtle}`,
         backgroundColor: colors.surface,
-        fontFamily: fonts.mono,
+        fontFamily: fonts.sans,
         fontSize: fontSizes.xs,
         maxHeight: 240,
         overflowY: "auto",

@@ -169,7 +169,7 @@ export function Sessions() {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.md,
         }}
       >
@@ -206,12 +206,12 @@ export function Sessions() {
 
       {Object.keys(tagsMap).length > 0 && (
         <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-          <span style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted }}>Folder:</span>
+          <span style={{ fontFamily: fonts.sans, fontSize: fontSizes.xs, color: colors.muted }}>Folder:</span>
           <select
             value={folderFilter}
             onChange={(e) => setFolderFilter(e.target.value)}
             style={{
-              fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.text,
+              fontFamily: fonts.sans, fontSize: fontSizes.xs, color: colors.text,
               padding: "2px 8px", backgroundColor: colors.surfaceAlt,
               border: `1px solid ${colors.border}`, borderRadius: 4, cursor: "pointer",
             }}
@@ -248,7 +248,7 @@ export function Sessions() {
           data-testid="sessions-loading"
           style={{
             color: colors.muted,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: fontSizes.md,
             textAlign: "center",
             padding: 40,
@@ -261,7 +261,7 @@ export function Sessions() {
           data-testid="sessions-empty"
           style={{
             color: colors.muted,
-            fontFamily: fonts.mono,
+            fontFamily: fonts.sans,
             fontSize: fontSizes.md,
             textAlign: "center",
             padding: 40,
@@ -292,7 +292,7 @@ export function Sessions() {
                     onBlur={() => void handleRenameSave()}
                     onKeyDown={handleRenameKeyDown}
                     style={{
-                      fontFamily: fonts.mono,
+                      fontFamily: fonts.sans,
                       fontSize: fontSizes.xs,
                       width: "100%",
                       padding: "2px 4px",
@@ -313,7 +313,7 @@ export function Sessions() {
                 >
                   <div
                     style={{
-                      fontFamily: fonts.mono,
+                      fontFamily: fonts.sans,
                       fontSize: fontSizes.xs,
                       color: colors.text,
                       overflow: "hidden",
@@ -392,7 +392,7 @@ export function Sessions() {
                 marginTop: 4, marginBottom: 4,
               }}>
                 <div style={{ marginBottom: 6 }}>
-                  <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Tags (comma-separated)</label>
+                  <label style={{ fontFamily: fonts.sans, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Tags (comma-separated)</label>
                   <Input
                     data-testid={`tag-input-${sess.id}`}
                     value={tagInput}
@@ -408,7 +408,7 @@ export function Sessions() {
                     placeholder="important, bug, feature"
                     style={{
                       width: "100%",
-                      fontFamily: fonts.mono,
+                      fontFamily: fonts.sans,
                       fontSize: fontSizes.xs,
                       padding: "4px 8px",
                       backgroundColor: colors.surface,
@@ -416,7 +416,7 @@ export function Sessions() {
                   />
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Folder</label>
+                  <label style={{ fontFamily: fonts.sans, fontSize: fontSizes.xs, color: colors.muted, display: "block", marginBottom: 2 }}>Folder</label>
                   <Input
                     data-testid={`folder-input-${sess.id}`}
                     value={folderInput}
@@ -424,7 +424,7 @@ export function Sessions() {
                     placeholder="Project A"
                     style={{
                       width: "100%",
-                      fontFamily: fonts.mono,
+                      fontFamily: fonts.sans,
                       fontSize: fontSizes.xs,
                       padding: "4px 8px",
                       backgroundColor: colors.surface,

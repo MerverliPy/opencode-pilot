@@ -84,7 +84,7 @@ export function ProfilePanel({ serverId, server }: Props) {
           flex: 1,
           minHeight: 0,
           color: colors.muted,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.sm,
         }}
       >
@@ -108,7 +108,7 @@ export function ProfilePanel({ serverId, server }: Props) {
           gap: 8,
           padding: 24,
           color: colors.error,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.sm,
         }}
       >
@@ -131,7 +131,7 @@ export function ProfilePanel({ serverId, server }: Props) {
           minHeight: 0,
           padding: 32,
           color: colors.mutedAlt,
-          fontFamily: fonts.mono,
+          fontFamily: fonts.sans,
           fontSize: fontSizes.md,
           textAlign: "center",
         }}

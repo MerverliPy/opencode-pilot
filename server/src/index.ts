@@ -13,7 +13,7 @@ import { cors } from "hono/cors";
 import { resolve, dirname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProxy } from "./proxy.js";
-import { getConfiguredAuthToken, requireBearerAuth } from "./auth.js";
+import { getConfiguredAuthToken, requireBearerAuth, isAuthDisabled, isAuthEnabled } from "./auth.js";
 import { shouldRateLimitRequest } from "./rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -269,8 +269,12 @@ export function startServer(
   setupStatic();
   const httpServer = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`✈  Pilot server listening on http://localhost:${info.port}`);
-    if (openCodeUrl) {
-      console.log(`↔  Proxying to OpenCode at ${openCodeUrl}`);
+    if (isAuthEnabled()) {
+      console.log(`🔐  Auth enabled (PILOT_AUTH_TOKEN set)`);
+    } else if (isAuthDisabled()) {
+      console.log(`⚠️  Auth DISABLED (PILOT_AUTH_DISABLE=1) — only for local dev`);
+    } else {
+      console.log(`🔒  Auth REQUIRED by default — set PILOT_AUTH_TOKEN or PILOT_AUTH_DISABLE=1 for dev`);
     }
   });
   // Attach terminal WebSocket bridge to the same HTTP server

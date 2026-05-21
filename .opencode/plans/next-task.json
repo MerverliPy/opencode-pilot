@@ -1,29 +1,24 @@
 {
   "/*": "Generated agent next-task pointer. TASKS.md is the human-maintained source of truth; run npm run write:opencode-inventory after OpenCode surface changes.",
   "version": 2,
-  "updated": "2026-05-20",
+  "updated": "2026-05-21",
   "agent_type": "implementer",
   "source": "TASKS.md",
   "task": {
-    "id": "P26",
-    "title": "Require auth by default",
+    "id": "P27",
+    "title": "Add browser login + httpOnly session cookie auth",
     "status": "open",
     "priority": "critical",
     "phase": "tailscale-security-readiness-v0.4.1-tier-0",
-    "depends_on": [],
+    "depends_on": ["P26"],
     "files": [
       "server/src/auth.ts",
-      "server/src/index.ts",
-      "server/src/cli.ts",
-      ".env.example",
-      "README.md",
-      "SELF_RUN.md"
+      "ui/src/services/auth.ts",
+      "ui/src/store/server.ts"
     ],
     "risk_labels": [
-      "security",
-      "api-contract",
-      "proxy-tunnel",
-      "terminal-stream"
+      "auth-session",
+      "api-contract"
     ],
     "skills": [
       "workflow-routing",
@@ -33,26 +28,24 @@
     ],
     "verification": [
       "npm run typecheck -w server",
-      "npm run test -w server -- auth",
-      "npm run lint"
+      "npm run typecheck -w ui",
+      "npm run test -w server -- auth"
     ],
     "reviewers": [
       "security-auditor",
       "api-contract-reviewer",
-      "terminal-stream-reviewer",
       "typescript-reviewer"
     ],
-    "description": "Make Pilot require authentication by default for Tailscale-exposed admin use. Only allow an explicit dev-only loopback auth bypass.",
+    "description": "Replace browser bearer-token dependence with login/session-cookie auth. Use secure httpOnly cookies, session expiry, logout, and CSRF-aware mutation handling. Keep bearer auth only for CLI/API automation.",
     "context_files": [
       "TASKS.md",
       "server/src/auth.ts",
       "server/src/index.ts",
-      ".env.example",
+      "ui/src/services/auth.ts",
       ".opencode/rules/remediation.md"
     ]
   },
   "queue": [
-    "P27",
     "P28",
     "P29",
     "P30",
@@ -76,6 +69,7 @@
     "P12",
     "P13",
     "P14",
-    "P15"
+    "P15",
+    "P26"
   ]
 }

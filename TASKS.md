@@ -97,7 +97,7 @@ Full audit and prioritized plan in `IMPLEMENTATION_PLAN.md`. Next: Tier 2 items.
 
 | #   | Task                                                     | Effort | Deps | Validation |
 | --- | -------------------------------------------------------- | ------ | ---- | ---------- |
-| P26 | [ ] Require auth by default                              | 2h     | —    | Missing token fails outside explicit dev-only bypass; protected routes reject unauthenticated requests |
+| P26 | [x] Require auth by default                              | 2h     | —    | Missing token fails outside explicit dev-only bypass; protected routes reject unauthenticated requests |
 | P27 | [ ] Add browser login + httpOnly session cookie auth      | 4h     | P26  | Login/logout tests; mutating routes accept session cookie and reject missing/expired sessions |
 | P28 | [ ] Add terminal WebSocket ticket auth                    | 3h     | P27  | WS without ticket fails; ticket is short-lived and single-use |
 | P29 | [ ] Bind terminal sessions to authenticated users         | 3h     | P28  | Unknown session IDs fail; cross-session attach rejected; idle/absolute timeouts tested |

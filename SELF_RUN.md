@@ -71,11 +71,17 @@ Both devices must be on the same Tailscale network.
 
 ## Auth
 
-Pilot server Bearer token auth is **disabled** for local testing (`PILOT_AUTH_TOKEN` commented out in `.env`).
+Pilot server Bearer token auth is **required by default**. To run without auth for local testing:
 
-To re-enable:
-1. Uncomment `PILOT_AUTH_TOKEN` in `.env`
-2. The client sends `Authorization: Bearer <token>` — the Settings UI doesn't expose this yet, so only enable auth when the client supports it.
+```bash
+PILOT_AUTH_DISABLE=1 npm start
+```
+
+To set a token instead:
+
+1. Set `PILOT_AUTH_TOKEN=your-token` in `.env`
+| `PILOT_AUTH_DISABLE` | *(unset)* | Disable auth for local dev (set to 1) |
+2. The client sends `Authorization: Bearer <token>` — the Settings UI doesn't expose this yet.
 
 ---
 
@@ -108,7 +114,8 @@ Set in `.env` (sourced by scripts) or inline:
 | `PORT` | 3201 | Pilot server listen port |
 | `OPENCODE_URL` | `http://100.81.83.98:4096` | Upstream OpenCode |
 | `CORS_ORIGINS` | localhost + 100.81.83.98 on 5173/3201 | Allowed origins |
-| `PILOT_AUTH_TOKEN` | *(commented out)* | Bearer token for API auth |
+| `PILOT_AUTH_TOKEN` | *(unset)* | Bearer token for API auth (required by default) |
+| `PILOT_AUTH_DISABLE` | *(unset)* | Disable auth for local dev (set to 1) |
 | `N9ROUTER_API_KEY` | *(set in .env)* | n9router API key |
 
 ---
@@ -121,4 +128,5 @@ Set in `.env` (sourced by scripts) or inline:
 | Chat load failure / API errors | Check server URL is port 3201 (not 4096 — CORS blocks cross-port) |
 | Port already in use | Run `scripts/pilot-stop.sh` first |
 | Server returns HTML instead of JSON | `OPENCODE_URL` not set — server didn't register proxy routes |
-| 401 Unauthorized | `PILOT_AUTH_TOKEN` is set but client doesn't send Bearer header — comment it out |
+| 401 Unauthorized | Auth is required by default. Set `PILOT_AUTH_TOKEN` or `PILOT_AUTH_DISABLE=1` for dev |
+| `PILOT_AUTH_DISABLE` | *(unset)* | Disable auth for local dev (set to 1) |

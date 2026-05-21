@@ -193,15 +193,9 @@ describe("terminal WS auth", () => {
       attachTerminalWS(server, null);
     });
 
-    it("accepts WebSocket upgrade without auth header", async () => {
-      const { ws, firstMessage } = await connectAndReceive(port!);
-      wsClients.push(ws);
-
-      expect(ws.readyState).toBe(WebSocket.OPEN);
-
-      const parsed = JSON.parse(firstMessage);
-      expect(parsed).toHaveProperty("type", "session");
-      expect(parsed).toHaveProperty("id");
+    it("rejects WebSocket upgrade without auth header by default", async () => {
+      const code = await connectExpectReject(port!);
+      expect(code).toBe(401);
     });
   });
 });

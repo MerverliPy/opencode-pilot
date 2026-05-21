@@ -90,13 +90,20 @@ npm start
 
 The Hono server starts on `http://localhost:3201`, serving the built UI and proxying all API calls to OpenCode.
 
-To protect sensitive routes (terminal, git, proxy, tunnel, push, memory), set the `PILOT_AUTH_TOKEN` environment variable:
+Auth is REQUIRED by default. All sensitive routes return 401 unless a valid
+`Authorization: Bearer <token>` header is sent. Set a token:
 
 ```bash
 PILOT_AUTH_TOKEN="your-secret-token" npm start
 ```
 
-When set, clients must include `Authorization: Bearer your-secret-token` on all requests to protected routes. The `/health` endpoint and static frontend remain public.
+For local development only, auth can be disabled:
+
+```bash
+PILOT_AUTH_DISABLE=1 npm start
+```
+
+The `/health` endpoint and static frontend remain public.
 
 ### 3. Open the app
 
@@ -163,13 +170,14 @@ On Tailscale, components are accessible at:
 
 | Variable          | Default                  | Description                                      |
 | ----------------- | ------------------------ | ------------------------------------------------ |
+| `PILOT_AUTH_DISABLE`| (unset)                  | Disable auth for local dev (set to 1)            |
 | `PORT`            | `3201`                   | HTTP port for the Pilot Hono server              |
 | `HOSTNAME`        | `0.0.0.0`                | Bind address                                     |
 | `OPENCODE_URL`    | `http://:4096`           | Upstream OpenCode server URL                     |
 | `VAPID_SUBJECT`   | (auto)                   | Web Push contact (mailto: or URL)                |
 | `VAPID_PUBLIC`    | (generated)              | VAPID public key for Web Push                    |
 | `VAPID_PRIVATE`   | (generated)              | VAPID private key for Web Push                   |
-| `PILOT_AUTH_TOKEN`| (none)                   | Bearer token for route auth                      |
+| `PILOT_AUTH_TOKEN`| (none)                   | Bearer token for API auth (required by default)  |
 | `CORS_ORIGINS`    | `http://localhost:5173`  | Comma-separated allowed origins                  |
 | `RATE_LIMIT_MAX`  | `100`                    | Max requests per minute                          |
 | `BODY_LIMIT_SIZE` | `10`                     | Max body size in MB                              |

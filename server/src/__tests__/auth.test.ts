@@ -16,7 +16,7 @@ describe("auth helpers", () => {
   });
 
   it("allows requests when auth token not configured", () => {
-    expect(isAuthorizedHeaderValue(null, null)).toBe(true);
+    expect(isAuthorizedHeaderValue(null, null)).toBe(false);
   });
 
   it("rejects missing or wrong bearer token when configured", () => {
@@ -107,6 +107,6 @@ describe("auth edge cases", () => {
   it("handles node request with missing header", () => {
     const req = { headers: {} } as IncomingMessage;
     expect(isAuthorizedNodeRequest(req, "token")).toBe(false);
-    expect(isAuthorizedNodeRequest(req, null)).toBe(true);
+    expect(isAuthorizedNodeRequest(req, null)).toBe(false);
   });
 });

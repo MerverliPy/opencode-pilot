@@ -98,7 +98,24 @@ describe("auth middleware route gating", () => {
       delete process.env.PILOT_AUTH_TOKEN;
     });
 
-    it("allows routes when no token is configured", async () => {
+    it("rejects routes when no token is configured", async () => {
+      app.use("/api/*", authMw);
+      app.get("/api/test", (c) => c.json({ ok: true }));
+      const res = await app.request("/api/test");
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe("with PILOT_AUTH_DISABLE=1", () => {
+    beforeEach(() => {
+      process.env.PILOT_AUTH_DISABLE = "1";
+    });
+
+    afterEach(() => {
+      delete process.env.PILOT_AUTH_DISABLE;
+    });
+
+    it("allows routes without auth header when disabled", async () => {
       app.use("/api/*", authMw);
       app.get("/api/test", (c) => c.json({ ok: true }));
       const res = await app.request("/api/test");

@@ -3,6 +3,7 @@ import type { IncomingMessage } from "node:http";
 
 const AUTH_ENV_NAME = "PILOT_AUTH_TOKEN";
 const BEARER_PREFIX = "Bearer ";
+const AUTH_DISABLE_ENV_NAME = "PILOT_AUTH_DISABLE";
 
 export function getConfiguredAuthToken(): string | null {
   const token = process.env[AUTH_ENV_NAME]?.trim();
@@ -11,6 +12,11 @@ export function getConfiguredAuthToken(): string | null {
 
 export function isAuthEnabled(): boolean {
   return getConfiguredAuthToken() !== null;
+}
+
+export function isAuthDisabled(): boolean {
+  const val = process.env[AUTH_DISABLE_ENV_NAME];
+  return val === "1" || val === "true";
 }
 
 export function getBearerTokenFromHeader(value: string | null | undefined): string | null {
@@ -26,10 +32,11 @@ export function isAuthorizedHeaderValue(
   value: string | null | undefined,
   expectedToken: string | null = getConfiguredAuthToken(),
 ): boolean {
-  if (!expectedToken) {
-    return true;
-  }
-
+  // Explicit dev bypass: auth completely disabled
+  if (isAuthDisabled()) return true;
+  // No token configured: reject by default
+  if (!expectedToken) return false;
+  // Token configured: require exact match
   return getBearerTokenFromHeader(value) === expectedToken;
 }
 

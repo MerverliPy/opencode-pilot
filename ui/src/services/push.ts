@@ -5,6 +5,8 @@
  * communicating with the Pilot server's /push endpoints.
  */
 
+import { csrfHeaders } from "./auth";
+
 const STORAGE_KEY = "pilot_push_subscription";
 
 export type PushStatus = {
@@ -14,7 +16,7 @@ export type PushStatus = {
 
 /** Ask the server whether Web Push is configured. */
 export async function fetchPushStatus(): Promise<PushStatus> {
-  const res = await fetch("/push/status");
+  const res = await fetch("/push/status", { credentials: "include" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as PushStatus;
 }
@@ -43,17 +45,19 @@ export async function subscribeToPush(publicKey: string): Promise<boolean> {
     return true;
   }
 
+  let sub: PushSubscription;
   try {
-    const sub = await reg.pushManager.subscribe({
+    sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
-    await syncSubscriptionWithServer(sub);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sub.toJSON()));
-    return true;
   } catch {
     return false;
   }
+
+  await syncSubscriptionWithServer(sub);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sub.toJSON()));
+  return true;
 }
 
 /**
@@ -65,12 +69,16 @@ export async function unsubscribeFromPush(): Promise<boolean> {
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (sub) {
-    await sub.unsubscribe();
-    await fetch("/push/unsubscribe", {
+    const res = await fetch("/push/unsubscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...csrfHeaders() },
+      credentials: "include",
       body: JSON.stringify({ endpoint: sub.endpoint }),
     });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    await sub.unsubscribe();
   }
 
   localStorage.removeItem(STORAGE_KEY);
@@ -80,11 +88,15 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 async function syncSubscriptionWithServer(
   sub: PushSubscription,
 ): Promise<void> {
-  await fetch("/push/subscribe", {
+  const res = await fetch("/push/subscribe", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...csrfHeaders() },
+    credentials: "include",
     body: JSON.stringify(sub.toJSON()),
   });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
 }
 
 /** Check whether the browser is currently push-subscribed. */

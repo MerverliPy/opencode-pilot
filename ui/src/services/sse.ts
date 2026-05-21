@@ -2,7 +2,7 @@
  * SSE client for the Pilot web client.
  *
  * Uses `fetch` + `ReadableStream` (instead of native `EventSource`) so we
- * can send the `Authorization` header needed by protected Pilot servers.
+ * can send `credentials: "include"` for httpOnly session cookie auth.
  * Auto-reconnects with exponential backoff.
  */
 import { useEffect, useRef } from "react";
@@ -58,13 +58,12 @@ async function* readSSEEvents(
  * Subscribes to /event SSE on the active server and dispatches typed events.
  * Auto-reconnects with exponential backoff. Single connection per server.
  *
- * When `server.authToken` is set, sends `Authorization: Bearer <token>`
- * so the Pilot server's auth middleware allows the request.
+ * Uses `credentials: "include"` so the server's auth middleware accepts
+ * the httpOnly session cookie set at login.
  */
 export function useEventStream(
   serverId: string | null,
   serverUrl: string | null,
-  authToken: string | null,
   onEvent: Handler,
 ) {
   const handlerRef = useRef(onEvent);
@@ -86,15 +85,16 @@ export function useEventStream(
 
       const url = `${serverUrl.replace(/\/$/, "")}/event`;
       const headers: Record<string, string> = { Accept: "text/event-stream" };
-      if (authToken) {
-        headers.Authorization = `Bearer ${authToken}`;
-      }
 
       controller = new AbortController();
       const signal = controller.signal;
 
       try {
-        const response = await fetch(url, { headers, signal });
+        const response = await fetch(url, {
+          headers,
+          signal,
+          credentials: "include",
+        });
 
         if (!response.ok) {
           const status = response.status;
@@ -142,6 +142,5 @@ export function useEventStream(
     };
     // Depend on individual primitives so identical values
     // do not trigger an unnecessary reconnect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverId, serverUrl, authToken]);
+  }, [serverId, serverUrl]);
 }

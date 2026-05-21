@@ -23,7 +23,9 @@ describe("push service", () => {
 
       const status = await fetchPushStatus();
       expect(status).toEqual({ enabled: true, publicKey: "pk" });
-      expect(global.fetch).toHaveBeenCalledWith("/push/status");
+      expect(global.fetch).toHaveBeenCalledWith("/push/status", {
+        credentials: "include",
+      });
     });
 
     it("throws on non-ok response", async () => {
@@ -70,8 +72,41 @@ describe("push service", () => {
       expect(mockPushManager.subscribe).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledWith(
         "/push/subscribe",
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          headers: expect.objectContaining({
+            "Content-Type": "application/json",
+            "X-Requested-With": "PilotPWA",
+          }),
+        }),
       );
+    });
+
+    it("throws when the server rejects subscription sync", async () => {
+      const mockSubscription = {
+        endpoint: "https://push.example/ep",
+        toJSON: () => ({ endpoint: "https://push.example/ep" }),
+      };
+
+      const mockPushManager = {
+        getSubscription: jest.fn().mockResolvedValue(null),
+        subscribe: jest.fn().mockResolvedValue(mockSubscription),
+      };
+
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: { ready: Promise.resolve({ pushManager: mockPushManager }) },
+        configurable: true,
+      });
+      Object.defineProperty(window, "PushManager", {
+        value: {},
+        configurable: true,
+      });
+
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
+
+      await expect(subscribeToPush("dGVzdA==")).rejects.toThrow("HTTP 500");
+      expect(localStorage.getItem("pilot_push_subscription")).toBeNull();
     });
   });
 
@@ -96,6 +131,38 @@ describe("push service", () => {
       const result = await unsubscribeFromPush();
       expect(result).toBe(true);
       expect(mockSubscription.unsubscribe).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/push/unsubscribe",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          headers: expect.objectContaining({
+            "Content-Type": "application/json",
+            "X-Requested-With": "PilotPWA",
+          }),
+        }),
+      );
+    });
+
+    it("throws when the server rejects unsubscribe", async () => {
+      const mockSubscription = {
+        endpoint: "https://push.example/ep",
+        unsubscribe: jest.fn().mockResolvedValue(true),
+      };
+
+      const mockPushManager = {
+        getSubscription: jest.fn().mockResolvedValue(mockSubscription),
+      };
+
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: { ready: Promise.resolve({ pushManager: mockPushManager }) },
+        configurable: true,
+      });
+
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
+
+      await expect(unsubscribeFromPush()).rejects.toThrow("HTTP 500");
+      expect(mockSubscription.unsubscribe).not.toHaveBeenCalled();
     });
   });
 

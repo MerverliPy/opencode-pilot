@@ -66,7 +66,7 @@ describe("OpencodeClient", () => {
   });
 
   describe("request headers", () => {
-    it("includes Authorization header for basic auth", async () => {
+    it("uses cookie auth without Authorization header", async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         status: 200,
@@ -75,8 +75,8 @@ describe("OpencodeClient", () => {
       });
       await client.health();
       const [, init] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(init.headers).toHaveProperty("Authorization");
-      expect(init.headers.Authorization).toMatch(/^Basic /);
+      expect(init.headers.Authorization).toBeUndefined();
+      expect(init.credentials).toBe("include");
     });
 
     it("sets Content-Type for POST with body", async () => {

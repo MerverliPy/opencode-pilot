@@ -4,7 +4,7 @@
  * All calls are relative to `serverUrl` (the Pilot server base URL, not the
  * OpenCode upstream). Each call requires a `serverId` that scopes the data.
  */
-import { basicAuthHeader } from "./auth";
+import { csrfHeaders } from "./auth";
 import type { ServerConfig } from "./auth";
 import type {
   Memory,
@@ -18,19 +18,23 @@ export type MemoryListResult = { memories: Memory[]; count: number };
 
 async function req<T>(
   serverUrl: string,
-  authHeaders: Record<string, string>,
   method: string,
   path: string,
   body?: unknown,
 ): Promise<T> {
   const base = serverUrl.replace(/\/$/, "");
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+  };
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    Object.assign(headers, csrfHeaders());
+  }
+
   const res = await fetch(`${base}${path}`, {
     method,
-    headers: {
-      Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...authHeaders,
-    },
+    headers,
+    credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -43,9 +47,8 @@ async function req<T>(
 
 export function createMemoryApi(server: ServerConfig) {
   const serverUrl = server.url;
-  const authHeaders = basicAuthHeader(server);
   const r = <T>(method: string, path: string, body?: unknown) =>
-    req<T>(serverUrl, authHeaders, method, path, body);
+    req<T>(serverUrl, method, path, body);
 
   return {
     listMemories(

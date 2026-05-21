@@ -1,5 +1,14 @@
 import { useServerStore } from "../server";
 import type { ServerConfig } from "../../services/auth";
+import * as authService from "../../services/auth";
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
+}
 
 describe("useServerStore", () => {
   beforeEach(() => {
@@ -7,8 +16,11 @@ describe("useServerStore", () => {
       servers: [],
       activeId: null,
       hydrated: false,
+      authenticated: false,
+      authUsername: null,
     });
     localStorage.clear();
+    jest.restoreAllMocks();
   });
 
   it("has default state", () => {
@@ -135,6 +147,74 @@ describe("useServerStore", () => {
       const client = useServerStore.getState().client();
       expect(client).not.toBeNull();
       expect(client?.server.id).toBe("s1");
+    });
+  });
+
+  describe("auth actions", () => {
+    const primaryServer: ServerConfig = {
+      id: "s1",
+      name: "Home",
+      url: "http://localhost:4096",
+    };
+    const secondaryServer: ServerConfig = {
+      id: "s2",
+      name: "Other",
+      url: "http://localhost:5000",
+    };
+
+    it("does not clear auth state when logout fails", async () => {
+      useServerStore.setState({
+        servers: [primaryServer],
+        activeId: "s1",
+        authenticated: true,
+        authUsername: "alice",
+      });
+      jest.spyOn(authService, "logout").mockRejectedValue(new Error("HTTP 403"));
+
+      await expect(useServerStore.getState().logout()).rejects.toThrow("HTTP 403");
+
+      expect(useServerStore.getState().authenticated).toBe(true);
+      expect(useServerStore.getState().authUsername).toBe("alice");
+    });
+
+    it("ignores stale login responses after switching servers", async () => {
+      const loginDeferred = createDeferred<{ ok: boolean; username?: string }>();
+      useServerStore.setState({
+        servers: [primaryServer, secondaryServer],
+        activeId: "s1",
+      });
+      jest.spyOn(authService, "login").mockImplementation(
+        () => loginDeferred.promise,
+      );
+
+      const loginPromise = useServerStore.getState().login("alice", "secret");
+      await useServerStore.getState().setActive("s2");
+      loginDeferred.resolve({ ok: true, username: "alice" });
+
+      await expect(loginPromise).resolves.toBe(false);
+      expect(useServerStore.getState().activeId).toBe("s2");
+      expect(useServerStore.getState().authenticated).toBe(false);
+      expect(useServerStore.getState().authUsername).toBeNull();
+    });
+
+    it("ignores stale auth checks after switching servers", async () => {
+      const checkDeferred = createDeferred<{ authenticated: boolean; username?: string }>();
+      useServerStore.setState({
+        servers: [primaryServer, secondaryServer],
+        activeId: "s1",
+      });
+      jest.spyOn(authService, "checkAuthStatus").mockImplementation(
+        () => checkDeferred.promise,
+      );
+
+      const checkPromise = useServerStore.getState().checkAuth();
+      await useServerStore.getState().setActive("s2");
+      checkDeferred.resolve({ authenticated: true, username: "alice" });
+      await checkPromise;
+
+      expect(useServerStore.getState().activeId).toBe("s2");
+      expect(useServerStore.getState().authenticated).toBe(false);
+      expect(useServerStore.getState().authUsername).toBeNull();
     });
   });
 });

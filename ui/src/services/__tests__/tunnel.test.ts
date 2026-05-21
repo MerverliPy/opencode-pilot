@@ -26,7 +26,9 @@ describe("tunnel service", () => {
         url: "https://abc.trycloudflare.com",
         error: null,
       });
-      expect(global.fetch).toHaveBeenCalledWith("/tunnel/status");
+      expect(global.fetch).toHaveBeenCalledWith("/tunnel/status", {
+        credentials: "include",
+      });
     });
 
     it("throws on non-ok response", async () => {
@@ -42,6 +44,8 @@ describe("tunnel service", () => {
       await startTunnel();
       expect(global.fetch).toHaveBeenCalledWith("/tunnel/start", {
         method: "POST",
+        headers: { "X-Requested-With": "PilotPWA" },
+        credentials: "include",
       });
     });
 
@@ -58,6 +62,8 @@ describe("tunnel service", () => {
       await stopTunnel();
       expect(global.fetch).toHaveBeenCalledWith("/tunnel/stop", {
         method: "POST",
+        headers: { "X-Requested-With": "PilotPWA" },
+        credentials: "include",
       });
     });
 

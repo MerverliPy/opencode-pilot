@@ -4,6 +4,7 @@ import {
   getBearerTokenFromHeader,
   isAuthorizedHeaderValue,
   isAuthorizedNodeRequest,
+  tokensEqualConstantTime,
 } from "../auth.js";
 
 describe("auth helpers", () => {
@@ -108,5 +109,13 @@ describe("auth edge cases", () => {
     const req = { headers: {} } as IncomingMessage;
     expect(isAuthorizedNodeRequest(req, "token")).toBe(false);
     expect(isAuthorizedNodeRequest(req, null)).toBe(false);
+  });
+
+  it("rejects different-length tokens with constant-time helper", async () => {
+    await expect(tokensEqualConstantTime("short", "much-longer-token")).resolves.toBe(false);
+  });
+
+  it("accepts equal tokens with constant-time helper", async () => {
+    await expect(tokensEqualConstantTime("pilot-token", "pilot-token")).resolves.toBe(true);
   });
 });

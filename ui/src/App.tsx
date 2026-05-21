@@ -4,8 +4,9 @@
  * Provides routes for Chat, Sessions, Files, Terminal, Diff, and Settings.
  * Wraps everything in a responsive Layout with sidebar / bottom nav.
  */
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useServerStore } from "./store/server";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -19,6 +20,7 @@ const Terminal = lazy(() => import("./pages/Terminal").then((m) => ({ default: m
 const Diff = lazy(() => import("./pages/Diff").then((m) => ({ default: m.Diff })));
 const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
 const Memory = lazy(() => import("./pages/Memory").then((m) => ({ default: m.Memory })));
+const Login = lazy(() => import("./pages/Login").then((m) => ({ default: m.Login })));
 
 function LoadingFallback() {
   return (
@@ -40,6 +42,44 @@ function LoadingFallback() {
   );
 }
 
+/**
+ * AuthGuard checks the session cookie with the server on mount and
+ * redirects if the user is not authenticated or no server is active.
+ */
+function AuthGuard({ children }: { children: ReactNode }) {
+  const hydrated = useServerStore((s) => s.hydrated);
+  const authenticated = useServerStore((s) => s.authenticated);
+  const activeServer = useServerStore((s) => {
+    const { servers, activeId } = s;
+    return servers.find((srv) => srv.id === activeId) ?? null;
+  });
+  const checkAuth = useServerStore((s) => s.checkAuth);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    if (hydrated && activeServer) {
+      checkAuth().finally(() => setChecking(false));
+    } else if (hydrated) {
+      setChecking(false);
+    }
+  }, [hydrated, activeServer, checkAuth]);
+
+  if (!hydrated || checking) {
+    return <LoadingFallback />;
+  }
+
+  // No active server — redirect to settings so user can configure one
+  if (!activeServer) {
+    return <Navigate to="/settings" replace />;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export function App() {
   return (
     <Layout>
@@ -48,75 +88,101 @@ export function App() {
         <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route
-            path="/"
+            path="/login"
             element={
               <ErrorBoundary>
-                <SimpleChat />
+                <Login />
               </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <AuthGuard>
+                <ErrorBoundary>
+                  <SimpleChat />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/chat"
             element={
-              <ErrorBoundary>
-                <SimpleChat />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <SimpleChat />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/session/:sessionId"
             element={
-              <ErrorBoundary>
-                <Chat />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Chat />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/sessions"
             element={
-              <ErrorBoundary>
-                <Sessions />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Sessions />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/files"
             element={
-              <ErrorBoundary>
-                <Files />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Files />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/terminal"
             element={
-              <ErrorBoundary>
-                <Terminal />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Terminal />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/diff"
             element={
-              <ErrorBoundary>
-                <Diff />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Diff />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/settings"
             element={
-              <ErrorBoundary>
-                <Settings />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Settings />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route
             path="/memory"
             element={
-              <ErrorBoundary>
-                <Memory />
-              </ErrorBoundary>
+              <AuthGuard>
+                <ErrorBoundary>
+                  <Memory />
+                </ErrorBoundary>
+              </AuthGuard>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

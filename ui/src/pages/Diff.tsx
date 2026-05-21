@@ -13,6 +13,7 @@ import "diff2html/bundles/css/diff2html.min.css";
 import { useServerStore } from "../store/server";
 import { colors, fonts, fontSizes } from "../theme";
 import { log } from "../services/logger";
+import { csrfHeaders } from "../services/auth";
 import { friendlyError } from "../lib/errors";
 
 interface GitStatus {
@@ -28,8 +29,63 @@ interface GitFileDiff {
   diff: string;
 }
 
+const BLOCKED_DIFF_TAGS = new Set([
+  "AUDIO",
+  "BUTTON",
+  "EMBED",
+  "FORM",
+  "IFRAME",
+  "IMG",
+  "INPUT",
+  "LINK",
+  "META",
+  "OBJECT",
+  "PICTURE",
+  "SCRIPT",
+  "SELECT",
+  "SOURCE",
+  "STYLE",
+  "SVG",
+  "TEXTAREA",
+  "VIDEO",
+]);
+
+function sanitizeDiffHtml(html: string): string {
+  if (typeof document === "undefined") {
+    return "";
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const elements = Array.from(template.content.querySelectorAll("*"));
+  for (const element of elements) {
+    if (BLOCKED_DIFF_TAGS.has(element.tagName)) {
+      element.remove();
+      continue;
+    }
+
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on") || name === "srcdoc") {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (
+        ["href", "src", "xlink:href"].includes(name) &&
+        (value.startsWith("javascript:") || value.startsWith("data:text/html"))
+      ) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  }
+
+  return template.innerHTML;
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: "include" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${res.status}: ${text}`);
@@ -40,7 +96,8 @@ async function fetchJson<T>(url: string): Promise<T> {
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...csrfHeaders() },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -81,10 +138,10 @@ function StatusBadge({
 }
 
 function DiffBlock({ fileDiff }: { fileDiff: GitFileDiff }) {
-  const rendered = diff2html(fileDiff.diff, {
+  const rendered = sanitizeDiffHtml(diff2html(fileDiff.diff, {
     outputFormat: "line-by-line",
     drawFileList: false,
-  });
+  }));
 
   return (
     <div

@@ -246,6 +246,8 @@ describe("createMemoryApi", () => {
       await api.insertMemory(serverId, input);
       const [, init] = (global.fetch as jest.Mock).mock.calls[0];
       expect(init.headers["Content-Type"]).toBe("application/json");
+      expect(init.headers["X-Requested-With"]).toBe("PilotPWA");
+      expect(init.credentials).toBe("include");
     });
   });
 
@@ -353,11 +355,12 @@ describe("createMemoryApi", () => {
   // ── Auth headers ────────────────────────────────────────────────────────
 
   describe("auth headers", () => {
-    it("includes Basic auth header on all requests", async () => {
+    it("uses cookie auth without Authorization header", async () => {
       (global.fetch as jest.Mock).mockResolvedValue(mockJsonResponse([]));
       await api.getProfile(serverId);
       const [, init] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(init.headers.Authorization).toMatch(/^Basic /);
+      expect(init.headers.Authorization).toBeUndefined();
+      expect(init.credentials).toBe("include");
     });
 
     it("sets Accept header on all requests", async () => {

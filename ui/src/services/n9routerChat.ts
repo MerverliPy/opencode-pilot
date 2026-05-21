@@ -5,7 +5,7 @@
  */
 
 import type { ServerConfig } from "@pilot-shared/types";
-import { basicAuthHeader } from "./auth";
+import { csrfHeaders } from "./auth";
 import { log } from "./logger";
 
 export type ChatMessage = {
@@ -36,8 +36,9 @@ export class N9RouterChatClient {
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
-        ...basicAuthHeader(this.server),
+        ...csrfHeaders(),
       },
+      credentials: "include",
       body: JSON.stringify({ messages, model, stream: true }),
       signal,
     });
@@ -67,12 +68,15 @@ export class N9RouterChatClient {
  */
 export async function availableModels(
   baseUrl: string,
-  _apiKey?: string,
+  apiKey?: string,
 ): Promise<string[]> {
   try {
     const url = `${baseUrl.replace(/\/$/, "")}/v1/models`;
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
     });
     if (!res.ok) {
       log.warn("models", `GET /v1/models \u2192 ${res.status}`);

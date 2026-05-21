@@ -3,7 +3,7 @@
  *
  * The implementation in sse.ts uses `fetch` + `ReadableStream` + async
  * generator (`readSSEEvents`) instead of native `EventSource` so it can
- * send `Authorization: Bearer` headers for protected Pilot servers.
+ * send `credentials: "include"` for httpOnly session cookie auth.
  */
 import { useEventStream } from "../sse";
 import type { ServerConfig } from "../auth";
@@ -113,10 +113,6 @@ describe("useEventStream", () => {
     password: "secret",
   };
 
-  const serverWithToken: ServerConfig = {
-    ...server,
-    authToken: "pilot-secret-token",
-  };
 
   let mockAbort: jest.Mock;
 
@@ -141,7 +137,7 @@ describe("useEventStream", () => {
 
   it("returns early when server is null", () => {
     (global as any).fetch = jest.fn();
-    useEventStream(null, null, null, jest.fn());
+    useEventStream(null, null, jest.fn());
     expect((global as any).fetch).not.toHaveBeenCalled();
   });
 
@@ -149,7 +145,7 @@ describe("useEventStream", () => {
 
   it("connects to /event with stripped trailing slash", () => {
     (global as any).fetch = mockSSEStream([]);
-    useEventStream(server.id, "http://host/", server.authToken ?? null, jest.fn());
+    useEventStream(server.id, "http://host/", jest.fn());
     expect((global as any).fetch).toHaveBeenCalledWith(
       "http://host/event",
       expect.objectContaining({
@@ -159,25 +155,13 @@ describe("useEventStream", () => {
     );
   });
 
-  // ── Auth header ──────────────────────────────────────────────────────
+  // ── Session cookie auth ───────────────────────────────────────────────
 
-  it("sends Authorization header when authToken is set", () => {
+  it("includes credentials for cookie auth and no Authorization header", () => {
     (global as any).fetch = mockSSEStream([]);
-    useEventStream(serverWithToken.id, serverWithToken.url, serverWithToken.authToken ?? null, jest.fn());
-    expect((global as any).fetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: `Bearer ${serverWithToken.authToken}`,
-        }),
-      }),
-    );
-  });
-
-  it("does not send Authorization header when authToken is unset", () => {
-    (global as any).fetch = mockSSEStream([]);
-    useEventStream(server.id, server.url, server.authToken ?? null, jest.fn());
+    useEventStream(server.id, server.url, jest.fn());
     const callArgs = ((global as any).fetch as jest.Mock).mock.calls[0][1];
+    expect(callArgs.credentials).toBe("include");
     expect(callArgs.headers.Authorization).toBeUndefined();
   });
 
@@ -186,7 +170,7 @@ describe("useEventStream", () => {
   it("dispatches parsed message events", async () => {
     const onEvent = jest.fn();
     (global as any).fetch = mockSSEStream([sseData({ type: "ping" })]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -197,7 +181,7 @@ describe("useEventStream", () => {
     const onEvent = jest.fn();
     const multi = sseData({ type: "a" }) + sseData({ type: "b" });
     (global as any).fetch = mockSSEStream([multi]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -212,7 +196,7 @@ describe("useEventStream", () => {
     const part1 = "data: " + json.slice(0, 10);
     const part2 = json.slice(10) + "\n\n";
     (global as any).fetch = mockSSEStream([part1, part2]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -225,7 +209,7 @@ describe("useEventStream", () => {
     const onEvent = jest.fn();
     const { log } = require("../logger");
     (global as any).fetch = mockSSEStream(["data: not-json\n\n"]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -241,7 +225,7 @@ describe("useEventStream", () => {
   it("ignores [DONE] marker", async () => {
     const onEvent = jest.fn();
     (global as any).fetch = mockSSEStream(["data: [DONE]\n\n"]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -251,7 +235,7 @@ describe("useEventStream", () => {
   it("ignores lines without data prefix", async () => {
     const onEvent = jest.fn();
     (global as any).fetch = mockSSEStream(["event: ping\n\n"]);
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
 
     await flush();
 
@@ -265,7 +249,7 @@ describe("useEventStream", () => {
     const { log } = require("../logger");
     (global as any).fetch = mockFetchErrorStatus(401);
 
-    useEventStream(serverWithToken.id, serverWithToken.url, serverWithToken.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
     await flush();
 
     expect(onEvent).not.toHaveBeenCalled();
@@ -280,7 +264,7 @@ describe("useEventStream", () => {
     const { log } = require("../logger");
     (global as any).fetch = mockFetchErrorStatus(403);
 
-    useEventStream(serverWithToken.id, serverWithToken.url, serverWithToken.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
     await flush();
 
     expect(log.error).toHaveBeenCalledWith(
@@ -296,7 +280,7 @@ describe("useEventStream", () => {
     const { log } = require("../logger");
     (global as any).fetch = mockSSEStream([sseData({ type: "hello" })]);
 
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
     await flush();
 
     expect(log.info).toHaveBeenCalledWith(
@@ -310,7 +294,7 @@ describe("useEventStream", () => {
     const onEvent = jest.fn();
     (global as any).fetch = mockSSEStream([sseData({ type: "first" })]);
 
-    useEventStream(server.id, server.url, server.authToken ?? null, onEvent);
+    useEventStream(server.id, server.url, onEvent);
     await flush();
 
     expect(onEvent).toHaveBeenCalledWith({ type: "first" });
@@ -324,7 +308,7 @@ describe("useEventStream", () => {
 
   it("aborts fetch on cleanup", () => {
     (global as any).fetch = mockSSEStream([]);
-    useEventStream(server.id, server.url, server.authToken ?? null, jest.fn());
+    useEventStream(server.id, server.url, jest.fn());
 
     const cleanup = effectCallbacks[0]?.cleanup;
     expect(cleanup).toBeDefined();
@@ -335,7 +319,7 @@ describe("useEventStream", () => {
 
   it("does not reconnect after cleanup", async () => {
     (global as any).fetch = mockSSEStream([sseData({ type: "ok" })]);
-    useEventStream(server.id, server.url, server.authToken ?? null, jest.fn());
+    useEventStream(server.id, server.url, jest.fn());
 
     await flush();
 

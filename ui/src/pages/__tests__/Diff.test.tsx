@@ -18,8 +18,10 @@ jest.mock("../../store/server", () => ({
 
 import { useServerStore } from "../../store/server";
 import { Diff } from "../Diff";
+import { html as mockDiff2html } from "diff2html";
 
 const mockedUseServerStore = useServerStore as unknown as jest.Mock;
+const mockedDiff2html = mockDiff2html as unknown as jest.Mock;
 
 const mockStatus = {
   branch: "main",
@@ -255,5 +257,28 @@ describe("Diff", () => {
     expect(styleTag?.textContent).toContain("color-mix");
     expect(styleTag?.textContent).toContain("var(--pilot-success)");
     expect(styleTag?.textContent).toContain("var(--pilot-error)");
+  });
+
+  it("sanitizes rendered diff HTML before injection", async () => {
+    mockedDiff2html.mockReturnValueOnce(
+      "<div class='d2h-wrapper'><script>alert(1)</script><img src='https://evil.invalid/x'><a href='javascript:alert(1)' onclick='alert(1)'>bad</a></div>",
+    );
+    mockedUseServerStore.mockReturnValue({
+      id: "s1",
+      url: "http://localhost:3000",
+      name: "Local",
+    });
+
+    const { container } = render(<Diff />);
+
+    await waitFor(() => {
+      expect(screen.getByText("main")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+    const link = container.querySelector("a");
+    expect(link?.getAttribute("href")).not.toBe("javascript:alert(1)");
+    expect(link?.getAttribute("onclick")).toBeNull();
   });
 });

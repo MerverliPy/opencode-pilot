@@ -153,10 +153,14 @@ export async function login(
 }
 
 export async function logout(serverUrl: string): Promise<void> {
-  await fetch(`${serverUrl.replace(/\/$/, "")}/auth/logout`, {
+  const res = await fetch(`${serverUrl.replace(/\/$/, "")}/auth/logout`, {
     method: "POST",
+    headers: csrfHeaders(),
     credentials: "include",
   });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
 }
 
 export async function checkAuthStatus(

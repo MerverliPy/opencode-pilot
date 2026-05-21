@@ -44,7 +44,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   setActive: async (id) => {
-    set({ activeId: id });
+    // Auth state is server-scoped; clear it when switching targets.
+    set({ activeId: id, authenticated: false, authUsername: null });
     await saveActiveServerId(id);
   },
 
@@ -76,7 +77,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
   login: async (username, password) => {
     const server = get().active();
     if (!server) return false;
+    const serverId = server.id;
     const res = await authLogin(server.url, username, password);
+    if (get().activeId !== serverId) {
+      return false;
+    }
     if (res.ok) {
       set({ authenticated: true, authUsername: res.username ?? username });
       return true;
@@ -86,16 +91,30 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   logout: async () => {
     const server = get().active();
-    if (server) {
-      await authLogout(server.url);
+    if (!server) {
+      set({ authenticated: false, authUsername: null });
+      return;
+    }
+
+    const serverId = server.id;
+    await authLogout(server.url);
+    if (get().activeId !== serverId) {
+      return;
     }
     set({ authenticated: false, authUsername: null });
   },
 
   checkAuth: async () => {
     const server = get().active();
-    if (!server) return;
+    if (!server) {
+      set({ authenticated: false, authUsername: null });
+      return;
+    }
+    const serverId = server.id;
     const res = await checkAuthStatus(server.url);
+    if (get().activeId !== serverId) {
+      return;
+    }
     set({ authenticated: res.authenticated, authUsername: res.username ?? null });
   },
 }));

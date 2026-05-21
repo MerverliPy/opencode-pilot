@@ -1,10 +1,13 @@
 import {
   basicAuthHeader,
+  checkAuthStatus,
   loadActiveServerId,
   loadLastSessionId,
   loadN9RouterConfig,
   loadPushToken,
   loadServers,
+  login,
+  logout,
   loadSessionWorkdir,
   saveActiveServerId,
   saveLastSessionId,
@@ -18,6 +21,7 @@ import {
 describe("auth", () => {
   beforeEach(() => {
     localStorage.clear();
+    global.fetch = jest.fn() as unknown as typeof fetch;
   });
 
   describe("loadServers / saveServers", () => {
@@ -182,6 +186,63 @@ describe("auth", () => {
       basicAuthHeader(server);
       expect(mockBtoa).toHaveBeenCalledWith("u:p");
       delete (globalThis as any).btoa;
+    });
+  });
+
+  describe("session cookie auth", () => {
+    it("sends logout with CSRF header and credentials", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, status: 200 });
+
+      await logout("http://localhost:4096/");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/auth/logout",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          headers: { "X-Requested-With": "PilotPWA" },
+        }),
+      );
+    });
+
+    it("throws when logout is rejected", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 403 });
+
+      await expect(logout("http://localhost:4096")).rejects.toThrow("HTTP 403");
+    });
+
+    it("sends login credentials in a cookie-auth request", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        json: () => Promise.resolve({ ok: true, username: "alice" }),
+      });
+
+      await login("http://localhost:4096/", "alice", "secret");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/auth/login",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: "alice", password: "secret" }),
+        }),
+      );
+    });
+
+    it("checks auth status with credentials included", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        json: () => Promise.resolve({ authenticated: true, username: "alice" }),
+      });
+
+      await checkAuthStatus("http://localhost:4096/");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:4096/auth/status",
+        expect.objectContaining({
+          method: "GET",
+          credentials: "include",
+        }),
+      );
     });
   });
 });

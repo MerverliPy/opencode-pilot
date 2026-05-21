@@ -173,11 +173,9 @@ export type ServerConfig = {
   url: string;
   username?: string;
   password?: string;
-  /** Bearer token for authenticating with the Pilot server itself
-   *  (PILOT_AUTH_TOKEN).  When a protected server is configured,
-   *  the UI sends `Authorization: Bearer <authToken>` so the
-   *  server-side auth middleware allows the request.  The proxy
-   *  strips this token before forwarding to the upstream. */
+  /** Bearer token for CLI/API automation (PILOT_AUTH_TOKEN).
+   *  The browser uses httpOnly session cookies for auth, not this field.
+   *  Server middleware accepts either a valid session cookie or this bearer token. */
   authToken?: string;
 };
 

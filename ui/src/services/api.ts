@@ -1,4 +1,4 @@
-import { basicAuthHeader, ServerConfig, csrfHeaders } from "./auth";
+import { ServerConfig, csrfHeaders } from "./auth";
 import { log } from "./logger";
 import type {
   Agent,
@@ -55,7 +55,6 @@ export class OpencodeClient {
   ): Promise<T> {
     const headers: Record<string, string> = {
       Accept: "application/json",
-      ...basicAuthHeader(this.server),
     };
     if (init?.body !== undefined) headers["Content-Type"] = "application/json";
     // Include CSRF header on mutating methods for cookie auth

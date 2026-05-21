@@ -18,6 +18,26 @@ interface SessionData {
   expiresAt: number; // absolute expiry (idle-resettable, capped at createdAt + SESSION_ABSOLUTE_MS)
 }
 
+export async function tokensEqualConstantTime(
+  actual: string,
+  expected: string,
+): Promise<boolean> {
+  const { timingSafeEqual } = await import("node:crypto");
+  const actualBuf = Buffer.from(actual);
+  const expectedBuf = Buffer.from(expected);
+  const maxLength = Math.max(actualBuf.length, expectedBuf.length, 1);
+
+  const paddedActual = Buffer.alloc(maxLength);
+  const paddedExpected = Buffer.alloc(maxLength);
+  actualBuf.copy(paddedActual);
+  expectedBuf.copy(paddedExpected);
+
+  return (
+    timingSafeEqual(paddedActual, paddedExpected) &&
+    actualBuf.length === expectedBuf.length
+  );
+}
+
 // ─── In-memory session store ────────────────────────────────────────────────────
 const sessions = new Map<string, SessionData>();
 
@@ -123,6 +143,12 @@ function extendSession(sessionId: string): void {
   );
 }
 
+/** Extend session expiry and refresh the browser cookie max-age. */
+function refreshSession(c: Context, sessionId: string): void {
+  extendSession(sessionId);
+  setCookie(c, SESSION_COOKIE_NAME, sessionId, sessionCookieOptions());
+}
+
 /** Check whether the CSRF sentinel header is present for mutating requests. */
 export function isCsrfValid(c: Context): boolean {
   return c.req.header("x-requested-with") === "PilotPWA";
@@ -175,8 +201,8 @@ export function requireAuth(): MiddlewareHandler {
           return c.json({ error: "Invalid or missing CSRF header" }, 403);
         }
       }
-      // Extend session idle time
-      extendSession(sessionCookie);
+      // Extend session idle time and refresh the cookie expiry in the browser.
+      refreshSession(c, sessionCookie);
       await next();
       return;
     }
@@ -222,14 +248,11 @@ export async function handleLogin(c: Context): Promise<Response> {
     return c.json({ ok: false, error: "Server auth is not configured" }, 401);
   }
 
-  // Validate password against configured token (constant-time)
+  // Validate password against configured token without leaking token length.
   if (typeof password !== "string" || !configuredToken) {
     return c.json({ ok: false, error: "Invalid credentials" }, 401);
   }
-  const { timingSafeEqual } = await import("node:crypto");
-  const pwBuf = Buffer.from(password);
-  const tokBuf = Buffer.from(configuredToken);
-  if (pwBuf.length !== tokBuf.length || !timingSafeEqual(pwBuf, tokBuf)) {
+  if (!(await tokensEqualConstantTime(password, configuredToken))) {
     return c.json({ ok: false, error: "Invalid credentials" }, 401);
   }
 
@@ -246,6 +269,10 @@ export async function handleLogin(c: Context): Promise<Response> {
 }
 
 export async function handleLogout(c: Context): Promise<Response> {
+  if (!isCsrfValid(c)) {
+    return c.json({ ok: false, error: "Invalid or missing CSRF header" }, 403);
+  }
+
   const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
   if (sessionCookie) {
     sessions.delete(sessionCookie);
@@ -257,7 +284,8 @@ export async function handleLogout(c: Context): Promise<Response> {
 export async function handleAuthStatus(c: Context): Promise<Response> {
   const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
   const session = validateSession(sessionCookie);
-  if (session) {
+  if (session && sessionCookie) {
+    refreshSession(c, sessionCookie);
     return c.json({ authenticated: true, username: session.username });
   }
   return c.json({ authenticated: false });

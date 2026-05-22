@@ -139,9 +139,11 @@ const pageErrors: Array<{ route: string; viewport: string; message: string }> =
 
 function routesToAudit(): string[] {
   const fromEnv = process.env.VISUAL_AUDIT_ROUTES;
+  const defaultRoutes = Array.from(new Set([...ALL_ROUTES, "/memory"]));
+
   const raw = fromEnv
     ? fromEnv.split(",").map((route) => route.trim()).filter(Boolean)
-    : ALL_ROUTES;
+    : defaultRoutes;
 
   return Array.from(
     new Set(raw.map((route) => (route.startsWith("/") ? route : `/${route}`))),

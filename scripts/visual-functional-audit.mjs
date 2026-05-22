@@ -70,7 +70,11 @@ function inferUiPort(url) {
     if (!["localhost", "127.0.0.1", "0.0.0.0"].includes(parsed.hostname)) {
       return "";
     }
-    return parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+
+    // Only override E2E_UI_PORT when the caller supplied an explicit URL port.
+    // Do not infer 80/443 from protocol because that can override the repo's
+    // configured dev-server port and make Playwright bind to privileged ports.
+    return parsed.port || "";
   } catch {
     return "";
   }

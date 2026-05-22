@@ -4,7 +4,6 @@ import { useServerStore } from "./store/server";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Skeleton } from "./components/ui/Skeleton";
 
 const Chat = lazy(() => import("./pages/Chat").then((m) => ({ default: m.Chat })));
 const SimpleChat = lazy(() => import("./pages/SimpleChat").then((m) => ({ default: m.SimpleChat })));

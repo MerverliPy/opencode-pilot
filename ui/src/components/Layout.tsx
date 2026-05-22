@@ -40,6 +40,7 @@ function NavLink({
         alignItems: "center",
         gap: 12,
         padding: "10px 16px",
+        minHeight: 44,
         borderRadius: 6,
         textDecoration: "none",
         color: active ? colors.accent : colors.text,
@@ -170,6 +171,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
               fontSize: 18,
               cursor: "pointer",
               padding: 4,
+              minWidth: 44,
+              minHeight: 44,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               lineHeight: 1,
             }}
             aria-label={

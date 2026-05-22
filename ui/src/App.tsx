@@ -1,20 +1,9 @@
-import {
-  Suspense,
-  lazy,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useServerStore } from "./store/server";
 import { Layout } from "./components/Layout";
 import { InstallBanner } from "./components/InstallBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-
 
 const Chat = lazy(() => import("./pages/Chat").then((m) => ({ default: m.Chat })));
 const SimpleChat = lazy(() => import("./pages/SimpleChat").then((m) => ({ default: m.SimpleChat })));

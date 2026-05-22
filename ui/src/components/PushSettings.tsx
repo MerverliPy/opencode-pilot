@@ -124,6 +124,8 @@ export function PushSettings() {
             border: "none",
             borderRadius: 4,
             padding: "6px 12px",
+            minWidth: 44,
+            minHeight: 44,
             fontFamily: fonts.mono,
             fontSize: fontSizes.sm,
             cursor: loading || !enabled ? "not-allowed" : "pointer",

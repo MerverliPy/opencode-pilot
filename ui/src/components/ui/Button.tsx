@@ -103,6 +103,8 @@ export const Button = memo(function Button({
         borderRadius: radii.md,
         ...variantStyle(variant, disabled),
         ...sizeStyle(size),
+        minWidth: 44,
+        minHeight: 44,
         display: "inline-flex",
         alignItems: "center",
         gap: spacing.px1,

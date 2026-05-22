@@ -7,11 +7,11 @@ Do not edit counts by hand.
 
 | Surface | Count |
 | --- | ---: |
-| Agents | 37 |
+| Agents | 38 |
 | Primary agents | 6 |
-| Subagents | 31 |
-| Commands | 26 |
-| Skills | 30 |
+| Subagents | 32 |
+| Commands | 27 |
+| Skills | 31 |
 | Plugins | 6 |
 | Tools | 1 |
 | Rules | 2 |
@@ -59,6 +59,7 @@ Do not edit counts by hand.
 - `typescript-reviewer`
 - `ui-critic`
 - `ui-render-reviewer`
+- `visual-ui-auditor`
 - `workflow-profiler`
 
 
@@ -90,6 +91,7 @@ Do not edit counts by hand.
 - `/ui-scorecard`
 - `/ui-token-audit`
 - `/verify`
+- `/visual-functional-audit`
 - `/visual-regression-plan`
 
 ## Skills
@@ -121,6 +123,7 @@ Do not edit counts by hand.
 - `typescript-react-hono`
 - `ui-taste-judge`
 - `visual-direction`
+- `visual-functional-audit`
 - `visual-regression-checklist`
 - `wcag22-ui-check`
 - `workflow-routing`

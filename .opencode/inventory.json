@@ -1,11 +1,11 @@
 {
   "generated_by": "scripts/check-opencode-inventory.mjs",
   "counts": {
-    "agents": 37,
+    "agents": 38,
     "primary_agents": 6,
-    "subagents": 31,
-    "commands": 26,
-    "skills": 30,
+    "subagents": 32,
+    "commands": 27,
+    "skills": 31,
     "plugins": 6,
     "tools": 1,
     "rules": 2
@@ -50,6 +50,7 @@
       "typescript-reviewer",
       "ui-critic",
       "ui-render-reviewer",
+      "visual-ui-auditor",
       "workflow-profiler"
     ],
     "unknown": []
@@ -80,6 +81,7 @@
     "ui-scorecard",
     "ui-token-audit",
     "verify",
+    "visual-functional-audit",
     "visual-regression-plan"
   ],
   "skills": [
@@ -110,6 +112,7 @@
     "typescript-react-hono",
     "ui-taste-judge",
     "visual-direction",
+    "visual-functional-audit",
     "visual-regression-checklist",
     "wcag22-ui-check",
     "workflow-routing"

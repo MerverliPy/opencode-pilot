@@ -133,6 +133,7 @@ const env = {
   E2E_BASE_URL: args.url,
   VISUAL_AUDIT_OUT: outDir,
   VISUAL_AUDIT_SOFT: args.soft ? "1" : process.env.VISUAL_AUDIT_SOFT || "",
+  VISUAL_FUNCTIONAL_AUDIT: "1",
 };
 
 const inferredPort = inferUiPort(args.url);

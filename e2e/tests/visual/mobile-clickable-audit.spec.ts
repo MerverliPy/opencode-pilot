@@ -635,6 +635,11 @@ function markdownReport(input: {
 }
 
 test.describe("Visual functional mobile audit", () => {
+  test.skip(
+    process.env.VISUAL_FUNCTIONAL_AUDIT !== "1",
+    "Visual functional audit is opt-in. Run npm run qa:visual-functional.",
+  );
+
   test("route, viewport, layout, and clickable audit", async ({ page }, testInfo) => {
     test.setTimeout(300_000);
 

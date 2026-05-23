@@ -37,9 +37,12 @@ export function getMemoryDb(): Database.Database {
         _db.pragma(`user_version = ${storedVersion}`);
       }
     } catch (err: unknown) {
-      // Only swallow "no such table" (schema_meta doesn't exist in fresh DBs).
-      // Re-throw any other SQLite error (corruption, I/O, locking).
-      if (err instanceof Database.SqliteError && err.message.includes("no such table")) {
+      // Only swallow the expected legacy schema_meta miss.
+      // In Jest/module-reset environments, instanceof checks against
+      // Database.SqliteError can be brittle, so use the message as the
+      // compatibility guard and rethrow everything else.
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("no such table") && message.includes("schema_meta")) {
         // Table doesn't exist yet — migrations haven't run.
         // storedVersion stays 0, which is < SCHEMA_VERSION, so migrations will run.
       } else {

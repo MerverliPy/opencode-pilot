@@ -1,18 +1,56 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, jest } from "@jest/globals";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-process.env.PILOT_DB_PATH = ":memory:";
+type EmbeddingRepositoryModule = typeof import("../EmbeddingRepository.js");
+type MemoryRepositoryModule = typeof import("../MemoryRepository.js");
 
-import {
-  insertEmbedding,
-  getEmbeddingsByModel,
-  getEmbeddingByMemoryAndModel,
-  deleteEmbeddingsByMemory,
-  upsertEmbedding,
-} from "../EmbeddingRepository.js";
-import { insertMemory, deleteAllMemoriesByServer } from "../MemoryRepository.js";
+let insertEmbedding: EmbeddingRepositoryModule["insertEmbedding"];
+let getEmbeddingsByModel: EmbeddingRepositoryModule["getEmbeddingsByModel"];
+let getEmbeddingByMemoryAndModel: EmbeddingRepositoryModule["getEmbeddingByMemoryAndModel"];
+let deleteEmbeddingsByMemory: EmbeddingRepositoryModule["deleteEmbeddingsByMemory"];
+let upsertEmbedding: EmbeddingRepositoryModule["upsertEmbedding"];
+
+let insertMemory: MemoryRepositoryModule["insertMemory"];
+let deleteAllMemoriesByServer: MemoryRepositoryModule["deleteAllMemoriesByServer"];
 
 const MODEL_ID = "test-model-1";
 const SERVER_ID = "test-server-e1";
+
+let tempDir = "";
+
+beforeAll(async () => {
+  tempDir = mkdtempSync(join(tmpdir(), "pilot-memory-embedding-test-"));
+  process.env.PILOT_DB_PATH = join(tempDir, "pilot-memory-test.db");
+
+  // Ensure memory DB modules initialize after PILOT_DB_PATH is set.
+  jest.resetModules();
+
+  // Import MemoryRepository first so the memory schema is initialized before
+  // embedding repository operations attempt to read/write embedding rows.
+  const memory = await import("../MemoryRepository.js");
+  insertMemory = memory.insertMemory;
+  deleteAllMemoriesByServer = memory.deleteAllMemoriesByServer;
+
+  const embeddings = await import("../EmbeddingRepository.js");
+  insertEmbedding = embeddings.insertEmbedding;
+  getEmbeddingsByModel = embeddings.getEmbeddingsByModel;
+  getEmbeddingByMemoryAndModel = embeddings.getEmbeddingByMemoryAndModel;
+  deleteEmbeddingsByMemory = embeddings.deleteEmbeddingsByMemory;
+  upsertEmbedding = embeddings.upsertEmbedding;
+});
+
+beforeEach(() => {
+  deleteAllMemoriesByServer(SERVER_ID);
+});
+
+afterAll(() => {
+  if (tempDir) {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+  delete process.env.PILOT_DB_PATH;
+});
 
 function sampleMemory(overrides?: Record<string, unknown>) {
   return {

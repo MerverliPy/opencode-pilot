@@ -1,24 +1,36 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "@jest/globals";
-import Database from "better-sqlite3";
+import { describe, it, expect, beforeAll } from "@jest/globals";
 
-// Set in-memory DB path BEFORE any imports that call getMemoryDb()
-process.env.PILOT_DB_PATH = ":memory:";
+type MemoryRepositoryModule = typeof import("../MemoryRepository.js");
 
-// Now import the modules under test
-import {
-  insertMemory,
-  getMemoriesByServer,
-  getMemoryById,
-  updateMemory,
-  deleteMemory,
-  deleteAllMemoriesByServer,
-  countMemories,
-  searchMemories,
-  getMemoryConfig,
-  saveMemoryConfig,
-} from "../MemoryRepository.js";
+let insertMemory: MemoryRepositoryModule["insertMemory"];
+let getMemoriesByServer: MemoryRepositoryModule["getMemoriesByServer"];
+let getMemoryById: MemoryRepositoryModule["getMemoryById"];
+let updateMemory: MemoryRepositoryModule["updateMemory"];
+let deleteMemory: MemoryRepositoryModule["deleteMemory"];
+let deleteAllMemoriesByServer: MemoryRepositoryModule["deleteAllMemoriesByServer"];
+let countMemories: MemoryRepositoryModule["countMemories"];
+let searchMemories: MemoryRepositoryModule["searchMemories"];
+let getMemoryConfig: MemoryRepositoryModule["getMemoryConfig"];
+let saveMemoryConfig: MemoryRepositoryModule["saveMemoryConfig"];
 
 const SERVER_ID = "test-server-1";
+
+beforeAll(async () => {
+  process.env.PILOT_DB_PATH = ":memory:";
+
+  const repo = await import("../MemoryRepository.js");
+  insertMemory = repo.insertMemory;
+  getMemoriesByServer = repo.getMemoriesByServer;
+  getMemoryById = repo.getMemoryById;
+  updateMemory = repo.updateMemory;
+  deleteMemory = repo.deleteMemory;
+  deleteAllMemoriesByServer = repo.deleteAllMemoriesByServer;
+  countMemories = repo.countMemories;
+  searchMemories = repo.searchMemories;
+  getMemoryConfig = repo.getMemoryConfig;
+  saveMemoryConfig = repo.saveMemoryConfig;
+});
+
 
 function sample(overrides?: Record<string, unknown>) {
   return {

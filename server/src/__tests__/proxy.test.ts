@@ -1,23 +1,44 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { createProxy, type ProxyConfig } from "../proxy.js";
 
+type HeaderLike = {
+  get: (key: string) => string | null;
+  forEach?: (cb: (value: string, key: string) => void) => void;
+};
+
 function mockContext(overrides?: Record<string, unknown>) {
-  const headers = new Map<string, string>();
-  return {
-    req: {
-      path: "/api/test",
-      method: "GET",
-      query: () => ({}),
-      raw: {
-        headers: {
-          get: (key: string) => headers.get(key) ?? null,
-          forEach: (cb: (value: string, key: string) => void) =>
-            headers.forEach((v, k) => cb(v, k)),
-        },
-      },
-      blob: async () => new Blob(),
-      ...(overrides?.req as Record<string, unknown>),
+  const defaultHeaders = new Headers();
+  const overrideReq =
+    (overrides?.req as Record<string, unknown> | undefined) ?? {};
+
+  const req = {
+    path: "/api/test",
+    method: "GET",
+    query: () => ({}),
+    raw: {
+      headers: defaultHeaders,
     },
+    blob: async () => new Blob(),
+    ...overrideReq,
+  } as Record<string, unknown>;
+
+  const raw =
+    (req.raw as Record<string, unknown> | undefined) ?? {
+      headers: defaultHeaders,
+    };
+
+  const headers = (raw.headers as HeaderLike | undefined) ?? defaultHeaders;
+  raw.headers = headers;
+  req.raw = raw;
+
+  req.header = (key: string): string | undefined => {
+    const value = headers.get(key) ?? headers.get(key.toLowerCase());
+    return value ?? undefined;
+  };
+
+  return {
+    ...overrides,
+    req,
     json: (body: unknown, status?: number) =>
       new Response(JSON.stringify(body), {
         status: status ?? 200,
@@ -28,7 +49,6 @@ function mockContext(overrides?: Record<string, unknown>) {
       status?: number,
       headers?: Record<string, string>,
     ) => new Response(body, { status, headers }),
-    ...overrides,
   };
 }
 

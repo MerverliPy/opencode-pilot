@@ -14,8 +14,7 @@
  * to populate environment variables. Explicit env vars take precedence.
  */
 import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import type { startServer as StartServerFn } from "./index.js";
 
 /**
@@ -23,18 +22,17 @@ import type { startServer as StartServerFn } from "./index.js";
  * Sets process.env variables only if not already set (no override).
  */
 function loadDotEnv(): void {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const root = resolve(__dirname, "..");
-  const envPath = resolve(root, ".env");
-  if (!existsSync(envPath)) {
-    // Try project root (pilot/)
-    const projectRoot = resolve(root, "..");
-    const projectEnvPath = resolve(projectRoot, ".env");
-    if (!existsSync(projectEnvPath)) return;
-    loadEnvFile(projectEnvPath);
-    return;
+  const candidates = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "..", ".env"),
+  ];
+
+  for (const envPath of candidates) {
+    if (existsSync(envPath)) {
+      loadEnvFile(envPath);
+      return;
+    }
   }
-  loadEnvFile(envPath);
 }
 
 function loadEnvFile(path: string): void {

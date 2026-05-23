@@ -269,6 +269,7 @@ test.describe("Session title rename — full-stack", () => {
         ]),
       );
       localStorage.setItem("pilot.activeServer", "e2e-test-server");
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
 

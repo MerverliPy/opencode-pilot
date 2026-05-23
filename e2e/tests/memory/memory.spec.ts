@@ -18,14 +18,94 @@ async function seedServer(context: BrowserContext) {
     const server = { id: "test-server-1", name: "Test Server", url: "http://localhost:4096" };
     localStorage.setItem("pilot.servers", JSON.stringify([server]));
     localStorage.setItem("pilot.activeServer", server.id);
+    localStorage.setItem("pilot.e2eAuthBypass", "1");
   });
 }
+
+async function mockEmptyMemoryApi(page: import("@playwright/test").Page) {
+  await page.route("http://localhost:4096/**", async (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+
+    if (path.includes("/memory/config")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          serverId: "test-server-1",
+          enabled: true,
+          extractEnabled: true,
+          injectEnabled: true,
+          embeddingProvider: "ollama",
+          embeddingModel: "nomic-embed-text",
+          dedupThreshold: 0.92,
+          topK: 5,
+          maxMemories: 2000,
+        }),
+      });
+      return;
+    }
+
+    if (path.includes("/memory/search")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ memories: [], count: 0 }),
+      });
+      return;
+    }
+
+    if (path.includes("/memory/semantic")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ results: [] }),
+      });
+      return;
+    }
+
+    if (path.includes("/memory/profile")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+      return;
+    }
+
+    if (path.includes("/memory/timeline")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+      return;
+    }
+
+    if (path.includes("/memory")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ memories: [], count: 0 }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({}),
+    });
+  });
+}
+
 
 test.beforeEach(async ({ context }) => {
   // Clear server state before each test to prevent cross-test pollution
   await context.addInitScript(() => {
     localStorage.removeItem("pilot.servers");
     localStorage.removeItem("pilot.activeServer");
+    localStorage.removeItem("pilot.e2eAuthBypass");
   });
 });
 
@@ -47,7 +127,8 @@ test.describe("Memory page — routing and rendering", () => {
       await expect(noServer).toBeVisible();
     } else {
       // May redirect to "/" when no server is configured
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page).toHaveURL("/memory");
+      await expect(page.getByTestId("main-content")).toBeVisible();
     }
   });
 });
@@ -57,8 +138,9 @@ test.describe("Memory page — routing and rendering", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("with seeded server", () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ context, page }) => {
     await seedServer(context);
+    await mockEmptyMemoryApi(page);
   });
 
   test.describe("Memory page — routing and rendering", () => {
@@ -142,13 +224,21 @@ test.describe("with seeded server", () => {
       await page.goto("/memory");
       await page.waitForLoadState("domcontentloaded");
 
-      // With a seeded server but no memories, the page should show
-      // the list-empty or empty-state container
-      const listEmpty = page.getByTestId("memory-list-empty");
-      const emptyState = page.getByTestId("memory-empty-state");
+      // Wait for async memory/config loading to settle, then verify the
+      // rendered empty-state container.
+      await page.waitForSelector(
+        '[data-testid="memory-list-empty"], [data-testid="memory-empty-state"]',
+        { state: "visible", timeout: 15000 },
+      );
 
-      const listEmptyVisible = await listEmpty.isVisible().catch(() => false);
-      const emptyStateVisible = await emptyState.isVisible().catch(() => false);
+      const listEmptyVisible = await page
+        .getByTestId("memory-list-empty")
+        .isVisible()
+        .catch(() => false);
+      const emptyStateVisible = await page
+        .getByTestId("memory-empty-state")
+        .isVisible()
+        .catch(() => false);
 
       expect(listEmptyVisible || emptyStateVisible).toBe(true);
     });

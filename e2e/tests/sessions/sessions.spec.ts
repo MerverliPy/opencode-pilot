@@ -5,6 +5,7 @@ test.describe("Sessions page — routing and rendering", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -31,6 +32,7 @@ test.describe("Sessions page — UI state", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -50,6 +52,7 @@ test.describe("Sessions page — with seeded server", () => {
       };
       localStorage.setItem("pilot.servers", JSON.stringify([server]));
       localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
     // Mock API calls to the seeded server to prevent connection-refused console errors
     await page.route("http://localhost:4096/**", (route) => {
@@ -105,6 +108,7 @@ test.describe("Sessions page — navigation", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 

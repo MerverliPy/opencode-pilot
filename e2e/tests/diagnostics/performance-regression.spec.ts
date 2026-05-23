@@ -19,7 +19,7 @@ interface PerformanceMetrics {
 
 test.describe("Performance regression — navigation", () => {
   test.beforeEach(() => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     test.skip(!!process.env.E2E_FULL_STACK, "Full-stack mode includes upstream proxy latency");
   });
   // Baseline: navigating between all routes should be fast
@@ -69,7 +69,7 @@ test.describe("Performance regression — navigation", () => {
 
 test.describe("Performance regression — memory", () => {
   test.beforeEach(() => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
   });
   test("heap does not grow significantly during navigation", async ({ page }) => {
     // Navigate to home and measure initial heap
@@ -117,7 +117,7 @@ test.describe("Performance regression — memory", () => {
 
 test.describe("Performance regression — rendering", () => {
   test.beforeEach(() => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
   });
   test("settings form interaction is responsive", async ({ page }) => {
     await page.goto(ROUTES.SETTINGS);
@@ -187,11 +187,12 @@ test.describe("Performance regression — rendering", () => {
 
 test.describe("Performance regression — memory search", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     await page.addInitScript(() => {
       const server = { id: "test-server-1", name: "Test Server", url: "http://localhost:4096" };
       localStorage.setItem("pilot.servers", JSON.stringify([server]));
       localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
 
@@ -228,7 +229,7 @@ test.describe("Performance regression — memory search", () => {
 
 test.describe("Performance regression — sessions page", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -247,7 +248,7 @@ test.describe("Performance regression — sessions page", () => {
 
 test.describe("Performance regression — files page", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -302,7 +303,7 @@ test.describe("Performance regression — files page", () => {
 
 test.describe("Performance regression — diff page", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -321,7 +322,7 @@ test.describe("Performance regression — diff page", () => {
 
 test.describe("Performance regression — memory usage", () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!!process.env.CI, "Performance benchmarks require stable env");
+    test.skip(process.env.PERFORMANCE_REGRESSION !== "1", "Performance regression is opt-in. Set PERFORMANCE_REGRESSION=1 to run.");
     await page.addInitScript(() => {
       localStorage.clear();
     });

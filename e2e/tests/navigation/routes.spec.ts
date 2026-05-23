@@ -18,6 +18,7 @@ test.describe("Navigation — route rendering", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 

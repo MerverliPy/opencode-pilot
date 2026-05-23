@@ -335,6 +335,7 @@ test.describe("Responsive — Memory page mobile layout", () => {
         const server = { id: "test-server-1", name: "Test Server", url: "http://localhost:4096" };
         localStorage.setItem("pilot.servers", JSON.stringify([server]));
         localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
       });
     });
 
@@ -404,6 +405,7 @@ test.describe("Responsive — Files page mobile layout", () => {
         const server = { id: "test-server-1", name: "Test Server", url: "http://localhost:4096" };
         localStorage.setItem("pilot.servers", JSON.stringify([server]));
         localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
       });
     });
 

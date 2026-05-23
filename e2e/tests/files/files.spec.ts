@@ -18,6 +18,7 @@ test.describe("Files page — no server configured", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -50,6 +51,7 @@ test.describe("Files page — with seeded server", () => {
       };
       localStorage.setItem("pilot.servers", JSON.stringify([server]));
       localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
 

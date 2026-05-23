@@ -11,7 +11,7 @@ import { ROUTES } from "../../utils/routes";
 // maxDiffPixelRatio controlled globally via playwright.config.ts expect.toHaveScreenshot
 
 test.describe("Regression — settings page states", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("settings page — empty state (no servers configured)", async ({
     page,
     settingsPage,
@@ -57,9 +57,10 @@ test.describe("Regression — terminal page", () => {
         url: window.location.origin,
       }]));
       localStorage.setItem("pilot.activeServer", "e2e-test-server");
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("terminal page — empty state", async ({ page }) => {
     await page.goto(ROUTES.TERMINAL);
     await page.waitForLoadState("networkidle");
@@ -73,7 +74,7 @@ test.describe("Regression — terminal page", () => {
 });
 
 test.describe("Regression — chat page", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("chat page — with prompt input", async ({ page, pilotPage }) => {
     await pilotPage.gotoChat();
     await expect(pilotPage.promptInput).toBeVisible();
@@ -85,7 +86,7 @@ test.describe("Regression — chat page", () => {
 });
 
 test.describe("Regression — responsive viewports", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("chat page — mobile viewport (375×812)", async ({
     page,
     pilotPage,

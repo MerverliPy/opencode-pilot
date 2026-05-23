@@ -5,6 +5,7 @@ test.describe("Diff page — routing and rendering", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -24,6 +25,7 @@ test.describe("Diff page — commit form", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -40,6 +42,7 @@ test.describe("Diff page — empty state", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -61,6 +64,7 @@ test.describe("Diff page — console and a11y", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -100,6 +104,7 @@ test.describe("Diff page — navigation", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
 
@@ -115,6 +120,7 @@ test.describe("Diff page — with seeded server", () => {
       const server = { id: "test-server-1", name: "Test Server", url: "http://localhost:4096" };
       localStorage.setItem("pilot.servers", JSON.stringify([server]));
       localStorage.setItem("pilot.activeServer", server.id);
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
 

@@ -19,6 +19,7 @@ test.describe("Console — error-free page loads", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
     // Mock backend-dependent endpoints to prevent Vite proxy errors
     await page.route("**/push/status", (route) =>
@@ -61,6 +62,7 @@ test.describe("Console — warning audit", () => {
     await context.addInitScript(() => {
       localStorage.removeItem("pilot.servers");
       localStorage.removeItem("pilot.activeServer");
+      localStorage.removeItem("pilot.e2eAuthBypass");
     });
   });
   for (const route of ROUTES) {

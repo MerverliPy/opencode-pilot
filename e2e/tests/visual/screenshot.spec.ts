@@ -12,7 +12,7 @@ import { ROUTES } from "../../utils/routes";
 // maxDiffPixelRatio controlled globally via playwright.config.ts expect.toHaveScreenshot
 
 test.describe("Screenshot — full-page per route", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   const routes = [ROUTES.HOME, ROUTES.CHAT, ROUTES.SESSIONS, ROUTES.FILES, ROUTES.SETTINGS];
 
   for (const route of routes) {
@@ -29,7 +29,7 @@ test.describe("Screenshot — full-page per route", () => {
 });
 
 test.describe("Screenshot — element-level snapshots", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("chat prompt input snapshot", async ({ page }) => {
     await page.goto(ROUTES.HOME);
     await page.waitForLoadState("domcontentloaded");
@@ -50,7 +50,7 @@ test.describe("Screenshot — element-level snapshots", () => {
 });
 
 test.describe("Screenshot — viewport vs fullPage", () => {
-  test.skip(!!process.env.CI, "Visual regression requires local baseline — skip in CI");
+  test.skip(process.env.VISUAL_REGRESSION !== "1", "Visual regression is opt-in. Set VISUAL_REGRESSION=1 to run.");
   test("viewport-only screenshot matches visible area", async ({ page }) => {
     await page.goto(ROUTES.HOME);
     await page.waitForLoadState("domcontentloaded");

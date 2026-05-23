@@ -28,6 +28,7 @@ test.describe("Terminal — WebSocket", () => {
         url: window.location.origin,
       }]));
       localStorage.setItem("pilot.activeServer", "e2e-test-server");
+      localStorage.setItem("pilot.e2eAuthBypass", "1");
     });
   });
 

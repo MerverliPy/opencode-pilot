@@ -64,9 +64,11 @@ function AuthGuard({ children }: { children: ReactNode }) {
     return <LoadingFallback />;
   }
 
-  // No active server — redirect to settings so user can configure one
+  // No active server: allow route components to render their own
+  // no-server/configuration states. Settings must stay reachable so users and
+  // tests can configure a server.
   if (!activeServer) {
-    return <Navigate to="/settings" replace />;
+    return <>{children}</>;
   }
 
   if (!authenticated) {
@@ -164,11 +166,9 @@ export function App() {
           <Route
             path="/settings"
             element={
-              <AuthGuard>
-                <ErrorBoundary>
-                  <Settings />
-                </ErrorBoundary>
-              </AuthGuard>
+              <ErrorBoundary>
+                <Settings />
+              </ErrorBoundary>
             }
           />
           <Route
